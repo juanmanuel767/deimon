@@ -403,3 +403,52 @@ fn por_https_las_galletas_van_marcadas_como_seguras() {
     let sin_https = enviar_formulario(puerto, "/registro", cuerpo, "");
     assert!(sin_https.contains("Set-Cookie:") && !sin_https.contains("Secure"), "{}", sin_https);
 }
+
+#[test]
+fn el_servidor_resiste_tamanos_trucados_y_clientes_lentos() {
+    let (ruta_rust, ruta_bin) = compilar_sitio("cuentas.dmn");
+    let puerto = puerto_libre();
+    let datos = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("tmp")
+        .join(format!("datos_ataques_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&datos);
+    let proceso = Command::new(&ruta_bin)
+        .env("DEIMON_PUERTO", puerto.to_string())
+        .env("DEIMON_DATOS", &datos)
+        .env("DEIMON_HILOS", "2")
+        .env("DEIMON_TIEMPO_ESPERA", "2")
+        .stdin(Stdio::null())
+        .spawn()
+        .expect("no se pudo arrancar el servidor");
+    let _servidor = Servidor {
+        proceso,
+        archivos: vec![ruta_rust, ruta_bin],
+    };
+    esperar_servidor(puerto);
+
+    // Un tamaño que, sumado a la cabecera, daría la vuelta: antes se saltaba el límite.
+    let vuelta = peticion_completa(puerto, "POST /entrar HTTP/1.1\r\nContent-Length: 18446744073709551606\r\n\r\n");
+    assert!(vuelta.starts_with("HTTP/1.1 413"), "{}", vuelta);
+    let doble = peticion_completa(puerto, "POST /entrar HTTP/1.1\r\nContent-Length: 3\r\nContent-Length: 9\r\n\r\nabc");
+    assert!(doble.starts_with("HTTP/1.1 400"), "{}", doble);
+    let trozos = peticion_completa(puerto, "POST /entrar HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n");
+    assert!(trozos.starts_with("HTTP/1.1 400"), "{}", trozos);
+
+    // Clientes que mandan la cabecera gota a gota: no pueden retener los hilos más que el plazo.
+    let mut lentos = Vec::new();
+    for _ in 0..2 {
+        let mut c = TcpStream::connect(("127.0.0.1", puerto)).unwrap();
+        c.write_all(b"GET / HTTP/1.1\r\n").unwrap();
+        lentos.push(c);
+    }
+    let inicio = Instant::now();
+    while inicio.elapsed() < Duration::from_secs(3) {
+        for c in &mut lentos {
+            let _ = c.write_all(b"X: y\r\n");
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    let normal = peticion(puerto, "/");
+    assert!(normal.starts_with("HTTP/1.1 200"), "{}", normal);
+}

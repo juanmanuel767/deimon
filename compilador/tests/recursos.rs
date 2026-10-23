@@ -297,7 +297,7 @@ fn el_arranque_muestra_el_perfil_y_los_hilos_y_la_ruta_que_falla_da_500() {
         servidor.arranque
     );
     assert!(
-        servidor.arranque.contains("2 hilos"),
+        servidor.arranque.contains("4 hilos"),
         "el arranque no muestra los hilos: {}",
         servidor.arranque
     );

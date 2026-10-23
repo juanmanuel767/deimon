@@ -38,9 +38,19 @@ El servidor ya no crea un hilo por conexión: usa un grupo fijo de hilos
 trabajadores y una cola acotada. Si la cola está llena responde
 `503 Servidor ocupado, inténtalo de nuevo`; si la petición pasa del tamaño
 máximo responde `413 Petición demasiado grande`; y si una conexión tarda
-demasiado en enviar su petición, se cierra para no bloquear un hilo. Al arrancar
-se ve el perfil y los hilos, por ejemplo
-`Servidor listo en http://127.0.0.1:8080 (perfil equilibrado, 4 hilos)`.
+demasiado en enviar su petición, se cierra para no bloquear un hilo. El plazo
+cuenta para la petición entera: un cliente que manda datos gota a gota
+(ataque «Slowloris») no retiene el hilo más de `DEIMON_TIEMPO_ESPERA` segundos.
+Un tamaño de cuerpo inválido, repetido con valores distintos o enviado por trozos
+(`Transfer-Encoding`) se rechaza con `400`.
+
+Como los hilos pasan casi todo el tiempo esperando a la red, hay más hilos que
+núcleos: 4 en `pequeño`, 4 por núcleo (mínimo 16) en `equilibrado` y 8 por núcleo
+(mínimo 64) en `servidor`. Al arrancar se ve el perfil y los hilos, por ejemplo
+`Servidor listo en http://127.0.0.1:8080 (perfil equilibrado, 16 hilos)`.
+
+El servidor solo escucha en el propio ordenador (`127.0.0.1`). Para abrirlo a
+internet usa `deimon publicar`, que pone Caddy delante con HTTPS.
 
 El perfil queda grabado en el programa generado. Estas variables de entorno lo
 sobrescriben al ejecutarlo:

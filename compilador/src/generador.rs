@@ -2261,10 +2261,12 @@ fn limites() -> Limites {
         let nucleos = std::thread::available_parallelism()
             .map(|cantidad| cantidad.get())
             .unwrap_or(1);
+        // Casi todo el tiempo de un hilo es esperar a la red, no calcular: con pocos hilos,
+        // unos pocos clientes lentos bastarían para ocuparlos todos.
         match PERFIL_LN {
-            "pequeño" | "pequeno" => 2,
-            "servidor" => nucleos * 2,
-            _ => nucleos,
+            "pequeño" | "pequeno" => 4,
+            "servidor" => (nucleos * 8).max(64),
+            _ => (nucleos * 4).max(16),
         }
     });
     let max_conexiones =
@@ -2300,8 +2302,18 @@ fn fin_de_cabecera(datos: &[u8]) -> Option<usize> {
         })
 }
 
-/// Lee solo las cabeceras, sin pasar del máximo: así un cliente lento o enorme no agota la memoria.
-fn leer_cabecera(conexion: &mut std::net::TcpStream, maximo: usize) -> Lectura {
+/// Antes de cada lectura, ajusta la espera a lo que queda del plazo total de la petición.
+/// Devuelve falso si el plazo ya terminó (un cliente que gotea datos no ocupa el hilo para siempre).
+fn quedar_hasta(conexion: &std::net::TcpStream, limite: std::time::Instant) -> bool {
+    match limite.checked_duration_since(std::time::Instant::now()) {
+        Some(resto) if !resto.is_zero() => conexion.set_read_timeout(Some(resto)).is_ok(),
+        _ => false,
+    }
+}
+
+/// Lee solo las cabeceras, sin pasar del máximo ni del plazo: así un cliente lento o enorme
+/// no agota la memoria ni retiene el hilo.
+fn leer_cabecera(conexion: &mut std::net::TcpStream, maximo: usize, limite: std::time::Instant) -> Lectura {
     use std::io::Read;
     let mut datos = Vec::new();
     let mut bloque = [0u8; 4096];
@@ -2318,6 +2330,9 @@ fn leer_cabecera(conexion: &mut std::net::TcpStream, maximo: usize) -> Lectura {
         }
         let disponibles = maximo + 1 - datos.len();
         let tamano = bloque.len().min(disponibles);
+        if !quedar_hasta(conexion, limite) {
+            return Lectura::Cerrada;
+        }
         match conexion.read(&mut bloque[..tamano]) {
             Ok(0) => return Lectura::Cerrada,
             Ok(leidos) => datos.extend_from_slice(&bloque[..leidos]),
@@ -2327,6 +2342,8 @@ fn leer_cabecera(conexion: &mut std::net::TcpStream, maximo: usize) -> Lectura {
 }
 
 fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
+    // Plazo total para recibir la petición entera (cabeceras y cuerpo), no por cada lectura.
+    let limite = std::time::Instant::now() + limites.tiempo_espera;
     let _ = conexion.set_read_timeout(Some(limites.tiempo_espera));
     let _ = conexion.set_write_timeout(Some(std::time::Duration::from_secs(10)));
     let mut escritura = match conexion.try_clone() {
@@ -2334,7 +2351,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
         Err(_) => return,
     };
     let mut lectura = conexion;
-    let (peticion, mut cuerpo) = match leer_cabecera(&mut lectura, limites.max_peticion) {
+    let (peticion, mut cuerpo) = match leer_cabecera(&mut lectura, limites.max_peticion, limite) {
         Lectura::Peticion(texto, resto) => (texto, resto),
         Lectura::DemasiadoGrande => {
             responder(
@@ -2369,14 +2386,38 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
     let envio = metodo == "POST";
     if envio {
         // El cuerpo del formulario cuenta para el tamaño máximo de la petición.
-        let largo: usize = cabecera("Content-Length").and_then(|v| v.parse().ok()).unwrap_or(0);
-        if peticion.len() + largo > limites.max_peticion {
+        // Un tamaño que no es un número, dos tamaños distintos o el envío por trozos (chunked,
+        // que Deimon no entiende) se rechazan en vez de adivinar dónde termina el cuerpo.
+        let tamanos: Vec<&str> = peticion
+            .lines()
+            .skip(1)
+            .filter_map(|linea| linea.split_once(':'))
+            .filter(|(clave, _)| clave.trim().eq_ignore_ascii_case("Content-Length"))
+            .map(|(_, valor)| valor.trim())
+            .collect();
+        let largo: Option<usize> = match tamanos.as_slice() {
+            [] => Some(0),
+            [primero, resto @ ..] if resto.iter().all(|otro| otro == primero) => primero.parse().ok(),
+            _ => None,
+        };
+        let largo = match largo {
+            Some(largo) if cabecera("Transfer-Encoding").is_none() => largo,
+            _ => {
+                responder(&mut escritura, "400 Bad Request", "<h1>Petición mal formada</h1>");
+                return;
+            }
+        };
+        if largo > limites.max_peticion.saturating_sub(peticion.len()) {
             responder(&mut escritura, "413 Payload Too Large", "<h1>Petición demasiado grande</h1>");
             return;
         }
         let mut bloque = [0u8; 4096];
         while cuerpo.len() < largo {
             use std::io::Read;
+            if !quedar_hasta(&lectura, limite) {
+                responder(&mut escritura, "408 Request Timeout", "<h1>La petición tardó demasiado</h1>");
+                return;
+            }
             match lectura.read(&mut bloque) {
                 Ok(0) | Err(_) => return,
                 Ok(leidos) => cuerpo.extend_from_slice(&bloque[..leidos]),
