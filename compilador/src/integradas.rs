@@ -110,6 +110,20 @@ pub const INTEGRADAS: &[Integrada] = &[
         ejemplo: "mostrar(sumar_lista([1, 2, 3]))   # 6",
     },
     Integrada {
+        nombre: "plantilla",
+        parametros: &["archivo", "datos"],
+        categoria: "web",
+        descripcion: "rellena un archivo HTML con los datos: {{ dato }}, {% para x en lista %}...{% fin %}, {% si dato %}...{% sino %}...{% fin %}; se revisa al traducir",
+        ejemplo: "devolver plantilla(\"inicio.html\", {\"nombre\": \"Ana\", \"productos\": lista})",
+    },
+    Integrada {
+        nombre: "rellenar_plantilla",
+        parametros: &["texto", "datos"],
+        categoria: "web",
+        descripcion: "como plantilla(), pero con el texto de la plantilla en vez del archivo",
+        ejemplo: "mostrar(rellenar_plantilla(\"Hola, {{ nombre }}\", {\"nombre\": \"Ana\"}))",
+    },
+    Integrada {
         nombre: "tiene_clave",
         parametros: &["mapa", "clave"],
         categoria: "listas y textos",

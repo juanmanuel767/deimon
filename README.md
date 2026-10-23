@@ -17,7 +17,7 @@ deimon/
   ejemplos-web/   ejemplos de páginas web y de app
   ejemplos-php/   programas de PHP para probar el traductor (desde-php)
   proyectos/      proyectos reales hechos en Deimon (tienda/: tienda en línea completa)
-  biblioteca/     13 módulos estándar (texto, json, sql, excel, pdf, graficos, pagos, correo...)
+  biblioteca/     14 módulos estándar (texto, json, sql, mysql, excel, pdf, graficos, pagos, correo...)
   rendimiento/    programas para medir velocidad y medir.sh
   herramientas/   ver-pruebas.sh para ver las pruebas en vivo
   docs/           documentación detallada

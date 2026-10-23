@@ -10,7 +10,7 @@ use crate::ajenas;
 use crate::antiguas;
 use crate::ast::{Extension, FuncionExtension, Programa, Sentencia};
 use crate::error::ErrorTraduccion;
-use crate::{biblioteca, generador, integradas, lexer, parser};
+use crate::{biblioteca, generador, integradas, lexer, parser, plantillas};
 
 /// Resuelve los `usar` de `programa` y devuelve el programa combinado.
 pub fn resolver(
@@ -48,6 +48,10 @@ pub fn resolver_con_fuentes(
                 sentencias.append(&mut definiciones);
             }
             otra => {
+                let mut otra = otra;
+                for error in plantillas::incluir(std::slice::from_mut(&mut otra), &principal.dir) {
+                    resolutor.errores.push(error);
+                }
                 resolutor.registrar_definicion(&otra, &None, &principal);
                 sentencias.push(otra);
             }
@@ -258,6 +262,10 @@ impl Resolutor {
                 | Sentencia::Ruta { .. }
                 | Sentencia::Prueba { .. } => {
                     let mut sentencia = sentencia;
+                    for error in plantillas::incluir(std::slice::from_mut(&mut sentencia), &contexto.dir) {
+                        let error = self.marcar(error, contexto);
+                        self.errores.push(error);
+                    }
                     poner_archivo(&mut sentencia, &contexto.mostrar);
                     self.registrar_definicion(
                         &sentencia,

@@ -15,6 +15,7 @@ pub mod lexer;
 pub mod modulos;
 pub mod numerico;
 pub mod parser;
+pub mod plantillas;
 pub mod perfil;
 
 use std::collections::HashMap;

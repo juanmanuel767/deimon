@@ -7,7 +7,7 @@ use crate::integradas;
 /// Icono de Deimon para la pestaña del navegador (48×48), servido en /favicon.ico.
 const ICONO_WEB: &[u8] = include_bytes!("../recursos/favicon.png");
 
-const RUNTIME: &str = r##"
+const RUNTIME: &str = concat!(r##"
 const PERFIL_LN: &str = "@PERFIL@";
 
 use std::collections::BTreeMap;
@@ -1552,6 +1552,124 @@ fn texto_argumento(valor: &Valor, funcion: &str) -> String {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Plantillas HTML: {{ dato }} (protegido como HTML), {{{ dato }}} (sin proteger),
+// {% para x en lista %}...{% fin %}, {% si dato %}...{% sino %}...{% fin %} y {# nota #}.
+// ---------------------------------------------------------------------------
+
+/// Protege el texto como HTML sin volver a proteger lo que ya lo estaba (&amp; sigue igual),
+/// porque los campos de los formularios llegan ya protegidos.
+fn proteger_una_vez(texto: &str) -> String {
+    let mut salida = String::new();
+    let mut resto = texto;
+    while let Some(caracter) = resto.chars().next() {
+        match caracter {
+            '&' => {
+                let entidad = resto[1..].find(';').filter(|fin| *fin <= 8).map(|fin| &resto[1..1 + fin]);
+                let valida = entidad.map(|e| {
+                    matches!(e, "amp" | "lt" | "gt" | "quot" | "apos")
+                        || (e.starts_with('#') && e.len() > 1 && e[1..].chars().all(|c| c.is_ascii_digit()))
+                }).unwrap_or(false);
+                salida.push_str(if valida { "&" } else { "&amp;" });
+            }
+            '<' => salida.push_str("&lt;"),
+            '>' => salida.push_str("&gt;"),
+            '"' => salida.push_str("&quot;"),
+            '\'' => salida.push_str("&#39;"),
+            otro => salida.push(otro),
+        }
+        resto = &resto[caracter.len_utf8()..];
+    }
+    salida
+}
+
+fn buscar_en_plantilla(camino: &[String], ambitos: &[(String, Valor)], datos: &Valor) -> Result<Valor, String> {
+    let primero = &camino[0];
+    let mut valor = match ambitos.iter().rev().find(|(nombre, _)| nombre == primero) {
+        Some((_, valor)) => valor.clone(),
+        None => match datos {
+            Valor::Mapa(mapa) if mapa.valores.contains_key(primero) => mapa.valores[primero].clone(),
+            _ => return Err(format!("la plantilla usa '{}' y no está en los datos", primero)),
+        },
+    };
+    for parte in &camino[1..] {
+        valor = match &valor {
+            Valor::Mapa(mapa) => mapa.valores.get(parte).cloned().unwrap_or(Valor::Nada),
+            Valor::Lista(elementos) => parte.parse::<usize>().ok().and_then(|i| elementos.get(i).cloned()).unwrap_or(Valor::Nada),
+            _ => Valor::Nada,
+        };
+    }
+    Ok(valor)
+}
+
+fn es_cierto_en_plantilla(valor: &Valor) -> bool {
+    match valor {
+        Valor::Nada => false,
+        Valor::Logico(b) => *b,
+        Valor::Numero(n) => *n != 0.0,
+        Valor::Texto(t) => !t.is_empty(),
+        Valor::Lista(l) => !l.is_empty(),
+        Valor::Mapa(m) => !m.claves.is_empty(),
+    }
+}
+
+fn pintar_plantilla(trozos: &[TrozoPlantilla], ambitos: &mut Vec<(String, Valor)>, datos: &Valor, salida: &mut String) -> Result<(), String> {
+    for trozo in trozos {
+        match trozo {
+            TrozoPlantilla::Texto(texto) => salida.push_str(texto),
+            TrozoPlantilla::Dato { camino, proteger } => {
+                let valor = buscar_en_plantilla(camino, ambitos, datos)?;
+                let texto = if valor == Valor::Nada { String::new() } else { texto_de(&valor) };
+                salida.push_str(&if *proteger { proteger_una_vez(&texto) } else { texto });
+            }
+            TrozoPlantilla::Para { variable, camino, cuerpo } => {
+                let elementos: Vec<Valor> = match buscar_en_plantilla(camino, ambitos, datos)? {
+                    Valor::Lista(elementos) => elementos.iter().cloned().collect(),
+                    Valor::Mapa(mapa) => mapa.claves.iter().map(|c| Valor::Texto(Rc::new(c.clone()))).collect(),
+                    Valor::Nada => Vec::new(),
+                    otro => return Err(format!("'para' en la plantilla necesita una lista, y '{}' es {}", camino.join("."), otro.tipo())),
+                };
+                for elemento in elementos {
+                    ambitos.push((variable.clone(), elemento));
+                    let resultado = pintar_plantilla(cuerpo, ambitos, datos, salida);
+                    ambitos.pop();
+                    resultado?;
+                }
+            }
+            TrozoPlantilla::Si { negar, camino, entonces, sino } => {
+                let cierto = es_cierto_en_plantilla(&buscar_en_plantilla(camino, ambitos, datos)?) != *negar;
+                pintar_plantilla(if cierto { entonces } else { sino }, ambitos, datos, salida)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Rellena el texto de una plantilla con los datos (una lista con claves).
+fn rellenar_plantilla(plantilla: &Valor, datos: &Valor) -> Valor {
+    let texto = texto_argumento(plantilla, "rellenar_plantilla");
+    if !matches!(datos, Valor::Mapa(_) | Valor::Nada) {
+        fallo(format!("los datos de una plantilla van en una lista con claves, como {{\"nombre\": \"Ana\"}}, no en {}", datos.tipo()));
+    }
+    let trozos = analizar_plantilla(&texto).unwrap_or_else(|e| fallo(format!("plantilla mal escrita, {}", e)));
+    let mut salida = String::new();
+    if let Err(e) = pintar_plantilla(&trozos, &mut Vec::new(), datos, &mut salida) {
+        fallo(e);
+    }
+    Valor::Texto(Rc::new(salida))
+}
+
+/// plantilla("archivo.html", datos): si el nombre va entre comillas, Deimon incluye el archivo
+/// al traducir (y lo revisa); si no, lo lee aquí, al ejecutar.
+fn plantilla(archivo: &Valor, datos: &Valor) -> Valor {
+    let ruta = texto_argumento(archivo, "plantilla");
+    match std::fs::read_to_string(&ruta) {
+        Ok(texto) => rellenar_plantilla(&Valor::Texto(Rc::new(texto)), datos),
+        Err(error) => fallo(format!("no se pudo leer la plantilla '{}': {}", ruta, error)),
+    }
+}
+
+"##, include_str!("plantilla_lectura.rs"), r##"
 /// Valor de un campo del formulario (o de `?campo=` en la dirección), escapado como HTML.
 fn campo(nombre: &Valor) -> Valor {
     let nombre = texto_argumento(nombre, "campo");
@@ -2581,7 +2699,7 @@ fn servir(puerto: &Valor, rutas: Vec<Ruta>) -> Valor {
     }
     Valor::Nada
 }
-"##;
+"##);
 
 #[derive(Clone)]
 struct PruebaDef {

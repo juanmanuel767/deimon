@@ -74,6 +74,60 @@ Si existe la variable de entorno `DEIMON_PUERTO`, su valor sustituye al puerto
 escrito en `servir(...)`. Sirve, por ejemplo, para que las pruebas usen un
 puerto libre sin cambiar el ejemplo.
 
+## Plantillas HTML
+
+En vez de escribir el HTML dentro de textos, se escribe en un archivo `.html` con
+huecos, y `plantilla("archivo.html", datos)` lo rellena:
+
+```html
+<h1>Hola, {{ usuario.nombre }}</h1>
+{% si productos %}
+  <ul>{% para p en productos %}<li>{{ p.nombre }}: {{ p.precio }}</li>{% fin %}</ul>
+{% sino %}
+  <p>No hay productos.</p>
+{% fin %}
+{# esto es una nota y no sale en la página #}
+```
+
+```deimon
+ruta "/" {
+    devolver plantilla("vistas/inicio.html", {"usuario": {"nombre": "Ana"}, "productos": lista})
+}
+```
+
+- `{{ dato }}` escribe el dato protegido como HTML (nadie puede colar `<script>`);
+  lo que ya venía protegido, como los campos de un formulario, no se protege dos veces.
+- `{{{ dato }}}` lo escribe tal cual: úsalo solo con HTML que hayas creado tú.
+- `dato.campo` entra en una lista con claves y `lista.0` en una lista.
+- `{% para x en lista %}...{% fin %}` repite; `{% si dato %}...{% sino %}...{% fin %}`
+  elige (`{% si no dato %}` al revés). Cuenta como falso: `nada`, `falso`, `0`, `""`
+  y las listas vacías.
+- La ruta del archivo es relativa al `.dmn`. El archivo se mete **dentro** del
+  programa al traducir: si no existe o le falta un `{% fin %}`, Deimon avisa
+  (código `E024`) antes de arrancar, y el programa no necesita llevar la carpeta.
+- Si la plantilla usa un dato que no le das, la página falla con un mensaje que lo
+  dice. Para una plantilla que no está en un archivo: `rellenar_plantilla(texto, datos)`.
+
+## MySQL y MariaDB
+
+Con `usar modulo "mysql"` se trabaja con una base MySQL o MariaDB que ya exista (la
+de un alojamiento web, por ejemplo). Detalles en [modulos.md](modulos.md).
+
+```deimon
+usar modulo "mysql"
+# La contraseña no se escribe aquí: va en la variable DEIMON_MYSQL, por ejemplo
+#   DEIMON_MYSQL="mysql://tienda:secreta@localhost/tienda" deimon ejecutar web.dmn
+para fila en consultar_mysql("", "SELECT nombre, precio FROM productos WHERE precio < ?", [10]) {
+    mostrar(fila["nombre"] + ": " + fila["precio"])
+}
+ejecutar_mysql("", "INSERT INTO productos (nombre, precio) VALUES (?, ?)", [campo("nombre"), 8.5])
+```
+
+Funciona con los dos métodos de contraseña de MySQL 8 (`caching_sha2_password`, que
+por la red se manda cifrada con la llave del servidor, y `mysql_native_password`).
+Cada hilo del servidor web mantiene su conexión abierta y la reutiliza. No cifra la
+conexión (TLS): si la base está en otro ordenador, úsala dentro de una red privada.
+
 ## Formularios
 
 Una ruta atiende tanto las visitas como los formularios que se envían a ella

@@ -132,6 +132,7 @@ Dentro de `deimon probar`, el detalle de la prueba termina con `(línea N)`.
 | E021 | nombre antiguo de una función integrada |
 | E022 | palabra reservada usada como nombre |
 | E023 | se intenta cambiar un texto por partes |
+| E024 | plantilla HTML que no existe o está mal escrita |
 | E999 | otro error |
 
 ## Comprobar un programa

@@ -1,0 +1,3 @@
+nombre: mysql
+descripcion: conectar con MySQL y MariaDB sin instalar nada más; los valores van aparte (con ?) y se protegen, así nadie puede colar órdenes SQL por un formulario
+requiere: red
