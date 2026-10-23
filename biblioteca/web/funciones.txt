@@ -1,0 +1,4 @@
+# Funciones del módulo "web" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+pedir_web | 1 | pide una dirección (GET) y devuelve el texto de la respuesta; error si responde 400 o más | sea texto = pedir_web("https://ejemplo.com/datos.json")
+enviar_web | 2 | envía datos de formulario (POST) a una dirección y devuelve el texto de la respuesta | enviar_web("https://ejemplo.com/api", "nombre=Ana&edad=30")

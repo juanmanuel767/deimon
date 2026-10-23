@@ -1,0 +1,5 @@
+# Funciones del módulo "tiempo" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+ahora | 0 | segundos que han pasado desde el 1 de enero de 1970 (UTC) | sea inicio = ahora()
+esperar | 1 | detiene el programa unos milisegundos | esperar(500)
+fecha | 1 | convierte segundos desde 1970 en un texto AAAA-MM-DD HH:MM:SS (UTC) | fecha(0)   # 1970-01-01 00:00:00

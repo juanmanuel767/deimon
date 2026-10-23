@@ -1,0 +1,15 @@
+# Funciones compartidas por varios programas.
+funcion doble(valor) {
+    devolver valor * 2
+}
+
+funcion cuadrado(valor) {
+    devolver valor * valor
+}
+
+prueba "doble y cuadrado" {
+    comprobar_igual(doble(4), 8)
+    comprobar_igual(cuadrado(3), 9)
+}
+
+mostrar("esta línea del archivo usado se ignora")

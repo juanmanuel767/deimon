@@ -1,0 +1,3 @@
+nombre: pdf
+descripcion: crea documentos PDF con título, texto con acentos y varias páginas
+requiere: archivos

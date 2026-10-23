@@ -1,0 +1,3 @@
+nombre: graficos
+descripcion: gráficos de barras, líneas y tarta como imagen SVG (se ven en cualquier navegador y se pueden poner dentro de una página)
+requiere:

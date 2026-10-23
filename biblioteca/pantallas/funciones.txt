@@ -1,0 +1,11 @@
+# Funciones del módulo "pantallas" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+pantalla | 1 | junta una lista de elementos en una pantalla nativa; es lo que devuelve la ruta | devolver pantalla([titulo("Hola"), boton("Seguir", "/otra")])
+titulo | 1 | texto grande en negrita | titulo("Mis notas")
+parrafo | 1 | texto normal | parrafo("Tienes 3 notas")
+elemento_lista | 1 | una fila de una lista, con viñeta | elemento_lista("Comprar pan")
+separador | 0 | una línea para separar partes | separador()
+boton | 2 | botón que abre otra pantalla de la app (texto, camino) | boton("Ver notas", "/notas")
+cuadro_texto | 2 | cuadro para escribir (nombre del campo, texto de ayuda); se lee con campo(nombre) | cuadro_texto("nota", "Escribe una nota")
+cuadro_clave | 2 | como cuadro_texto, pero oculta lo que se escribe | cuadro_clave("clave", "Contraseña")
+boton_enviar | 2 | botón que envía los cuadros de la pantalla a un camino (como un formulario) | boton_enviar("Guardar", "/guardar")

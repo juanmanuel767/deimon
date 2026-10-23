@@ -1,0 +1,35 @@
+# Listas y datos permanentes
+
+# Borramos las claves de la colección para que la salida sea siempre igual
+para clave en listar_claves("prueba") {
+    borrar("prueba", clave)
+}
+
+guardar("prueba", "nombre", "Ana")
+guardar("prueba", "edad", 30)
+guardar("prueba", "activo", verdadero)
+guardar("prueba", "vacio", nada)
+
+mostrar(contar("prueba"))
+mostrar(listar_claves("prueba"))
+mostrar(leer("prueba", "nombre"))
+mostrar(leer("prueba", "edad"))
+mostrar(leer("prueba", "activo"))
+mostrar(leer("prueba", "vacio"))
+mostrar(leer("prueba", "no-existe"))
+
+sea frutas = ["manzana", "pera"]
+mostrar(frutas)
+mostrar(frutas[0])
+mostrar(medir(frutas))
+mostrar(agregar(frutas, "uva"))
+mostrar(frutas + ["uva"])
+para fruta en frutas {
+    mostrar(fruta)
+}
+
+guardar("prueba", "fruta", frutas[1])
+mostrar(contar("prueba"))
+borrar("prueba", "vacio")
+mostrar(contar("prueba"))
+mostrar(listar_claves("prueba"))

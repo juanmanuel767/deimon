@@ -1,0 +1,4 @@
+usar "piezas/calculos.dmn"
+
+mostrar(doble(4))
+mostrar(cuadrado(5))

@@ -1,0 +1,3 @@
+nombre: web
+descripcion: pide páginas y datos a otros sitios por HTTP o HTTPS (usa curl del sistema)
+requiere: red

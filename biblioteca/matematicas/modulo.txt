@@ -1,0 +1,3 @@
+nombre: matematicas
+descripcion: operaciones matemáticas (raíz, potencia, redondeo, mínimo, máximo, azar...)
+requiere:

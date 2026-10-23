@@ -1,0 +1,3 @@
+nombre: texto
+descripcion: funciones para trabajar con textos (mayúsculas, buscar, partir, unir...)
+requiere:

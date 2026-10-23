@@ -1,0 +1,19 @@
+# Usa los tres módulos de la biblioteca estándar.
+usar modulo "matematicas"
+usar modulo "texto"
+usar modulo "tiempo"
+
+mostrar(raiz(16))
+mostrar(potencia(2, 10))
+mostrar(redondear(2.6) + suelo(2.6) + techo(2.1))
+mostrar(minimo(3, 8) + maximo(3, 8))
+mostrar(factorial(5))
+mostrar(es_par(10))
+sea azar = aleatorio()
+mostrar(azar >= 0 y azar < 1)
+mostrar(mayusculas("hola") + " " + repetir("ja", 3))
+mostrar(unir(partir("a,b,c", ","), " - "))
+mostrar(empieza_con("modulo", "mod") y termina_con("modulo", "lo"))
+mostrar(fecha(0))
+mostrar(fecha(1700000000))
+mostrar(ahora() > 1700000000)

@@ -1,0 +1,8 @@
+# 20 millones de vueltas con una suma y un resto
+sea i = 0
+sea total = 0
+mientras i < 20000000 {
+    total = total + i % 7
+    i = i + 1
+}
+mostrar(total)

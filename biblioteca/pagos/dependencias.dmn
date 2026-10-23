@@ -1,0 +1,2 @@
+# El módulo "pagos" habla con Stripe por HTTPS usando el módulo "web".
+usar modulo "web"

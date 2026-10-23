@@ -1,0 +1,18 @@
+# Primer ejemplo: variables, textos y condiciones
+sea nombre = "Ana"
+sea edad = 30
+mostrar("Hola, " + nombre)
+
+funcion suma(a, b) {
+    devolver a + b
+}
+
+mostrar(suma(2, 3))
+
+si edad >= 18 {
+    mostrar("mayor")
+} sino si edad > 12 {
+    mostrar("adolescente")
+} sino {
+    mostrar("menor")
+}

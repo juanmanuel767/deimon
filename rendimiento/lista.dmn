@@ -1,0 +1,8 @@
+# Añadir 20 000 elementos a una lista
+sea l = []
+sea i = 0
+mientras i < 20000 {
+    l = agregar(l, i)
+    i = i + 1
+}
+mostrar(medir(l))

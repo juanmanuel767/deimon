@@ -1,0 +1,51 @@
+# Pedidos: se guardan en la colección "pedidos". Al comprar se descuentan las existencias
+# con incrementar (seguro aunque compren dos personas a la vez) y, si alguna no alcanza,
+# se devuelve todo lo descontado.
+
+usar modulo "tiempo"
+
+# Descuenta las existencias del carrito. Devuelve nada si todo alcanzó, o el aviso.
+funcion reservar(carrito) {
+    sea reservados = []
+    para id en carrito {
+        si incrementar("existencias", id, -carrito[id]) < 0 {
+            incrementar("existencias", id, carrito[id])
+            para otro en reservados {
+                incrementar("existencias", otro, carrito[otro])
+            }
+            devolver "Ya no quedan suficientes unidades de " + leer("productos", id)["nombre"] + ". Revisa tu carrito."
+        }
+        reservados = agregar(reservados, id)
+    }
+    devolver nada
+}
+
+funcion crear_pedido(cliente, carrito, direccion) {
+    sea lineas = []
+    para id en carrito {
+        sea p = leer("productos", id)
+        lineas = agregar(lineas, {"id": id, "nombre": p["nombre"], "precio": p["precio"], "unidades": carrito[id]})
+    }
+    sea numero = incrementar("contadores", "pedidos", 1)
+    sea id = formatear_texto("%05d", [numero])
+    guardar("pedidos", id, {"cliente": cliente, "lineas": lineas, "total": total_del_carrito(carrito), "direccion": direccion, "fecha": fecha(ahora()), "estado": "pendiente"})
+    devolver id
+}
+
+funcion tabla_de_pedido(pedido) {
+    sea filas = ""
+    para linea en pedido["lineas"] {
+        filas = filas + "<tr><td>" + linea["nombre"] + "</td><td>" + linea["unidades"] + "</td><td>" + moneda(linea["precio"] * linea["unidades"]) + "</td></tr>"
+    }
+    devolver "<table><tr><th>Producto</th><th>Unidades</th><th>Importe</th></tr>" + filas + "<tr><th>Total</th><th></th><th>" + moneda(pedido["total"]) + "</th></tr></table><p>Enviar a: " + pedido["direccion"] + "</p><p>Fecha: " + pedido["fecha"] + " (UTC) · Estado: <b>" + pedido["estado"] + "</b> · Pago al recibir</p>"
+}
+
+funcion pedidos_de(cliente) {
+    sea lista = []
+    para id en invertir(listar_claves("pedidos")) {
+        si cliente == nada o leer("pedidos", id)["cliente"] == cliente {
+            lista = agregar(lista, id)
+        }
+    }
+    devolver lista
+}

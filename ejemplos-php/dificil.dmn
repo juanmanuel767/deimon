@@ -1,0 +1,44 @@
+# Traducido de PHP con 'deimon desde-php'.
+usar modulo "texto"
+
+funcion fib(n) {
+    si n < 2 {
+        devolver n
+    }
+    devolver fib(n - 1) + fib(n - 2)
+}
+
+funcion medir_php(x) {
+    devolver x * 2
+}
+
+sea i = nada
+sea j = nada
+sea si_php = 1
+sea prueba_php = 2
+escribir(a_texto(si_php) + prueba_php)
+mostrar("")
+escribir("Texto con \\n literal y 'comillas'" + "\n")
+mostrar("Tab:\tfin \"citado\" $no_variable")
+sea lista = [3, 1, 2]
+lista[1] = 10
+escribir(lista[0] + lista[1] + "\n")
+escribir(fib(20) + " " + medir_php(21) + "\n")
+sea texto = ""
+i = 0
+j = 10
+mientras i < 3 {
+    texto = texto + (i + "-" + j + " ")
+    i = i + 1
+    j = j - 1
+}
+escribir(recortar(texto) + "\n")
+si no si_php > 5 y prueba_php != 3 {
+    mostrar("condición ok")
+}
+escribir(-5 + 2 * 3)
+mostrar("")
+escribir((10 - 4) / 4)
+mostrar("")
+escribir("Fin en HTML ")
+escribir(mayusculas("ok"))

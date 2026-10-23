@@ -1,0 +1,19 @@
+# Un sitio web pequeño con tres páginas
+
+funcion cuadrado(n) {
+    devolver n * n
+}
+
+ruta "/" {
+    devolver "<h1>Inicio</h1><p>Bienvenido a mi sitio hecho con Deimon.</p>"
+}
+
+ruta "/saludo/:nombre" {
+    devolver "<h1>Hola, " + nombre + "</h1>"
+}
+
+ruta "/cuadrado/:n" {
+    devolver "<h1>El cuadrado de " + n + " es " + cuadrado(a_numero(n)) + "</h1>"
+}
+
+servir(8080)

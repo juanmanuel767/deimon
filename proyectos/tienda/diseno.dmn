@@ -1,0 +1,33 @@
+# Aspecto de la tienda: la plantilla de todas las páginas y el formato del dinero.
+
+usar modulo "texto"
+
+# Cambia aquí el símbolo de la moneda.
+funcion moneda(cantidad) {
+    devolver "$" + formatear_texto("%.2f", [cantidad])
+}
+
+funcion es_dueno(usuario) {
+    devolver usuario != nada y leer("ajustes", "dueno") == usuario
+}
+
+funcion menu() {
+    sea usuario = usuario_actual()
+    sea enlaces = "<a href='/'>Catálogo</a><a href='/carrito'>🛒 Carrito (" + unidades_en_carrito() + ")</a>"
+    si usuario == nada {
+        devolver enlaces + "<a href='/entrar'>Entrar</a><a href='/registro'>Crear cuenta</a>"
+    }
+    si es_dueno(usuario) {
+        enlaces = enlaces + "<a href='/panel'>Panel</a>"
+    }
+    devolver enlaces + "<a href='/mis-pedidos'>Mis pedidos</a><a href='/salir'>Salir (" + usuario + ")</a>"
+}
+
+funcion aviso(texto) {
+    devolver "<p class='aviso'>" + texto + "</p>"
+}
+
+funcion pagina(titulo, contenido) {
+    sea estilo = "body{margin:0;font-family:system-ui,sans-serif;background:#f6f3fb;color:#221b2e}" + "header{background:#2b1745;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}" + "header b{color:#c9a3ff;font-size:20px;margin-right:auto}header a{color:#fff;text-decoration:none;font-size:15px}" + "main{max-width:960px;margin:0 auto;padding:20px}h1{color:#2b1745}" + ".rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}" + ".tarjeta{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px #0002}" + ".tarjeta .icono{font-size:48px}.precio{font-weight:bold;color:#6b2fb3;font-size:18px}" + "button{background:#6b2fb3;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:15px;cursor:pointer}" + "input,textarea{padding:8px;border:1px solid #bbb;border-radius:8px;font-size:15px;margin:4px 0;max-width:100%;box-sizing:border-box}" + "table{width:100%;border-collapse:collapse;background:#fff}td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}" + ".aviso{background:#fff3cd;padding:10px;border-radius:8px}.agotado{color:#b00020}"
+    devolver "<!DOCTYPE html><html lang='es'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>" + titulo + " · Tienda Deimon</title><style>" + estilo + "</style></head><body><header><b>Tienda Deimon</b>" + menu() + "</header><main><h1>" + titulo + "</h1>" + contenido + "</main></body></html>"
+}

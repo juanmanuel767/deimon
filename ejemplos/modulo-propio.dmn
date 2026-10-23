@@ -1,0 +1,5 @@
+# El módulo "saludos" vive en ejemplos/modulos/saludos/
+usar modulo "saludos"
+
+mostrar(saludar("Ana"))
+mostrar(gritar(saludar("Luis")))

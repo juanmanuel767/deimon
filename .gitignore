@@ -1,0 +1,15 @@
+compilador/target/
+datos/
+*.apk
+*-linux-x64*
+*-android-*
+*.exe
+rendimiento/*_gen.rs
+.claude/
+*.registro
+*.datos
+*.keystore
+*.jks
+.env*
+# Notas internas de traspaso (rutas privadas del ordenador del autor)
+docs/TRASPASO.md

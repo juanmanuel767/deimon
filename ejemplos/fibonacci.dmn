@@ -1,0 +1,11 @@
+# Fibonacci recursivo
+funcion fibonacci(n) {
+    si n <= 1 {
+        devolver n
+    }
+    devolver fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+mostrar(fibonacci(0))
+mostrar(fibonacci(1))
+mostrar(fibonacci(10))

@@ -1,0 +1,42 @@
+# Traducido de PHP con 'deimon desde-php'.
+usar modulo "matematicas"
+usar modulo "texto"
+
+funcion precio_con_iva(precio) {
+    devolver precio * 1.21
+}
+
+funcion descuento(total) {
+    si total > 100 {
+        devolver 10
+    } sino si total > 50 {
+        devolver 5
+    } sino {
+        devolver 0
+    }
+}
+
+sea i = nada
+sea linea = nada
+sea productos = ["camiseta", "taza", "gorra"]
+sea precios = [20, 8.5, 15]
+sea total = 0
+i = 0
+mientras i < medir(precios) {
+    linea = precio_con_iva(precios[i])
+    total = total + linea
+    escribir("Producto: " + mayusculas(productos[i]) + " -> " + redondear(linea) + "\n")
+    i = i + 1
+}
+sea rebaja = descuento(total)
+mostrar("Descuento: " + rebaja + "%")
+escribir("Total: " + redondear(total - rebaja) + " euros\n")
+sea nombres = partir("ana,luis,eva", ",")
+para n en nombres {
+    si empieza_con(n, "e") o medir(n) == 3 {
+        escribir("Hola, " + n + "! ")
+    }
+}
+mostrar("")
+escribir(unir(nombres, " | "))
+mostrar("")

@@ -1,0 +1,19 @@
+# Traducido de PHP con 'deimon desde-php'.
+usar modulo "texto"
+
+sea resultado = []
+sea i = 1
+mientras i <= 15 {
+    si i % 15 == 0 {
+        resultado = agregar(resultado, "FizzBuzz")
+    } sino si i % 3 == 0 {
+        resultado = agregar(resultado, "Fizz")
+    } sino si i % 5 == 0 {
+        resultado = agregar(resultado, "Buzz")
+    } sino {
+        resultado = agregar(resultado, a_texto(i))
+    }
+    i = i + 1
+}
+escribir(unir(resultado, " ") + "\n")
+escribir("Hay " + medir(resultado) + " elementos\n")

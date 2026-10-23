@@ -1,0 +1,5 @@
+# Funciones escritas en Deimon del módulo "saludos".
+
+funcion saludar(nombre) {
+    devolver "Hola, " + nombre
+}

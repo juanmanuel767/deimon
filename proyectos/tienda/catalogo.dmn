@@ -1,0 +1,54 @@
+# Productos: se guardan en la colección "productos" y sus existencias en "existencias"
+# (aparte, para poder descontarlas de forma segura con incrementar).
+
+funcion nuevo_producto(nombre, precio, descripcion, icono, existencias) {
+    sea numero = incrementar("contadores", "productos", 1)
+    sea id = formatear_texto("p%04d", [numero])
+    guardar("productos", id, {"nombre": nombre, "precio": precio, "descripcion": descripcion, "icono": icono})
+    incrementar("existencias", id, existencias)
+    devolver id
+}
+
+funcion existencias_de(id) {
+    sea cantidad = leer("existencias", id)
+    si cantidad == nada {
+        devolver 0
+    }
+    devolver cantidad
+}
+
+funcion tarjeta(id) {
+    sea p = leer("productos", id)
+    sea estado = "<form method='post' action='/carrito/agregar'><input type='hidden' name='id' value='" + id + "'><input type='hidden' name='cantidad' value='1'><button>Añadir al carrito</button></form>"
+    si existencias_de(id) <= 0 {
+        estado = "<p class='agotado'>Agotado</p>"
+    }
+    devolver "<div class='tarjeta'><div class='icono'>" + p["icono"] + "</div><h3><a href='/producto/" + id + "'>" + p["nombre"] + "</a></h3><p class='precio'>" + moneda(p["precio"]) + "</p>" + estado + "</div>"
+}
+
+# Comprueba que un texto sea un número entero de 1 a 6 cifras (cantidades y existencias).
+funcion entero_valido(texto) {
+    si texto == nada o medir(texto) == 0 o medir(texto) > 6 {
+        devolver falso
+    }
+    sea i = 0
+    mientras i < medir(texto) {
+        si no incluye("0123456789", texto[i]) {
+            devolver falso
+        }
+        i = i + 1
+    }
+    devolver verdadero
+}
+
+# Un precio: cifras con, como mucho, un punto y dos decimales (12, 12.5, 12.50).
+funcion precio_valido(texto) {
+    si texto == nada {
+        devolver falso
+    }
+    sea partes = partir(texto, ".")
+    si medir(partes) == 1 {
+        devolver entero_valido(texto)
+    }
+    devolver medir(partes) == 2 y entero_valido(partes[0]) y entero_valido(partes[1]) y medir(partes[1]) <= 2
+}

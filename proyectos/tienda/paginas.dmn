@@ -1,0 +1,236 @@
+# Todas las direcciones de la tienda.
+
+# ---- Catálogo ----
+
+ruta "/" {
+    sea ids = listar_claves("productos")
+    si medir(ids) == 0 {
+        devolver pagina("Catálogo", aviso("Todavía no hay productos. Si eres el dueño, entra y añádelos desde el panel."))
+    }
+    sea tarjetas = ""
+    para id en ids {
+        tarjetas = tarjetas + tarjeta(id)
+    }
+    devolver pagina("Catálogo", "<div class='rejilla'>" + tarjetas + "</div>")
+}
+
+ruta "/producto/:id" {
+    sea p = leer("productos", id)
+    si p == nada {
+        devolver pagina("No encontrado", aviso("Ese producto no existe.") + "<p><a href='/'>Volver al catálogo</a></p>")
+    }
+    sea quedan = existencias_de(id)
+    sea compra = "<p class='agotado'>Agotado</p>"
+    si quedan > 0 {
+        compra = "<p>Quedan " + quedan + "</p><form method='post' action='/carrito/agregar'><input type='hidden' name='id' value='" + id + "'><input name='cantidad' value='1' size='3'> <button>Añadir al carrito</button></form>"
+    }
+    devolver pagina(p["nombre"], "<div class='tarjeta'><div class='icono'>" + p["icono"] + "</div><p>" + p["descripcion"] + "</p><p class='precio'>" + moneda(p["precio"]) + "</p>" + compra + "</div>")
+}
+
+# ---- Carrito ----
+
+ruta "/carrito/agregar" {
+    si no es_envio() o no entero_valido(campo("cantidad")) {
+        devolver redirigir("/")
+    }
+    sea id = campo("id")
+    sea unidades = a_numero(campo("cantidad"))
+    sea carrito = carrito_actual()
+    si tiene_clave(carrito, id) {
+        unidades = unidades + carrito[id]
+    }
+    sea problema = poner_en_carrito(id, unidades)
+    si problema != nada {
+        devolver pagina("Carrito", aviso(problema) + "<p><a href='/carrito'>Ver carrito</a></p>")
+    }
+    devolver redirigir("/carrito")
+}
+
+ruta "/carrito/cambiar" {
+    si es_envio() y entero_valido(campo("cantidad")) {
+        sea problema = poner_en_carrito(campo("id"), a_numero(campo("cantidad")))
+        si problema != nada {
+            devolver pagina("Carrito", aviso(problema) + "<p><a href='/carrito'>Volver al carrito</a></p>")
+        }
+    }
+    devolver redirigir("/carrito")
+}
+
+ruta "/carrito" {
+    sea carrito = carrito_actual()
+    si medir(carrito) == 0 {
+        devolver pagina("Carrito", "<p>Tu carrito está vacío. <a href='/'>Ver el catálogo</a></p>")
+    }
+    sea filas = ""
+    para id en carrito {
+        sea p = leer("productos", id)
+        filas = filas + "<tr><td>" + p["icono"] + " " + p["nombre"] + "</td><td><form method='post' action='/carrito/cambiar'><input type='hidden' name='id' value='" + id + "'><input name='cantidad' value='" + carrito[id] + "' size='3'> <button>Cambiar</button></form></td><td>" + moneda(p["precio"] * carrito[id]) + "</td></tr>"
+    }
+    sea tabla = "<table><tr><th>Producto</th><th>Unidades (0 lo quita)</th><th>Importe</th></tr>" + filas + "<tr><th>Total</th><th></th><th>" + moneda(total_del_carrito(carrito)) + "</th></tr></table>"
+    devolver pagina("Carrito", tabla + "<p><a href='/comprar'><button>Comprar</button></a></p>")
+}
+
+# ---- Compra ----
+
+ruta "/comprar" {
+    sea usuario = usuario_actual()
+    si usuario == nada {
+        devolver redirigir("/entrar")
+    }
+    sea carrito = carrito_actual()
+    si medir(carrito) == 0 {
+        devolver redirigir("/carrito")
+    }
+    sea formulario = "<form method='post' action='/comprar'><p>Dirección de envío:<br><textarea name='direccion' rows='3' cols='40'></textarea></p><p>Total: <b>" + moneda(total_del_carrito(carrito)) + "</b> · Pagas al recibir el pedido.</p><button>Confirmar pedido</button></form>"
+    si es_envio() {
+        sea direccion = campo("direccion")
+        si direccion == nada o medir(recortar(direccion)) < 5 {
+            devolver pagina("Comprar", aviso("Escribe la dirección de envío.") + formulario)
+        }
+        sea problema = reservar(carrito)
+        si problema != nada {
+            devolver pagina("Comprar", aviso(problema) + "<p><a href='/carrito'>Ver carrito</a></p>")
+        }
+        sea pedido = crear_pedido(usuario, carrito, recortar(direccion))
+        guardar_en_sesion("carrito", {})
+        devolver redirigir("/pedido/" + pedido)
+    }
+    devolver pagina("Comprar", formulario)
+}
+
+ruta "/pedido/:id" {
+    sea usuario = usuario_actual()
+    sea pedido = leer("pedidos", id)
+    si usuario == nada o pedido == nada o (pedido["cliente"] != usuario y no es_dueno(usuario)) {
+        devolver pagina("No encontrado", aviso("Ese pedido no existe."))
+    }
+    devolver pagina("Pedido " + id, "<p>¡Gracias por tu compra!</p>" + tabla_de_pedido(pedido))
+}
+
+ruta "/mis-pedidos" {
+    sea usuario = usuario_actual()
+    si usuario == nada {
+        devolver redirigir("/entrar")
+    }
+    sea lista = ""
+    para id en pedidos_de(usuario) {
+        sea pedido = leer("pedidos", id)
+        lista = lista + "<li><a href='/pedido/" + id + "'>Pedido " + id + "</a> · " + moneda(pedido["total"]) + " · " + pedido["estado"] + "</li>"
+    }
+    si lista == "" {
+        devolver pagina("Mis pedidos", "<p>Todavía no has hecho pedidos.</p>")
+    }
+    devolver pagina("Mis pedidos", "<ul>" + lista + "</ul>")
+}
+
+# ---- Cuentas ----
+
+funcion formulario_cuenta(destino, boton) {
+    devolver "<form method='post' action='" + destino + "'><p><input name='nombre' placeholder='nombre'></p><p><input name='clave' type='password' placeholder='contraseña (8 o más)'></p><button>" + boton + "</button></form>"
+}
+
+ruta "/registro" {
+    si es_envio() {
+        si crear_usuario(campo("nombre"), campo("clave")) {
+            # La primera cuenta de la tienda es la del dueño.
+            si leer("ajustes", "dueno") == nada {
+                guardar("ajustes", "dueno", campo("nombre"))
+            }
+            iniciar_sesion(campo("nombre"))
+            devolver redirigir("/")
+        }
+        devolver pagina("Crear cuenta", aviso("Ese nombre ya existe o la contraseña tiene menos de 8 caracteres.") + formulario_cuenta("/registro", "Crear cuenta"))
+    }
+    devolver pagina("Crear cuenta", formulario_cuenta("/registro", "Crear cuenta"))
+}
+
+ruta "/entrar" {
+    si es_envio() {
+        si cuenta_bloqueada(campo("nombre")) {
+            devolver pagina("Entrar", aviso("Demasiados intentos: espera 15 minutos."))
+        }
+        si comprobar_clave(campo("nombre"), campo("clave")) {
+            iniciar_sesion(campo("nombre"))
+            devolver redirigir("/")
+        }
+        devolver pagina("Entrar", aviso("Nombre o contraseña incorrectos.") + formulario_cuenta("/entrar", "Entrar"))
+    }
+    devolver pagina("Entrar", formulario_cuenta("/entrar", "Entrar"))
+}
+
+ruta "/salir" {
+    cerrar_sesion()
+    devolver redirigir("/")
+}
+
+# ---- Panel del dueño ----
+
+funcion formulario_producto() {
+    devolver "<form method='post' action='/panel/producto' class='tarjeta'><h3>Nuevo producto</h3><p><input name='nombre' placeholder='nombre'> <input name='icono' placeholder='icono (emoji)' size='8'></p><p><input name='precio' placeholder='precio (12.50)' size='10'> <input name='existencias' placeholder='existencias' size='10'></p><p><textarea name='descripcion' placeholder='descripción' rows='2' cols='40'></textarea></p><button>Añadir</button></form>"
+}
+
+ruta "/panel" {
+    si no es_dueno(usuario_actual()) {
+        devolver redirigir("/entrar")
+    }
+    sea filas = ""
+    para id en listar_claves("productos") {
+        sea p = leer("productos", id)
+        filas = filas + "<tr><td>" + p["icono"] + " " + p["nombre"] + "</td><td>" + moneda(p["precio"]) + "</td><td><form method='post' action='/panel/existencias'><input type='hidden' name='id' value='" + id + "'><input name='existencias' value='" + existencias_de(id) + "' size='5'> <button>Guardar</button></form></td></tr>"
+    }
+    sea pedidos = ""
+    para id en pedidos_de(nada) {
+        sea pedido = leer("pedidos", id)
+        sea boton = ""
+        si pedido["estado"] == "pendiente" {
+            boton = "<form method='post' action='/panel/enviado'><input type='hidden' name='id' value='" + id + "'><button>Marcar enviado</button></form>"
+        }
+        pedidos = pedidos + "<tr><td><a href='/pedido/" + id + "'>" + id + "</a></td><td>" + pedido["cliente"] + "</td><td>" + moneda(pedido["total"]) + "</td><td>" + pedido["estado"] + boton + "</td></tr>"
+    }
+    sea tabla_productos = "<h2>Productos</h2><table><tr><th>Producto</th><th>Precio</th><th>Existencias</th></tr>" + filas + "</table>"
+    sea tabla_pedidos = "<h2>Pedidos</h2><table><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Estado</th></tr>" + pedidos + "</table>"
+    devolver pagina("Panel", formulario_producto() + tabla_productos + tabla_pedidos)
+}
+
+ruta "/panel/producto" {
+    si no es_dueno(usuario_actual()) o no es_envio() {
+        devolver redirigir("/entrar")
+    }
+    sea nombre = campo("nombre")
+    si nombre == nada o medir(recortar(nombre)) == 0 o no precio_valido(campo("precio")) o no entero_valido(campo("existencias")) {
+        devolver pagina("Panel", aviso("Revisa los datos: hace falta un nombre, un precio como 12.50 y unas existencias enteras.") + formulario_producto())
+    }
+    sea icono = campo("icono")
+    si icono == nada o icono == "" {
+        icono = "📦"
+    }
+    sea descripcion = campo("descripcion")
+    si descripcion == nada {
+        descripcion = ""
+    }
+    nuevo_producto(recortar(nombre), a_numero(campo("precio")), descripcion, icono, a_numero(campo("existencias")))
+    devolver redirigir("/panel")
+}
+
+ruta "/panel/existencias" {
+    si no es_dueno(usuario_actual()) o no es_envio() {
+        devolver redirigir("/entrar")
+    }
+    sea id = campo("id")
+    si leer("productos", id) != nada y entero_valido(campo("existencias")) {
+        incrementar("existencias", id, a_numero(campo("existencias")) - existencias_de(id))
+    }
+    devolver redirigir("/panel")
+}
+
+ruta "/panel/enviado" {
+    si no es_dueno(usuario_actual()) o no es_envio() {
+        devolver redirigir("/entrar")
+    }
+    sea pedido = leer("pedidos", campo("id"))
+    si pedido != nada {
+        pedido["estado"] = "enviado"
+        guardar("pedidos", campo("id"), pedido)
+    }
+    devolver redirigir("/panel")
+}

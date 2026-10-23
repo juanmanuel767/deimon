@@ -1,0 +1,6 @@
+# Funciones del módulo "json" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+a_json | 1 | convierte un valor (número, texto, lógico, nada, lista o lista con claves) en texto JSON | a_json([1, "dos"])   # [1,"dos"]
+leer_json | 2 | saca un dato de un texto JSON siguiendo un camino con puntos y corchetes; un objeto se devuelve como texto JSON | leer_json(respuesta, "usuario.nombre")
+listar_claves_json | 2 | lista las claves del objeto que hay en ese camino ("" para el principal) | listar_claves_json(respuesta, "")
+desde_json | 1 | convierte un texto JSON entero en valores: los objetos pasan a listas con claves | sea datos = desde_json(respuesta)   # datos["usuario"]["nombre"]

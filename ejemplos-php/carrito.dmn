@@ -1,0 +1,45 @@
+# Traducido de PHP con 'deimon desde-php'.
+
+# Página /index.php
+funcion pagina_index() {
+    si campo("agregar") != nada {
+        agregar_a_sesion("carrito", campo("agregar"))
+        guardar_en_sesion("ultimo", campo("agregar"))
+        devolver redirigir("/index.php")
+    }
+    escribir("<h1>Tienda</h1>\n")
+    escribir("<a href='index.php?agregar=taza'>Añadir taza</a> <a href='index.php?agregar=gorra'>Añadir gorra</a>\n")
+    si leer_de_sesion("carrito") != nada {
+        escribir("<p>Llevas " + medir(leer_de_sesion("carrito")) + " productos:</p><ul>\n")
+        para producto en leer_de_sesion("carrito") {
+            escribir("<li>" + producto + "</li>\n")
+        }
+        escribir("</ul><p>El último fue: " + leer_de_sesion("ultimo") + "</p>\n")
+        escribir("<a href='vaciar.php'>Vaciar</a>\n")
+    } sino {
+        escribir("<p>Tu carrito está vacío.</p>\n")
+    }
+    devolver ""
+}
+
+ruta "/index.php" {
+    devolver pagina_index()
+}
+
+ruta "/" {
+    devolver pagina_index()
+}
+
+# Página /vaciar.php
+funcion pagina_vaciar() {
+    borrar_de_sesion("ultimo")
+    vaciar_sesion()
+    devolver redirigir("/index.php")
+    devolver ""
+}
+
+ruta "/vaciar.php" {
+    devolver pagina_vaciar()
+}
+
+servir(8000)

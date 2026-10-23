@@ -1,0 +1,92 @@
+# Sitio con cuentas de usuario: registro, entrada con contraseña y una página privada.
+# Para probarlo: deimon ejecutar ejemplos-web/cuentas.dmn y abre http://127.0.0.1:8120
+
+usar modulo "texto"
+
+funcion pagina(titulo, contenido) {
+    devolver "<!DOCTYPE html><html><head><meta charset='utf-8'><title>" + titulo + "</title></head><body><h1>" + titulo + "</h1>" + contenido + "</body></html>"
+}
+
+funcion formulario(destino, boton) {
+    devolver "<form method='post' action='" + destino + "'><input name='nombre' placeholder='nombre'> <input name='clave' type='password' placeholder='contraseña'> <button>" + boton + "</button></form>"
+}
+
+ruta "/" {
+    sea usuario = usuario_actual()
+    si usuario == nada {
+        devolver pagina("Inicio", "<p><a href='/registro'>Crear cuenta</a> · <a href='/entrar'>Entrar</a></p>")
+    }
+    devolver pagina("Inicio", "<p>Hola, " + usuario + ". <a href='/privado'>Tu página</a> · <a href='/salir'>Salir</a></p>")
+}
+
+ruta "/registro" {
+    si es_envio() {
+        si crear_usuario(campo("nombre"), campo("clave")) {
+            iniciar_sesion(campo("nombre"))
+            devolver redirigir("/privado")
+        }
+        devolver pagina("Crear cuenta", "<p>Ese nombre ya existe o la contraseña tiene menos de 8 caracteres.</p>" + formulario("/registro", "Crear"))
+    }
+    devolver pagina("Crear cuenta", formulario("/registro", "Crear"))
+}
+
+ruta "/entrar" {
+    si es_envio() {
+        si comprobar_clave(campo("nombre"), campo("clave")) {
+            iniciar_sesion(campo("nombre"))
+            devolver redirigir("/privado")
+        }
+        si cuenta_bloqueada(campo("nombre")) {
+            devolver pagina("Entrar", "<p>Demasiados intentos: espera 15 minutos.</p>")
+        }
+        devolver pagina("Entrar", "<p>Nombre o contraseña incorrectos.</p>" + formulario("/entrar", "Entrar"))
+    }
+    devolver pagina("Entrar", formulario("/entrar", "Entrar"))
+}
+
+ruta "/privado" {
+    sea usuario = usuario_actual()
+    si usuario == nada {
+        devolver redirigir("/entrar")
+    }
+    sea visitas = incrementar("visitas", usuario, 1)
+    devolver pagina("Tu página", "<p>" + usuario + ", has entrado aquí " + visitas + " veces.</p><p><a href='/salir'>Salir</a></p>")
+}
+
+ruta "/salir" {
+    cerrar_sesion()
+    devolver redirigir("/")
+}
+
+prueba "registrarse abre la sesión y la página privada cuenta las visitas" {
+    comprobar_igual(enviar("/registro", "nombre=ana&clave=secreta12"), "redirige a /privado")
+    comprobar(contiene(visitar("/privado"), "has entrado aquí 1 veces"))
+    comprobar(contiene(visitar("/privado"), "has entrado aquí 2 veces"))
+}
+
+prueba "una contraseña incorrecta no deja entrar" {
+    enviar("/registro", "nombre=luis&clave=correcta1")
+    visitar("/salir")
+    comprobar(contiene(enviar("/entrar", "nombre=luis&clave=equivocada"), "incorrectos"))
+    comprobar_igual(visitar("/privado"), "redirige a /entrar")
+    comprobar_igual(enviar("/entrar", "nombre=luis&clave=correcta1"), "redirige a /privado")
+}
+
+prueba "no se repiten nombres ni se aceptan contraseñas cortas" {
+    comprobar(crear_usuario("eva", "larga1234"))
+    comprobar(no crear_usuario("eva", "otra12345"))
+    comprobar(no crear_usuario("pepe", "corta"))
+}
+
+prueba "tras cinco contraseñas equivocadas la cuenta se bloquea" {
+    crear_usuario("rosa", "correcta1")
+    sea i = 0
+    mientras i < 4 {
+        enviar("/entrar", "nombre=rosa&clave=mala")
+        i = i + 1
+    }
+    comprobar(contiene(enviar("/entrar", "nombre=rosa&clave=mala"), "espera 15 minutos"))
+    comprobar(contiene(enviar("/entrar", "nombre=rosa&clave=correcta1"), "espera 15 minutos"))
+}
+
+servir(8120)

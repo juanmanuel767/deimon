@@ -1,0 +1,7 @@
+# Tabla de multiplicar
+mostrar("Tabla del 7:")
+sea n = 1
+mientras n <= 3 {
+    mostrar(7 * n)
+    n = n + 1
+}

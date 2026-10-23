@@ -1,0 +1,12 @@
+# Funciones en Rust del módulo "matematicas" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+raiz | 1 | raíz cuadrada de un número (no negativo) | raiz(9)   # 3
+potencia | 2 | eleva un número a otro | potencia(2, 10)   # 1024
+absoluto | 1 | valor sin signo | absoluto(-4)   # 4
+redondear | 1 | redondea al entero más cercano | redondear(2.5)   # 3
+suelo | 1 | redondea hacia abajo | suelo(2.7)   # 2
+techo | 1 | redondea hacia arriba | techo(2.1)   # 3
+minimo | 2 | el menor de dos números | minimo(3, 8)   # 3
+maximo | 2 | el mayor de dos números | maximo(3, 8)   # 8
+aleatorio | 0 | número al azar entre 0 (incluido) y 1 (sin incluir) | aleatorio()
+entero_al_azar | 2 | número entero al azar entre mínimo y máximo, los dos incluidos (como rand de PHP) | entero_al_azar(1, 6)   # un dado

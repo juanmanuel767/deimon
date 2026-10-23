@@ -1,0 +1,21 @@
+# Bucles y funciones con bucle dentro
+sea i = 0
+mientras i < 3 {
+    mostrar(i)
+    i = i + 1
+}
+
+funcion contar_hasta(limite) {
+    sea j = 1
+    mientras j <= limite {
+        mostrar("Cuenta: " + j)
+        j = j + 1
+    }
+    devolver j
+}
+
+mostrar(contar_hasta(2))
+
+sea resto = 7 % 4
+mostrar(resto)
+mostrar(7 / 2)

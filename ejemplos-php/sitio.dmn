@@ -1,0 +1,94 @@
+# Traducido de PHP con 'deimon desde-php'.
+usar modulo "texto"
+
+funcion ucfirst_falso(t) {
+    devolver mayusculas(t)
+}
+
+# Página /contacto.php
+funcion pagina_contacto() {
+    sea correo = nada
+    sea mensaje = nada
+    sea error = ""
+    si es_envio() {
+        correo = recortar(campo("correo"))
+        mensaje = recortar(campo("mensaje"))
+        si correo == "" o mensaje == "" {
+            error = "Rellena los dos campos."
+        } sino {
+            devolver redirigir("/gracias.php")
+        }
+    }
+    escribir("<h1>Contacto</h1>\n")
+    si error != "" {
+        escribir("<p class='error'>" + error + "</p>")
+    }
+    escribir("<form method=\"post\">\n  <input name=\"correo\"> <textarea name=\"mensaje\"></textarea> <button>Enviar</button>\n</form>\n")
+    devolver ""
+}
+
+ruta "/contacto.php" {
+    devolver pagina_contacto()
+}
+
+# Página /gracias.php
+funcion pagina_gracias() {
+    escribir("<h1>¡Gracias!</h1>\n<p>Te responderemos pronto.</p>\n")
+    devolver ""
+}
+
+ruta "/gracias.php" {
+    devolver pagina_gracias()
+}
+
+# Página /index.php
+funcion pagina_index() {
+    sea titulo = "Mi tienda"
+    sea productos = ["camiseta", "taza", "gorra", "mochila"]
+    escribir("<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"><title>")
+    escribir(titulo)
+    escribir("</title></head>\n<body>\n<h1>")
+    escribir(titulo)
+    escribir("</h1>\n<form method=\"get\" action=\"index.php\">\n  <input name=\"buscar\" placeholder=\"Buscar\">\n  <button>Buscar</button>\n</form>\n<ul>\n")
+    sea buscar = ""
+    si campo("buscar") != nada {
+        buscar = minusculas(recortar(campo("buscar")))
+    }
+    sea encontrados = 0
+    para p en productos {
+        si buscar == "" o contiene(p, buscar) {
+            escribir("<li>" + ucfirst_falso(p) + "</li>\n")
+            encontrados = encontrados + 1
+        }
+    }
+    escribir("</ul>\n<p>")
+    escribir(encontrados)
+    escribir(" productos</p>\n<p><a href=\"contacto.php\">Contacto</a> · <a href=\"saludo.php?nombre=Ana\">Saludo</a></p>\n</body>\n</html>\n")
+    devolver ""
+}
+
+ruta "/index.php" {
+    devolver pagina_index()
+}
+
+ruta "/" {
+    devolver pagina_index()
+}
+
+# Página /saludo.php
+funcion pagina_saludo() {
+    si (campo("nombre") == nada o campo("nombre") == "") {
+        escribir("<p>¿Cómo te llamas?</p>")
+        devolver ""
+    }
+    sea nombre = campo("nombre")
+    escribir("<p>Hola, " + nombre + "</p>\n")
+    escribir("<p>Tu nombre tiene " + medir(nombre) + " letras</p>")
+    devolver ""
+}
+
+ruta "/saludo.php" {
+    devolver pagina_saludo()
+}
+
+servir(8000)

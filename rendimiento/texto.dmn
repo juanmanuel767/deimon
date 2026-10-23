@@ -1,0 +1,8 @@
+# Concatenar un texto 100 000 veces
+sea texto = ""
+sea i = 0
+mientras i < 100000 {
+    texto = texto + "x"
+    i = i + 1
+}
+mostrar(medir(texto))

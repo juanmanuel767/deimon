@@ -1,0 +1,42 @@
+# App de notas con pantallas nativas de Android (botones y cuadros de texto de verdad).
+# Crear la app: deimon app ejemplos-web/notas-nativa.dmn --nombre "Notas Deimon"
+usar modulo "pantallas"
+
+ruta "/" {
+    sea total = contar("notas")
+    devolver pantalla([titulo("Mis notas"), parrafo("Tienes " + total + " notas guardadas."), boton("Ver notas", "/notas"), separador(), cuadro_texto("nota", "Escribe una nota nueva"), boton_enviar("Guardar", "/guardar")])
+}
+
+ruta "/guardar" {
+    sea nota = campo("nota")
+    si nota != nada y nota != "" {
+        incrementar("contador", "notas", 1)
+        guardar("notas", "nota" + leer("contador", "notas"), nota)
+    }
+    devolver redirigir("/notas")
+}
+
+ruta "/notas" {
+    sea elementos = [titulo("Notas")]
+    para clave en listar_claves("notas") {
+        elementos = agregar(elementos, elemento_lista(leer("notas", clave)))
+    }
+    si contar("notas") == 0 {
+        elementos = agregar(elementos, parrafo("Todavía no hay notas."))
+    }
+    elementos = agregar(elementos, boton("Volver", "/"))
+    devolver pantalla(elementos)
+}
+
+prueba "guardar una nota la muestra en la lista" {
+    comprobar_igual(enviar("/guardar", "nota=Comprar+pan"), "redirige a /notas")
+    sea lista = visitar("/notas")
+    comprobar(lista == "#deimon-pantalla\ntitulo\tNotas\nelemento\tComprar pan\nboton\tVolver\t/\n")
+}
+
+prueba "la portada cuenta las notas" {
+    enviar("/guardar", "nota=Llamar")
+    comprobar(visitar("/") != "")
+}
+
+servir(8130)

@@ -1,0 +1,3 @@
+nombre: saludos
+descripcion: módulo de ejemplo: saludos con una función en Rust y otra en Deimon
+requiere:

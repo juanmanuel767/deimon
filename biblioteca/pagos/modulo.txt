@@ -1,0 +1,3 @@
+nombre: pagos
+descripcion: cobra con tarjeta usando Stripe Checkout (crear el pago y comprobar si se pagó)
+requiere: red

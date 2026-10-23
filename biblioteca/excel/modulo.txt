@@ -1,0 +1,3 @@
+nombre: excel
+descripcion: crear hojas de Excel (.xlsx) y archivos CSV, y leer CSV
+requiere: archivos

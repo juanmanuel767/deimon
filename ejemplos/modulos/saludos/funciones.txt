@@ -1,0 +1,2 @@
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+gritar | 1 | devuelve el texto en mayúsculas y con signos de exclamación | gritar("hola")   # ¡HOLA!

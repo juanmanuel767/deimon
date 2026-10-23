@@ -1,0 +1,44 @@
+# Pruebas dentro del lenguaje
+# `deimon ejecutar` solo muestra lo de abajo y se salta las pruebas.
+# Para correr las pruebas: deimon probar ejemplos/pruebas.dmn
+
+funcion suma(a, b) {
+    devolver a + b
+}
+
+funcion mayor_de(lista) {
+    sea mejor = lista[0]
+    para valor en lista {
+        si valor > mejor {
+            mejor = valor
+        }
+    }
+    devolver mejor
+}
+
+funcion saludo(nombre) {
+    devolver "Hola, " + nombre
+}
+
+prueba "suma básica" {
+    comprobar(suma(2, 3) == 5)
+    comprobar_igual(suma(2, 2), 4)
+}
+
+prueba "el mayor de una lista" {
+    comprobar_igual(mayor_de([3, 9, 4]), 9)
+    comprobar_igual(medir([1, 2, 3]), 3)
+}
+
+prueba "datos guardados" {
+    guardar("ejemplo", "nombre", "Ana")
+    comprobar_igual(leer("ejemplo", "nombre"), "Ana")
+    comprobar_igual(leer("ejemplo", "otro"), nada)
+}
+
+prueba "saludo" {
+    comprobar_igual(saludo("Ana"), "Hola, Ana")
+}
+
+mostrar(suma(2, 3))
+mostrar(saludo("mundo"))

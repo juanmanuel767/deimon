@@ -1,0 +1,26 @@
+# Traducido de PHP con 'deimon desde-php'.
+usar modulo "texto"
+
+funcion precio(plato) {
+    si plato == "sopa" o plato == "ensalada" {
+        devolver 5
+    } sino si plato == "carne" {
+        devolver 12
+    } sino {
+        devolver 0
+    }
+}
+
+sea eleccion_94 = nada
+sea pedido = ["sopa", "carne", "agua", "ensalada"]
+sea total = 0
+para p en pedido {
+    eleccion_94 = mayusculas(p)
+    si eleccion_94 == "AGUA" {
+        mostrar("" + p + ": gratis")
+    } sino {
+        escribir("" + p + ": " + precio(p) + " euros\n")
+        total = total + precio(p)
+    }
+}
+mostrar("Total: " + total)

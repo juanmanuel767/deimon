@@ -1,0 +1,75 @@
+# Pruebas de la tienda: se ejecutan con  deimon probar tienda.dmn
+
+funcion abrir_tienda_con_productos() {
+    enviar("/registro", "nombre=duena&clave=secreta123")
+    enviar("/panel/producto", "nombre=Taza&precio=8.50&existencias=3&icono=%E2%98%95&descripcion=De+cer%C3%A1mica")
+    enviar("/panel/producto", "nombre=Gorra&precio=12&existencias=10&icono=%F0%9F%A7%A2&descripcion=Morada")
+    visitar("/salir")
+}
+
+prueba "sin productos el catálogo lo avisa" {
+    comprobar(contiene(visitar("/"), "Todavía no hay productos"))
+}
+
+prueba "la primera cuenta es la del dueño y puede añadir productos" {
+    abrir_tienda_con_productos()
+    comprobar(contiene(visitar("/"), "Taza"))
+    comprobar(contiene(visitar("/"), "$8.50"))
+    comprobar(contiene(visitar("/producto/p0002"), "Morada"))
+    enviar("/registro", "nombre=cliente&clave=cliente123")
+    comprobar_igual(visitar("/panel"), "redirige a /entrar")
+    enviar("/panel/producto", "nombre=Falso&precio=1&existencias=1")
+    comprobar(no contiene(visitar("/"), "Falso"))
+}
+
+prueba "el panel rechaza datos incorrectos" {
+    enviar("/registro", "nombre=duena&clave=secreta123")
+    comprobar(contiene(enviar("/panel/producto", "nombre=Taza&precio=abc&existencias=3"), "Revisa los datos"))
+    comprobar(contiene(enviar("/panel/producto", "nombre=Taza&precio=1.234&existencias=3"), "Revisa los datos"))
+    comprobar(contiene(enviar("/panel/producto", "nombre=Taza&precio=2&existencias=-1"), "Revisa los datos"))
+}
+
+prueba "comprar descuenta existencias y crea el pedido" {
+    abrir_tienda_con_productos()
+    enviar("/carrito/agregar", "id=p0001&cantidad=2")
+    enviar("/carrito/agregar", "id=p0002&cantidad=1")
+    comprobar(contiene(visitar("/carrito"), "$29.00"))
+    comprobar_igual(visitar("/comprar"), "redirige a /entrar")
+    enviar("/registro", "nombre=ana&clave=claveana1")
+    comprobar(contiene(enviar("/comprar", "direccion=x"), "Escribe la dirección"))
+    comprobar_igual(enviar("/comprar", "direccion=Calle+Luna+5"), "redirige a /pedido/00001")
+    sea pedido = visitar("/pedido/00001")
+    comprobar(contiene(pedido, "Gracias") y contiene(pedido, "Calle Luna 5") y contiene(pedido, "$29.00"))
+    comprobar_igual(existencias_de("p0001"), 1)
+    comprobar(contiene(visitar("/carrito"), "vacío"))
+    comprobar(contiene(visitar("/mis-pedidos"), "Pedido 00001"))
+}
+
+prueba "no se puede pedir más de lo que hay" {
+    abrir_tienda_con_productos()
+    comprobar(contiene(enviar("/carrito/agregar", "id=p0001&cantidad=4"), "Solo quedan 3"))
+    comprobar(contiene(enviar("/carrito/agregar", "id=p9999&cantidad=1"), "no existe"))
+    enviar("/carrito/agregar", "id=p0001&cantidad=3")
+    # Otra persona compra antes: la reserva falla y no se descuenta nada.
+    incrementar("existencias", "p0001", -2)
+    enviar("/carrito/agregar", "id=p0002&cantidad=1")
+    enviar("/registro", "nombre=leo&clave=claveleo1")
+    comprobar(contiene(enviar("/comprar", "direccion=Calle+Sol+1"), "Ya no quedan suficientes"))
+    comprobar_igual(existencias_de("p0001"), 1)
+    comprobar_igual(existencias_de("p0002"), 10)
+}
+
+prueba "un cliente no ve pedidos ajenos y el dueño los marca enviados" {
+    abrir_tienda_con_productos()
+    enviar("/registro", "nombre=ana&clave=claveana1")
+    enviar("/carrito/agregar", "id=p0002&cantidad=1")
+    enviar("/comprar", "direccion=Calle+Luna+5")
+    visitar("/salir")
+    enviar("/registro", "nombre=intruso&clave=intruso12")
+    comprobar(contiene(visitar("/pedido/00001"), "no existe"))
+    visitar("/salir")
+    enviar("/entrar", "nombre=duena&clave=secreta123")
+    comprobar(contiene(visitar("/panel"), "Marcar enviado"))
+    enviar("/panel/enviado", "id=00001")
+    comprobar(contiene(visitar("/pedido/00001"), "enviado"))
+}

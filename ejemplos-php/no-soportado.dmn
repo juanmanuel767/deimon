@@ -1,0 +1,15 @@
+# Traducido de PHP con 'deimon desde-php'.
+# PENDIENTE (línea 2 del PHP): clases (Deimon no tiene clases) (class Gato { public $nombre ; })
+# PENDIENTE (línea 3 del PHP): $_GET (las páginas web se traducen a mano con 'ruta' y campo()) ($edad = $_GET [ "…" ])
+# PENDIENTE (línea 4 del PHP): operador ternario ? : (escríbelo con si / sino) ($tipo = $edad > 18 ? "…" : "…")
+# PENDIENTE (línea 5 del PHP): switch (tradúcelo a si / sino si) (switch ( $tipo ) { case "…" : echo "…" ; break ; })
+# PENDIENTE (línea 6 del PHP): listas con claves => (Deimon aún no las tiene) ($datos = [ "…" => "…" ])
+# PENDIENTE (línea 8 del PHP): la función de PHP 'sprintf' con 2 argumentos no tiene equivalente en Deimon
+
+# PHP sin traducir (línea 2): class Gato { public $nombre ; }
+# PHP sin traducir (línea 3): $edad = $_GET [ "…" ]
+# PHP sin traducir (línea 4): $tipo = $edad > 18 ? "…" : "…"
+# PHP sin traducir (línea 5): switch ( $tipo ) { case "…" : echo "…" ; break ; }
+# PHP sin traducir (línea 6): $datos = [ "…" => "…" ]
+mostrar("seguimos")
+escribir(nada)

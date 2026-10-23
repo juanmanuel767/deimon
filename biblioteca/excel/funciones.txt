@@ -1,0 +1,5 @@
+# Funciones del módulo "excel" de la biblioteca estándar. Las filas son una lista de listas.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+crear_excel | 2 | crea un archivo .xlsx (se abre en Excel, LibreOffice o Google Sheets) con una lista de filas; los números quedan como números | crear_excel("ventas.xlsx", [["Mes", "Total"], ["enero", 120]])
+crear_csv | 2 | crea un archivo CSV separado por ';' (como lo abre Excel en español) con una lista de filas | crear_csv("ventas.csv", [["Mes", "Total"], ["enero", 120]])
+leer_csv | 1 | lee un archivo CSV (separado por ';' o ',') y devuelve una lista de filas de textos | sea filas = leer_csv("ventas.csv")

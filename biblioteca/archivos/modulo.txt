@@ -1,0 +1,3 @@
+nombre: archivos
+descripcion: leer, escribir, listar y borrar archivos de texto
+requiere: archivos

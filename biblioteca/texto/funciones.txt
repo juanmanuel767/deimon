@@ -1,0 +1,13 @@
+# Funciones del módulo "texto" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+mayusculas | 1 | devuelve el texto en mayúsculas | mayusculas("hola")   # HOLA
+minusculas | 1 | devuelve el texto en minúsculas | minusculas("HOLA")   # hola
+recortar | 1 | quita los espacios del principio y del final | recortar("  hola  ")
+contiene | 2 | dice si el texto contiene otro texto | contiene("hola mundo", "mundo")   # verdadero
+reemplazar | 3 | cambia todas las apariciones de un texto por otro | reemplazar("a-b", "-", "+")
+partir | 2 | divide el texto por un separador y devuelve una lista | partir("a,b", ",")
+empieza_con | 2 | dice si el texto empieza por otro texto | empieza_con("hola", "ho")   # verdadero
+termina_con | 2 | dice si el texto termina en otro texto | termina_con("hola", "la")   # verdadero
+repetir | 2 | repite un texto varias veces | repetir("ja", 3)   # jajaja
+unir | 2 | une los elementos de una lista en un texto con un separador | unir(["a", "b"], "-")   # a-b
+formatear_texto | 2 | rellena una plantilla como sprintf: %s texto, %d entero, %.2f decimales, %05d con ceros; los valores van en una lista | formatear_texto("%s tiene %d años", ["Ana", 30])   # Ana tiene 30 años

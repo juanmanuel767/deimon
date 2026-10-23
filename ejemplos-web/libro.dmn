@@ -1,0 +1,27 @@
+# Libro de visitas: cuenta las visitas y guarda las firmas
+
+ruta "/" {
+    sea total = leer("visitas", "total")
+    si total == nada {
+        total = 0
+    }
+    total = total + 1
+    guardar("visitas", "total", total)
+    devolver "<h1>Libro de visitas</h1><p>Visitas totales: " + total + "</p><p><a href=\"/firmar/Ana\">Firmar como Ana</a> · <a href=\"/firmas\">Ver firmas</a></p>"
+}
+
+ruta "/firmar/:nombre" {
+    sea total = contar("firmas")
+    guardar("firmas", "firma" + (total + 1), nombre)
+    devolver "<h1>Gracias, " + nombre + "</h1><p>Tu firma se ha guardado.</p><p><a href=\"/\">Volver</a></p>"
+}
+
+ruta "/firmas" {
+    sea pagina = "<h1>Firmas</h1><ul>"
+    para clave en listar_claves("firmas") {
+        pagina = pagina + "<li>" + leer("firmas", clave) + "</li>"
+    }
+    devolver pagina + "</ul><p><a href=\"/\">Volver</a></p>"
+}
+
+servir(8090)

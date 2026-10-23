@@ -1,0 +1,12 @@
+# Tienda Deimon: catálogo, carrito, cuentas, pedidos y panel del dueño.
+# Arrancar:  deimon ejecutar tienda.dmn   y abrir http://127.0.0.1:8130
+# Probar:    deimon probar tienda.dmn
+
+usar "diseno.dmn"
+usar "catalogo.dmn"
+usar "carrito.dmn"
+usar "pedidos.dmn"
+usar "paginas.dmn"
+usar "pruebas.dmn"
+
+servir(8130)

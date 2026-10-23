@@ -1,0 +1,3 @@
+nombre: pantallas
+descripcion: pantallas nativas para apps de Android (títulos, botones y cuadros de texto de verdad, no una página web)
+requiere:

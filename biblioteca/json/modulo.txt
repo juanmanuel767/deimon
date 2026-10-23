@@ -1,0 +1,3 @@
+nombre: json
+descripcion: leer y crear datos en JSON, el formato con el que hablan casi todas las webs y APIs
+requiere:

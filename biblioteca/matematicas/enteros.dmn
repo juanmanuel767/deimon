@@ -1,0 +1,12 @@
+# Funciones escritas en Deimon del módulo "matematicas".
+
+funcion factorial(n) {
+    si n <= 1 {
+        devolver 1
+    }
+    devolver n * factorial(n - 1)
+}
+
+funcion es_par(n) {
+    devolver n % 2 == 0
+}

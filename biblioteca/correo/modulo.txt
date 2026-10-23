@@ -1,0 +1,3 @@
+nombre: correo
+descripcion: envía correos con el programa de correo del sistema (sendmail), igual que mail() de PHP
+requiere: red

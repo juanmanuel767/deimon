@@ -1,0 +1,3 @@
+# Funciones del módulo "pdf" de la biblioteca estándar.
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+crear_pdf | 3 | crea un archivo PDF (A4) con un título y una lista de líneas (o un texto con saltos de línea); las líneas largas se parten y se añaden páginas solas | crear_pdf("factura.pdf", "Factura 001", ["Cliente: Ana", "Total: 30 €"])

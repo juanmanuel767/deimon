@@ -1,0 +1,64 @@
+# App sencilla para el móvil: contador y notas
+# Para crear el APK: deimon app ejemplos-web/app.dmn --nombre "Mi App"
+
+funcion pagina(contenido) {
+    devolver "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{font-family:sans-serif;margin:0;padding:1em;background:#f2f4f8;color:#222}h1{color:#1a5fb4}.caja{background:#fff;border-radius:12px;padding:1em;margin-bottom:1em}a.boton{display:block;text-align:center;background:#1a5fb4;color:#fff;padding:1em;border-radius:12px;text-decoration:none;margin-bottom:1em;transition:transform .12s,box-shadow .12s;box-shadow:0 4px 10px rgba(26,95,180,.3)}a.boton:active{transform:scale(.95);box-shadow:0 1px 3px rgba(26,95,180,.3)}body>*{opacity:0;animation:entrar .45s cubic-bezier(.2,.8,.2,1) forwards}body>*:nth-child(2){animation-delay:.08s}body>*:nth-child(3){animation-delay:.16s}body>*:nth-child(4){animation-delay:.24s}body>*:nth-child(5){animation-delay:.32s}b{display:inline-block;animation:saltar .6s .3s ease-out both}li{animation:entrar .4s ease-out both}body.salir>*{animation:salir .18s ease-in forwards}@keyframes entrar{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}@keyframes salir{to{opacity:0;transform:translateY(-10px)}}@keyframes saltar{0%{transform:scale(1)}40%{transform:scale(1.7);color:#e66100}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){*{animation:none!important;opacity:1!important;transition:none!important}}</style></head><body>" + contenido + "<script>document.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();document.body.className='salir';setTimeout(function(){location.href=a.href},180)})});window.addEventListener('pageshow',function(){document.body.className=''})</script></body></html>"
+}
+
+ruta "/" {
+    sea total = leer("contador", "total")
+    si total == nada {
+        total = 0
+    }
+    devolver pagina("<h1>Mi app</h1><div class='caja'><p>Contador: <b>" + total + "</b></p></div><a class='boton' href='/sumar'>Sumar uno</a><a class='boton' href='/notas'>Ver notas</a><p>Para añadir una nota, abre /nota/texto.</p>")
+}
+
+ruta "/sumar" {
+    sea total = leer("contador", "total")
+    si total == nada {
+        total = 0
+    }
+    total = total + 1
+    guardar("contador", "total", total)
+    devolver pagina("<h1>Sumado</h1><div class='caja'><p>Ahora el contador vale <b>" + total + "</b>.</p></div><a class='boton' href='/'>Volver</a>")
+}
+
+ruta "/nota/:texto" {
+    sea total = contar("notas")
+    guardar("notas", "nota" + (total + 1), texto)
+    devolver pagina("<h1>Nota guardada</h1><div class='caja'><p>" + texto + "</p></div><a class='boton' href='/notas'>Ver notas</a><a class='boton' href='/'>Volver</a>")
+}
+
+ruta "/notas" {
+    sea lista = "<h1>Notas</h1><div class='caja'><ul>"
+    para clave en listar_claves("notas") {
+        lista = lista + "<li>" + leer("notas", clave) + "</li>"
+    }
+    devolver pagina(lista + "</ul></div><a class='boton' href='/'>Volver</a>")
+}
+
+prueba "el contador sube con /sumar" {
+    borrar("contador", "total")
+    comprobar_igual(visitar("/sumar"), pagina("<h1>Sumado</h1><div class='caja'><p>Ahora el contador vale <b>1</b>.</p></div><a class='boton' href='/'>Volver</a>"))
+    comprobar_igual(visitar("/sumar"), pagina("<h1>Sumado</h1><div class='caja'><p>Ahora el contador vale <b>2</b>.</p></div><a class='boton' href='/'>Volver</a>"))
+    comprobar_igual(leer("contador", "total"), 2)
+}
+
+prueba "la nota guardada aparece en /notas" {
+    para clave en listar_claves("notas") {
+        borrar("notas", clave)
+    }
+    visitar("/nota/Comprar%20pan")
+    comprobar_igual(contar("notas"), 1)
+    comprobar_igual(visitar("/notas"), pagina("<h1>Notas</h1><div class='caja'><ul><li>Comprar pan</li></ul></div><a class='boton' href='/'>Volver</a>"))
+}
+
+prueba "el texto de una nota se escapa" {
+    para clave en listar_claves("notas") {
+        borrar("notas", clave)
+    }
+    comprobar_igual(visitar("/nota/<b>"), pagina("<h1>Nota guardada</h1><div class='caja'><p>&lt;b&gt;</p></div><a class='boton' href='/notas'>Ver notas</a><a class='boton' href='/'>Volver</a>"))
+    comprobar_igual(leer("notas", "nota1"), "&lt;b&gt;")
+}
+
+servir(8100)

@@ -1,0 +1,44 @@
+# Carrito: una lista con claves en la sesión del visitante (id del producto -> unidades).
+
+funcion carrito_actual() {
+    sea carrito = leer_de_sesion("carrito")
+    si carrito == nada {
+        devolver {}
+    }
+    devolver carrito
+}
+
+funcion unidades_en_carrito() {
+    sea carrito = carrito_actual()
+    sea total = 0
+    para id en carrito {
+        total = total + carrito[id]
+    }
+    devolver total
+}
+
+funcion total_del_carrito(carrito) {
+    sea total = 0
+    para id en carrito {
+        total = total + leer("productos", id)["precio"] * carrito[id]
+    }
+    devolver total
+}
+
+# Cambia las unidades de un producto (0 lo quita). Devuelve un aviso o nada si todo va bien.
+funcion poner_en_carrito(id, unidades) {
+    si leer("productos", id) == nada {
+        devolver "Ese producto no existe."
+    }
+    sea carrito = carrito_actual()
+    si unidades <= 0 {
+        carrito = quitar_clave(carrito, id)
+    } sino {
+        si unidades > existencias_de(id) {
+            devolver "Solo quedan " + existencias_de(id) + " unidades de " + leer("productos", id)["nombre"] + "."
+        }
+        carrito[id] = unidades
+    }
+    guardar_en_sesion("carrito", carrito)
+    devolver nada
+}

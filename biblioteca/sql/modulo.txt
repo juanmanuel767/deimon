@@ -1,0 +1,3 @@
+nombre: sql
+descripcion: base de datos SQL de verdad (SQLite) con consultas protegidas contra inyección; necesita libsqlite3 en el sistema (en Linux: sudo apt install libsqlite3-dev)
+requiere: archivos

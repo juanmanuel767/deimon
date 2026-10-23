@@ -1,0 +1,6 @@
+# Funciones del módulo "graficos" de la biblioteca estándar. Devuelven el SVG como texto:
+# se puede devolver en una página web o guardar con escribir_archivo("grafico.svg", ...).
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+grafico_barras | 3 | gráfico de barras (título, lista de etiquetas, lista de valores) | grafico_barras("Ventas", ["ene", "feb"], [120, 90])
+grafico_lineas | 3 | gráfico de líneas (título, etiquetas, valores) | grafico_lineas("Visitas", ["lun", "mar", "mié"], [5, 9, 7])
+grafico_tarta | 3 | gráfico de tarta con porcentajes (título, etiquetas, valores) | grafico_tarta("Gastos", ["casa", "comida"], [600, 300])
