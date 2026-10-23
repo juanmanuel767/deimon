@@ -997,8 +997,14 @@ impl Analizador {
                         self.esperar("]")?;
                         return Ok(Expr::Llamada("__sesion".to_string(), vec![indice], linea));
                     }
+                    if v == "_COOKIE" {
+                        self.esperar("[")?;
+                        let indice = self.expresion()?;
+                        self.esperar("]")?;
+                        return Ok(Expr::Llamada("__galleta".to_string(), vec![indice], linea));
+                    }
                     if !(campo || v == "_SERVER") {
-                        return Err(format!("${} (las galletas y los archivos subidos aún no se traducen)", v));
+                        return Err(format!("${} (los archivos subidos aún no se traducen: usa archivo_subido y guardar_subida)", v));
                     }
                     self.esperar("[")?;
                     let indice = self.expresion()?;
@@ -1421,6 +1427,38 @@ impl Escritor {
                     return (format!("{} = {}", nombre, ordenada), PRECEDENCIA_ATOMO);
                 }
             }
+            ("__galleta", 1) => {
+                let nombre = self.expr(&argumentos[0]).0;
+                return (format!("leer_galleta({})", nombre), PRECEDENCIA_ATOMO);
+            }
+            ("setcookie", 2) | ("setcookie", 3) => {
+                let nombre = self.expr(&argumentos[0]).0;
+                let valor = self.expr(&argumentos[1]).0;
+                // El tercer argumento suele ser time() + segundos; time() - x (o un valor vacío) la borra.
+                let caducidad = argumentos.get(2).map(|tercero| match tercero {
+                    Expr::Binaria(op, a, b) if matches!(a.as_ref(), Expr::Llamada(n, x, _) if n.eq_ignore_ascii_case("time") && x.is_empty()) => match op.as_str() {
+                        "+" => numero_constante(b).map(|s| Some(s / 86400.0)),
+                        "-" => Some(None),
+                        _ => None,
+                    },
+                    Expr::Numero(cero) if cero == "0" => Some(Some(0.0)),
+                    _ => None,
+                });
+                // caducidad: None sin tercer argumento; Some(None) si no se entiende;
+                // Some(Some(None)) para borrar; Some(Some(Some(días))) para guardar.
+                match caducidad {
+                    Some(Some(None)) => return (format!("borrar_galleta({})", nombre), PRECEDENCIA_ATOMO),
+                    None => return (format!("guardar_galleta({}, {}, 0)", nombre, valor), PRECEDENCIA_ATOMO),
+                    Some(Some(Some(dias))) => {
+                        let dias = if dias.fract() == 0.0 { format!("{}", dias as i64) } else { format!("{}", dias) };
+                        return (format!("guardar_galleta({}, {}, {})", nombre, valor, dias), PRECEDENCIA_ATOMO);
+                    }
+                    Some(None) => {
+                        self.pendientes.push((linea, "setcookie con una caducidad que no es time() + segundos (se guarda hasta cerrar el navegador)".to_string()));
+                        return (format!("guardar_galleta({}, {}, 0)", nombre, valor), PRECEDENCIA_ATOMO);
+                    }
+                }
+            }
             ("__claves", 1) | ("array_keys", 1) => {
                 let interior = self.expr(&argumentos[0]).0;
                 return (format!("listar_claves({})", interior), PRECEDENCIA_ATOMO);
@@ -1648,6 +1686,24 @@ impl Escritor {
         }
         self.por_declarar = en_linea;
         self.nivel_ambito = self.nivel;
+    }
+}
+
+/// Valor de una cuenta hecha solo con números (86400 * 30), si lo es.
+fn numero_constante(e: &Expr) -> Option<f64> {
+    match e {
+        Expr::Numero(n) => n.parse().ok(),
+        Expr::Binaria(op, a, b) => {
+            let (a, b) = (numero_constante(a)?, numero_constante(b)?);
+            match op.as_str() {
+                "+" => Some(a + b),
+                "-" => Some(a - b),
+                "*" => Some(a * b),
+                "/" if b != 0.0 => Some(a / b),
+                _ => None,
+            }
+        }
+        _ => None,
     }
 }
 

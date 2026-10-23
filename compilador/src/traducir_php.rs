@@ -49,7 +49,9 @@ pub fn desde_php(argumentos: &[String]) -> Result<(), Fallo> {
     .map_err(|error| (format!("Error: el PHP no se pudo leer: {}", error), 1))?;
     let salida = salida.unwrap_or_else(|| {
         if archivo.is_dir() {
-            PathBuf::from(format!("{}.dmn", archivo.display().to_string().trim_end_matches('/')))
+            // Con "." o "carpeta/" se usa el nombre real de la carpeta: sitio/ → sitio.dmn al lado.
+            let carpeta = std::fs::canonicalize(&archivo).unwrap_or_else(|_| archivo.clone());
+            PathBuf::from(format!("{}.dmn", carpeta.display().to_string().trim_end_matches('/')))
         } else {
             archivo.with_extension("dmn")
         }

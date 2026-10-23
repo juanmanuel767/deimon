@@ -93,6 +93,7 @@ redirección, saludo y página de gracias) y su traducción `ejemplos-php/sitio.
 | `sprintf`, `printf` (`%s %d %.2f %05d %-8s %x %b %e %%`, `%1$s`) | `formatear_texto(plantilla, [valores])` del módulo `texto` |
 | `in_array` `sort` `rsort` `array_reverse` `strrev` `array_sum` `range` `array_merge` `substr` `array_slice` | `incluye` `ordenar` `invertir` `sumar_lista` `rango` `+` `cortar` |
 | `rand` `mt_rand` `random_int` `json_encode` `json_decode($t, true)` | `entero_al_azar` (módulo `matematicas`), `a_json` y `desde_json` (módulo `json`) |
+| `$_COOKIE['x']`, `setcookie('x', $v, time() + 86400 * 30)`, `setcookie('x', '', time() - 1)` | `leer_galleta("x")`, `guardar_galleta("x", v, 30)`, `borrar_galleta("x")` |
 | `switch` con `case`, `default` y `break` | `si / sino si / sino` (varios `case` seguidos se unen con `o`) |
 | `true` `false` `null` `PHP_EOL` | `verdadero` `falso` `nada` `"\n"` |
 | HTML fuera de `<?php ?>` y `<?= ... ?>` | `escribir("...")` |
@@ -112,7 +113,7 @@ del archivo como `# PENDIENTE (línea N del PHP): motivo` y en la pantalla.
   `switch` que sigue en el siguiente sin `break`, `break 2`, y `break` dentro
   de un `if` de un `case`.
 - Arrays que mezclan valores con clave y sin clave (`[1, 'a' => 2]`).
-- `$_COOKIE`, `$_FILES` y `header()` que no sea una redirección.
+- `$_FILES` y `move_uploaded_file` (en Deimon: `archivo_subido` y `guardar_subida`) y `header()` que no sea una redirección.
 - Funciones de PHP sin equivalente todavía (por ejemplo `print_r`, `var_dump`,
   `number_format`, `str_pad`, `ucfirst`).
 - `include`/`require` (se traduce cada archivo y se usa `usar "archivo.dmn"`).

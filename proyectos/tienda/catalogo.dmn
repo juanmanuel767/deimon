@@ -9,6 +9,21 @@ funcion nuevo_producto(nombre, precio, descripcion, icono, existencias) {
     devolver id
 }
 
+# Guarda la foto que llegó en el formulario como foto del producto.
+funcion poner_foto(id) {
+    sea p = leer("productos", id)
+    p["foto"] = guardar_subida("foto", "productos")
+    guardar("productos", id, p)
+}
+
+# La foto del producto si tiene, o su icono (emoji) si no.
+funcion imagen_de(p) {
+    si p["foto"] != nada {
+        devolver "<img src='/foto/" + p["foto"] + "' alt='' style='width:100%;max-height:180px;object-fit:cover;border-radius:8px'>"
+    }
+    devolver p["icono"]
+}
+
 funcion existencias_de(id) {
     sea cantidad = leer("existencias", id)
     si cantidad == nada {
@@ -23,7 +38,7 @@ funcion tarjeta(id) {
     si existencias_de(id) <= 0 {
         estado = "<p class='agotado'>Agotado</p>"
     }
-    devolver "<div class='tarjeta'><div class='icono'>" + p["icono"] + "</div><h3><a href='/producto/" + id + "'>" + p["nombre"] + "</a></h3><p class='precio'>" + moneda(p["precio"]) + "</p>" + estado + "</div>"
+    devolver "<div class='tarjeta'><div class='icono'>" + imagen_de(p) + "</div><h3><a href='/producto/" + id + "'>" + p["nombre"] + "</a></h3><p class='precio'>" + moneda(p["precio"]) + "</p>" + estado + "</div>"
 }
 
 # Comprueba que un texto sea un número entero de 1 a 6 cifras (cantidades y existencias).

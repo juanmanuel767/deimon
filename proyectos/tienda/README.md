@@ -28,6 +28,9 @@ datos/         se crea al arrancar: productos, pedidos, cuentas y sesiones
 
 ## Cómo funciona
 
+- **Fotos**: en el panel se sube una foto al crear un producto o con «Cambiar foto».
+  Se guardan en `datos/archivos/productos/` con un nombre al azar; solo se aceptan
+  imágenes de verdad (JPG, PNG, GIF, WEBP). Sin foto, el producto muestra su emoji.
 - **Productos** en la colección `productos` (`p0001`, `p0002`...); sus existencias van
   aparte, en `existencias`, para descontarlas con `incrementar` (seguro aunque compren
   dos personas a la vez). Si alguna no alcanza, se devuelve todo lo descontado.

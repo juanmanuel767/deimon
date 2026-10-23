@@ -1483,10 +1483,27 @@ struct Peticion {
     envio: bool,
     campos: Vec<(String, String)>,
     galletas: Vec<(String, String)>,
+    /// Archivos que llegaron en un formulario multipart/form-data.
+    subidas: Vec<Subida>,
+}
+
+struct Subida {
+    campo: String,
+    nombre: String,
+    tipo: String,
+    datos: Vec<u8>,
+}
+
+/// Archivo que una ruta devuelve en vez de una página: datos, tipo y si se descarga.
+struct ArchivoRespuesta {
+    datos: Vec<u8>,
+    tipo: &'static str,
+    descargar: Option<String>,
 }
 
 #[derive(Default)]
 struct Respuesta {
+    archivo: Option<ArchivoRespuesta>,
     cabeceras: Vec<String>,
     redireccion: Option<String>,
     /// Mientras se atiende una ruta, lo que escribe escribir() va a la página (como echo).
@@ -1711,6 +1728,7 @@ fn preparar_peticion(envio: bool, campos: Vec<(String, String)>, galletas: Vec<(
             envio,
             campos,
             galletas,
+            subidas: Vec::new(),
         }
     });
     RESPUESTA.with(|respuesta| {
@@ -2307,6 +2325,9 @@ fn atender_sin_red(camino: &str, envio: bool, mut campos: Vec<(String, String)>,
             }
         }
     }
+    if let Some(archivo) = &respuesta.archivo {
+        return Valor::Texto(Rc::new(format!("archivo {} de {} bytes", archivo.tipo, archivo.datos.len())));
+    }
     match respuesta.redireccion {
         Some(destino) => Valor::Texto(Rc::new(format!("redirige a {}", destino))),
         None => Valor::Texto(Rc::new(cuerpo)),
@@ -2318,6 +2339,282 @@ fn enviar(camino: &Valor, datos: &Valor, rutas: Vec<Ruta>) -> Valor {
     let camino = texto_argumento(camino, "enviar");
     let datos = texto_argumento(datos, "enviar");
     atender_sin_red(&camino, true, decodificar_formulario(&datos), rutas)
+}
+
+// ---------------------------------------------------------------------------
+// Archivos subidos (multipart/form-data), archivos servidos y galletas propias.
+// ---------------------------------------------------------------------------
+
+/// Frontera de un formulario con archivos: Content-Type: multipart/form-data; boundary=...
+fn frontera_multipart(tipo: &str) -> Option<String> {
+    let (principal, resto) = tipo.split_once(';')?;
+    if !principal.trim().eq_ignore_ascii_case("multipart/form-data") {
+        return None;
+    }
+    resto.split(';').find_map(|parte| {
+        let (clave, valor) = parte.trim().split_once('=')?;
+        let valor = valor.trim().trim_matches('"');
+        (clave.trim().eq_ignore_ascii_case("boundary") && !valor.is_empty() && valor.len() <= 200).then(|| valor.to_string())
+    })
+}
+
+fn buscar_bytes(datos: &[u8], buscado: &[u8], desde: usize) -> Option<usize> {
+    if buscado.is_empty() || datos.len() < buscado.len() {
+        return None;
+    }
+    (desde..=datos.len() - buscado.len()).find(|&i| &datos[i..i + buscado.len()] == buscado)
+}
+
+/// Valor de un parámetro de Content-Disposition (name="x", filename="y").
+fn parametro_disposicion(linea: &str, nombre: &str) -> Option<String> {
+    let minuscula = linea.to_ascii_lowercase();
+    let buscado = format!("{}=\"", nombre);
+    let mut desde = 0;
+    while let Some(pos) = minuscula[desde..].find(&buscado) {
+        let inicio = desde + pos;
+        let antes = minuscula[..inicio].chars().last();
+        if antes.map_or(true, |c| c == ' ' || c == ';') {
+            let valor = &linea[inicio + buscado.len()..];
+            return Some(valor[..valor.find('"').unwrap_or(valor.len())].to_string());
+        }
+        desde = inicio + buscado.len();
+    }
+    None
+}
+
+/// Separa un cuerpo multipart en campos de texto y archivos. None si está mal formado.
+fn leer_multipart(cuerpo: &[u8], frontera: &str) -> Option<(Vec<(String, String)>, Vec<Subida>)> {
+    let marca = format!("--{}", frontera).into_bytes();
+    let separador = format!("\r\n--{}", frontera).into_bytes();
+    let mut pos = buscar_bytes(cuerpo, &marca, 0)? + marca.len();
+    let (mut textos, mut archivos) = (Vec::new(), Vec::new());
+    loop {
+        if cuerpo.get(pos..pos + 2) == Some(b"--") {
+            return Some((textos, archivos));
+        }
+        if cuerpo.get(pos..pos + 2) != Some(b"\r\n") {
+            return None;
+        }
+        pos += 2;
+        let fin_cabeceras = buscar_bytes(cuerpo, b"\r\n\r\n", pos)?;
+        let cabeceras = String::from_utf8_lossy(&cuerpo[pos..fin_cabeceras]).into_owned();
+        let inicio = fin_cabeceras + 4;
+        let fin = buscar_bytes(cuerpo, &separador, inicio)?;
+        let contenido = &cuerpo[inicio..fin];
+        let mut nombre = None;
+        let mut archivo = None;
+        let mut tipo = "application/octet-stream".to_string();
+        for linea in cabeceras.split("\r\n") {
+            let (clave, valor) = match linea.split_once(':') {
+                Some(par) => par,
+                None => continue,
+            };
+            if clave.trim().eq_ignore_ascii_case("Content-Disposition") {
+                nombre = parametro_disposicion(valor, "name");
+                archivo = parametro_disposicion(valor, "filename");
+            } else if clave.trim().eq_ignore_ascii_case("Content-Type") {
+                tipo = valor.trim().to_string();
+            }
+        }
+        let nombre = nombre?;
+        match archivo {
+            Some(archivo) if !archivo.is_empty() || !contenido.is_empty() => archivos.push(Subida {
+                campo: nombre,
+                // Algunos navegadores mandan la ruta entera (C:\fotos\taza.jpg): solo vale el final.
+                nombre: archivo.rsplit(['/', '\\']).next().unwrap_or("").to_string(),
+                tipo,
+                datos: contenido.to_vec(),
+            }),
+            Some(_) => {}
+            None => textos.push((nombre, String::from_utf8_lossy(contenido).into_owned())),
+        }
+        pos = fin + separador.len();
+    }
+}
+
+/// Tipo de imagen según sus primeros bytes (no según lo que diga el navegador).
+fn tipo_de_imagen(datos: &[u8]) -> Option<&'static str> {
+    if datos.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        Some("jpg")
+    } else if datos.starts_with(b"\x89PNG\r\n\x1a\n") {
+        Some("png")
+    } else if datos.starts_with(b"GIF87a") || datos.starts_with(b"GIF89a") {
+        Some("gif")
+    } else if datos.len() > 12 && &datos[..4] == b"RIFF" && &datos[8..12] == b"WEBP" {
+        Some("webp")
+    } else {
+        None
+    }
+}
+
+fn con_subida<T>(campo: &Valor, funcion: &str, accion: impl FnOnce(&Subida) -> T) -> Option<T> {
+    let campo = texto_argumento(campo, funcion);
+    PETICION.with(|peticion| peticion.borrow().subidas.iter().find(|s| s.campo == campo).map(accion))
+}
+
+/// Datos del archivo que llegó en ese campo del formulario, o nada.
+fn archivo_subido(campo: &Valor) -> Valor {
+    con_subida(campo, "archivo_subido", |s| {
+        let mut mapa = MapaValores::default();
+        mapa.poner("nombre".to_string(), Valor::Texto(Rc::new(escapar_html(&s.nombre))));
+        mapa.poner("tipo".to_string(), Valor::Texto(Rc::new(escapar_html(&s.tipo))));
+        mapa.poner("tamano".to_string(), Valor::Numero(s.datos.len() as f64));
+        mapa.poner("es_imagen".to_string(), Valor::Logico(tipo_de_imagen(&s.datos).is_some()));
+        Valor::Mapa(Rc::new(mapa))
+    })
+    .unwrap_or(Valor::Nada)
+}
+
+fn nombre_de_carpeta(carpeta: &Valor, funcion: &str) -> String {
+    let carpeta = texto_argumento(carpeta, funcion);
+    if carpeta.is_empty() || carpeta.len() > 64 || !carpeta.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        fallo(format!("{}(): la carpeta solo puede tener letras, dígitos, '_' y '-'", funcion));
+    }
+    carpeta
+}
+
+/// Guarda el archivo subido en datos/archivos/<carpeta>/ con un nombre nuevo al azar
+/// (nadie puede elegir dónde se escribe) y devuelve ese nombre, o nada si no llegó archivo.
+/// Las imágenes se reconocen por su contenido; lo demás se guarda como .bin y se descarga.
+fn guardar_subida(campo: &Valor, carpeta: &Valor) -> Valor {
+    let carpeta = nombre_de_carpeta(carpeta, "guardar_subida");
+    let (datos, extension) = match con_subida(campo, "guardar_subida", |s| {
+        let extension = match tipo_de_imagen(&s.datos) {
+            Some(imagen) => imagen.to_string(),
+            None => {
+                let pedida = s.nombre.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+                if pedida == "pdf" && s.datos.starts_with(b"%PDF-") {
+                    "pdf".to_string()
+                } else {
+                    "bin".to_string()
+                }
+            }
+        };
+        (s.datos.clone(), extension)
+    }) {
+        Some(par) => par,
+        None => return Valor::Nada,
+    };
+    let destino = carpeta_datos().join("archivos").join(&carpeta);
+    if let Err(error) = std::fs::create_dir_all(&destino) {
+        fallo(format!("guardar_subida(): no se pudo crear la carpeta: {}", error));
+    }
+    let nombre = format!("{}.{}", hexadecimal(&bytes_aleatorios(12)), extension);
+    let ruta = destino.join(&nombre);
+    let temporal = destino.join(format!(".{}.tmp", nombre));
+    let resultado = std::fs::write(&temporal, &datos).and_then(|_| std::fs::rename(&temporal, &ruta));
+    if let Err(error) = resultado {
+        let _ = std::fs::remove_file(&temporal);
+        fallo(format!("guardar_subida(): no se pudo guardar el archivo: {}", error));
+    }
+    Valor::Texto(Rc::new(nombre))
+}
+
+/// Hace que la ruta responda con un archivo guardado con guardar_subida(). Devuelve falso
+/// si no existe (la ruta puede entonces devolver un aviso).
+fn responder_archivo(carpeta: &Valor, nombre: &Valor) -> Valor {
+    let carpeta = nombre_de_carpeta(carpeta, "responder_archivo");
+    let nombre = texto_argumento(nombre, "responder_archivo");
+    let valido = !nombre.is_empty()
+        && nombre.len() <= 100
+        && !nombre.starts_with('.')
+        && nombre.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.');
+    if !valido {
+        return Valor::Logico(false);
+    }
+    let datos = match std::fs::read(carpeta_datos().join("archivos").join(&carpeta).join(&nombre)) {
+        Ok(datos) => datos,
+        Err(_) => return Valor::Logico(false),
+    };
+    let extension = nombre.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+    let (tipo, descargar) = match extension.as_str() {
+        "jpg" | "jpeg" => ("image/jpeg", None),
+        "png" => ("image/png", None),
+        "gif" => ("image/gif", None),
+        "webp" => ("image/webp", None),
+        "pdf" => ("application/pdf", None),
+        // Todo lo demás se descarga: así un archivo subido nunca se abre como página.
+        _ => ("application/octet-stream", Some(nombre.clone())),
+    };
+    RESPUESTA.with(|respuesta| respuesta.borrow_mut().archivo = Some(ArchivoRespuesta { datos, tipo, descargar }));
+    Valor::Logico(true)
+}
+
+fn responder_archivo_http(conexion: &mut std::net::TcpStream, archivo: ArchivoRespuesta, extra: &[String]) {
+    use std::io::Write;
+    let mut cabecera = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'\r\nCache-Control: private, max-age=3600\r\n",
+        archivo.tipo,
+        archivo.datos.len()
+    );
+    if let Some(nombre) = &archivo.descargar {
+        cabecera.push_str(&format!("Content-Disposition: attachment; filename=\"{}\"\r\n", nombre));
+    }
+    for linea in extra {
+        cabecera.push_str(linea);
+        cabecera.push_str("\r\n");
+    }
+    cabecera.push_str("Connection: close\r\n\r\n");
+    let _ = conexion.write_all(cabecera.as_bytes());
+    let _ = conexion.write_all(&archivo.datos);
+    let _ = conexion.flush();
+    let _ = conexion.shutdown(std::net::Shutdown::Write);
+}
+
+fn nombre_de_galleta(nombre: &Valor, funcion: &str) -> String {
+    let nombre = texto_argumento(nombre, funcion);
+    if nombre.is_empty() || nombre.len() > 64 || !nombre.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        fallo(format!("{}(): el nombre de la galleta solo puede tener letras, dígitos, '_' y '-'", funcion));
+    }
+    if nombre.starts_with("deimon_") {
+        fallo(format!("{}(): los nombres que empiezan por 'deimon_' los usa Deimon para las sesiones", funcion));
+    }
+    nombre
+}
+
+/// Lee una galleta (cookie) del navegador, protegida como HTML, o nada. Si se guardó un
+/// campo de formulario (ya protegido), no se protege dos veces.
+fn leer_galleta(nombre: &Valor) -> Valor {
+    let nombre = nombre_de_galleta(nombre, "leer_galleta");
+    galleta(&nombre)
+        .map(|valor| Valor::Texto(Rc::new(proteger_una_vez(&decodificar(&valor)))))
+        .unwrap_or(Valor::Nada)
+}
+
+/// Guarda una galleta en el navegador durante unos días (0: hasta cerrar el navegador).
+fn guardar_galleta(nombre: &Valor, valor: &Valor, dias: &Valor) -> Valor {
+    let nombre = nombre_de_galleta(nombre, "guardar_galleta");
+    let texto = texto_de(valor);
+    if texto.len() > 3000 {
+        fallo("guardar_galleta(): el valor es demasiado largo (máximo 3000 letras)".to_string());
+    }
+    let mut codificado = String::new();
+    for byte in texto.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {
+            codificado.push(byte as char);
+        } else {
+            codificado.push_str(&format!("%{:02X}", byte));
+        }
+    }
+    let dias = match dias {
+        Valor::Numero(n) if n.is_finite() && *n >= 0.0 && *n <= 3650.0 => *n,
+        _ => fallo("guardar_galleta(): los días deben ser un número entre 0 y 3650".to_string()),
+    };
+    let caducidad = if dias > 0.0 { format!("; Max-Age={}", (dias * 86400.0) as u64) } else { String::new() };
+    poner_galleta(format!("Set-Cookie: {}={}; Path=/; HttpOnly; SameSite=Lax{}", nombre, codificado, caducidad));
+    PETICION.with(|peticion| {
+        let mut peticion = peticion.borrow_mut();
+        peticion.galletas.retain(|(clave, _)| clave != &nombre);
+        peticion.galletas.push((nombre.clone(), codificado));
+    });
+    Valor::Nada
+}
+
+fn borrar_galleta(nombre: &Valor) -> Valor {
+    let nombre = nombre_de_galleta(nombre, "borrar_galleta");
+    poner_galleta(format!("Set-Cookie: {}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0", nombre));
+    PETICION.with(|peticion| peticion.borrow_mut().galletas.retain(|(clave, _)| clave != &nombre));
+    Valor::Nada
 }
 
 fn responder(conexion: &mut std::net::TcpStream, estado: &str, cuerpo: &str) {
@@ -2359,6 +2656,8 @@ struct Limites {
     hilos: usize,
     max_conexiones: usize,
     max_peticion: usize,
+    /// Tamaño máximo de un formulario con archivos (multipart/form-data).
+    max_subida: usize,
     tiempo_espera: std::time::Duration,
 }
 
@@ -2391,11 +2690,14 @@ fn limites() -> Limites {
         numero_de_entorno("DEIMON_MAX_CONEXIONES").unwrap_or_else(|| por_perfil(16, 128, 1024));
     let max_peticion = numero_de_entorno("DEIMON_MAX_PETICION")
         .unwrap_or_else(|| por_perfil(16 * 1024, 256 * 1024, 1024 * 1024));
+    let max_subida = numero_de_entorno("DEIMON_MAX_SUBIDA")
+        .unwrap_or_else(|| por_perfil(2 * 1024 * 1024, 10 * 1024 * 1024, 50 * 1024 * 1024));
     let segundos = numero_de_entorno("DEIMON_TIEMPO_ESPERA").unwrap_or(10);
     Limites {
         hilos,
         max_conexiones,
         max_peticion,
+        max_subida,
         tiempo_espera: std::time::Duration::from_secs(segundos as u64),
     }
 }
@@ -2501,6 +2803,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
     };
     let (camino, consulta) = objetivo.split_once('?').unwrap_or((objetivo, ""));
     let mut campos = decodificar_formulario(consulta);
+    let mut subidas: Vec<Subida> = Vec::new();
     let envio = metodo == "POST";
     if envio {
         // El cuerpo del formulario cuenta para el tamaño máximo de la petición.
@@ -2525,11 +2828,14 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
                 return;
             }
         };
-        if largo > limites.max_peticion.saturating_sub(peticion.len()) {
+        let frontera = cabecera("Content-Type").and_then(|tipo| frontera_multipart(&tipo));
+        let maximo = if frontera.is_some() { limites.max_subida } else { limites.max_peticion };
+        if largo > maximo.saturating_sub(peticion.len()) {
             responder(&mut escritura, "413 Payload Too Large", "<h1>Petición demasiado grande</h1>");
             return;
         }
-        let mut bloque = [0u8; 4096];
+        let mut limite = limite;
+        let mut bloque = [0u8; 16384];
         while cuerpo.len() < largo {
             use std::io::Read;
             if !quedar_hasta(&lectura, limite) {
@@ -2538,18 +2844,39 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
             }
             match lectura.read(&mut bloque) {
                 Ok(0) | Err(_) => return,
-                Ok(leidos) => cuerpo.extend_from_slice(&bloque[..leidos]),
+                Ok(leidos) => {
+                    cuerpo.extend_from_slice(&bloque[..leidos]);
+                    // Quien manda datos de verdad gana tiempo (32 KB por segundo): una foto grande
+                    // por una conexión lenta llega; quien manda gota a gota, no.
+                    limite += std::time::Duration::from_secs_f64(leidos as f64 / 32768.0);
+                }
             }
         }
         cuerpo.truncate(largo);
-        campos.extend(decodificar_formulario(&String::from_utf8_lossy(&cuerpo)));
+        match &frontera {
+            Some(frontera) => match leer_multipart(&cuerpo, frontera) {
+                Some((textos, archivos)) => {
+                    campos.extend(textos);
+                    subidas = archivos;
+                }
+                None => {
+                    responder(&mut escritura, "400 Bad Request", "<h1>Formulario mal formado</h1>");
+                    return;
+                }
+            },
+            None => campos.extend(decodificar_formulario(&String::from_utf8_lossy(&cuerpo))),
+        }
     }
     let galletas = cabecera("Cookie").map(|v| leer_galletas(&v)).unwrap_or_default();
     match buscar_ruta(rutas, camino) {
         Some((ruta, parametros)) => {
             preparar_peticion(envio, campos, galletas);
             let segura = cabecera("X-Forwarded-Proto").map(|v| v.eq_ignore_ascii_case("https")).unwrap_or(false);
-            PETICION.with(|peticion| peticion.borrow_mut().segura = segura);
+            PETICION.with(|peticion| {
+                let mut peticion = peticion.borrow_mut();
+                peticion.segura = segura;
+                peticion.subidas = std::mem::take(&mut subidas);
+            });
             EN_RUTA.with(|estado| estado.set(true));
             let resultado = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 (ruta.manejador)(parametros)
@@ -2557,6 +2884,10 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
             EN_RUTA.with(|estado| estado.set(false));
             let respuesta = tomar_respuesta();
             match resultado {
+                Ok(_) if respuesta.archivo.is_some() => {
+                    let archivo = respuesta.archivo.expect("hay archivo");
+                    responder_archivo_http(&mut escritura, archivo, &respuesta.cabeceras);
+                }
                 Ok(valor) => match respuesta.redireccion {
                     Some(destino) => {
                         let mut extra = respuesta.cabeceras;

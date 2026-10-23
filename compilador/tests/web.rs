@@ -452,3 +452,81 @@ fn el_servidor_resiste_tamanos_trucados_y_clientes_lentos() {
     let normal = peticion(puerto, "/");
     assert!(normal.starts_with("HTTP/1.1 200"), "{}", normal);
 }
+
+fn subir(puerto: u16, camino: &str, campos: &[(&str, &str)], archivo: Option<(&str, &str, &[u8])>) -> Vec<u8> {
+    let frontera = "----deimonprueba123";
+    let mut cuerpo: Vec<u8> = Vec::new();
+    for (nombre, valor) in campos {
+        cuerpo.extend_from_slice(format!("--{}\r\nContent-Disposition: form-data; name=\"{}\"\r\n\r\n{}\r\n", frontera, nombre, valor).as_bytes());
+    }
+    if let Some((campo, nombre, datos)) = archivo {
+        cuerpo.extend_from_slice(format!("--{}\r\nContent-Disposition: form-data; name=\"{}\"; filename=\"{}\"\r\nContent-Type: image/png\r\n\r\n", frontera, campo, nombre).as_bytes());
+        cuerpo.extend_from_slice(datos);
+        cuerpo.extend_from_slice(b"\r\n");
+    }
+    cuerpo.extend_from_slice(format!("--{}--\r\n", frontera).as_bytes());
+    let mut conexion = TcpStream::connect(("127.0.0.1", puerto)).unwrap();
+    conexion.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
+    conexion
+        .write_all(format!("POST {} HTTP/1.1\r\nContent-Type: multipart/form-data; boundary={}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", camino, frontera, cuerpo.len()).as_bytes())
+        .unwrap();
+    conexion.write_all(&cuerpo).unwrap();
+    let mut respuesta = Vec::new();
+    let _ = conexion.read_to_end(&mut respuesta);
+    respuesta
+}
+
+#[test]
+fn se_suben_fotos_se_sirven_y_las_galletas_se_guardan() {
+    let (ruta_rust, ruta_bin) = compilar_sitio("fotos.dmn");
+    let puerto = puerto_libre();
+    let datos = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("tmp")
+        .join(format!("datos_fotos_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&datos);
+    let proceso = Command::new(&ruta_bin)
+        .env("DEIMON_PUERTO", puerto.to_string())
+        .env("DEIMON_DATOS", &datos)
+        .env("DEIMON_MAX_SUBIDA", "100000")
+        .stdin(Stdio::null())
+        .spawn()
+        .expect("no se pudo arrancar el servidor");
+    let _servidor = Servidor { proceso, archivos: vec![ruta_rust, ruta_bin] };
+    esperar_servidor(puerto);
+
+    // Una imagen PNG mínima (la cabecera basta para reconocerla) con bytes de todo tipo.
+    let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+    png.extend((0..=255u8).cycle().take(3000));
+    let subida = String::from_utf8_lossy(&subir(puerto, "/subir", &[("titulo", "Mi <foto>")], Some(("foto", "C:\\fotos\\gato.png", &png)))).to_string();
+    assert!(subida.starts_with("HTTP/1.1 303"), "{}", subida);
+    let inicio = peticion(puerto, "/");
+    assert!(inicio.contains("Mi &lt;foto&gt;"), "{}", inicio);
+    let archivo = inicio.split("/foto/").nth(1).and_then(|r| r.split('\'').next()).expect("la foto no aparece").to_string();
+    assert!(archivo.ends_with(".png") && !archivo.contains("gato"), "{}", archivo);
+
+    let mut conexion = TcpStream::connect(("127.0.0.1", puerto)).unwrap();
+    conexion.write_all(format!("GET /foto/{} HTTP/1.1\r\nConnection: close\r\n\r\n", archivo).as_bytes()).unwrap();
+    let mut respuesta = Vec::new();
+    conexion.read_to_end(&mut respuesta).unwrap();
+    let fin = respuesta.windows(4).position(|v| v == b"\r\n\r\n").unwrap() + 4;
+    let cabeceras = String::from_utf8_lossy(&respuesta[..fin]).to_string();
+    assert!(cabeceras.contains("Content-Type: image/png") && cabeceras.contains("nosniff"), "{}", cabeceras);
+    assert_eq!(&respuesta[fin..], &png[..], "la foto no llegó idéntica");
+
+    // Un HTML disfrazado de imagen no se acepta como foto.
+    let trampa = String::from_utf8_lossy(&subir(puerto, "/subir", &[], Some(("foto", "x.png", b"<script>alert(1)</script>")))).to_string();
+    assert!(trampa.contains("Elige una imagen"), "{}", trampa);
+    // Ni salir de la carpeta ni pasar del tamaño máximo.
+    assert!(peticion(puerto, "/foto/..%2F..%2Fsecreto").contains("no existe"));
+    let enorme = String::from_utf8_lossy(&subir(puerto, "/subir", &[], Some(("foto", "g.png", &vec![0u8; 200_000])))).to_string();
+    assert!(enorme.starts_with("HTTP/1.1 413"), "{}", enorme);
+
+    let nombre = enviar_formulario(puerto, "/nombre", "nombre=Ana+%22la%22", "");
+    let galleta = nombre.lines().find(|l| l.starts_with("Set-Cookie: nombre=")).expect("no guardó la galleta").to_string();
+    assert!(galleta.contains("HttpOnly") && galleta.contains("Max-Age=2592000"), "{}", galleta);
+    let valor = galleta.trim_start_matches("Set-Cookie: ").split(';').next().unwrap().to_string();
+    let saludo = peticion_completa(puerto, &format!("GET / HTTP/1.1\r\nCookie: {}\r\nConnection: close\r\n\r\n", valor));
+    assert!(saludo.contains("Hola, Ana &quot;la&quot;"), "{}", saludo);
+    let _ = fs::remove_dir_all(&datos);
+}

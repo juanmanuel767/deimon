@@ -1,0 +1,61 @@
+# Galería de fotos: subir imágenes, verlas y recordar el nombre del visitante con una galleta.
+# Para probarlo: deimon ejecutar ejemplos-web/fotos.dmn y abre http://127.0.0.1:8160
+
+funcion pagina(contenido) {
+    sea nombre = leer_galleta("nombre")
+    sea saludo = "<form method='post' action='/nombre'>¿Cómo te llamas? <input name='nombre'> <button>Guardar</button></form>"
+    si nombre != nada {
+        saludo = "<p>Hola, " + nombre + " (<a href='/olvidar'>no soy yo</a>)</p>"
+    }
+    devolver "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Galería</title></head><body><h1>Galería</h1>" + saludo + contenido + "</body></html>"
+}
+
+ruta "/" {
+    sea fotos = ""
+    para clave en listar_claves("fotos") {
+        fotos = fotos + "<figure><img src='/foto/" + leer("fotos", clave)["archivo"] + "' width='200'><figcaption>" + leer("fotos", clave)["titulo"] + "</figcaption></figure>"
+    }
+    sea formulario = "<form method='post' action='/subir' enctype='multipart/form-data'><input name='titulo' placeholder='título'> <input type='file' name='foto' accept='image/*'> <button>Subir</button></form>"
+    devolver pagina(formulario + fotos)
+}
+
+ruta "/subir" {
+    sea foto = archivo_subido("foto")
+    si foto == nada o no foto["es_imagen"] {
+        devolver pagina("<p>Elige una imagen (JPG, PNG, GIF o WEBP). <a href='/'>Volver</a></p>")
+    }
+    sea archivo = guardar_subida("foto", "galeria")
+    guardar("fotos", archivo, {"archivo": archivo, "titulo": campo("titulo")})
+    devolver redirigir("/")
+}
+
+ruta "/foto/:archivo" {
+    si no responder_archivo("galeria", archivo) {
+        devolver pagina("<p>Esa foto no existe.</p>")
+    }
+}
+
+ruta "/nombre" {
+    guardar_galleta("nombre", campo("nombre"), 30)
+    devolver redirigir("/")
+}
+
+ruta "/olvidar" {
+    borrar_galleta("nombre")
+    devolver redirigir("/")
+}
+
+prueba "la galleta recuerda el nombre" {
+    comprobar(incluye(visitar("/"), "¿Cómo te llamas?"))
+    enviar("/nombre", "nombre=Ana")
+    comprobar(incluye(visitar("/"), "Hola, Ana"))
+    visitar("/olvidar")
+    comprobar(incluye(visitar("/"), "¿Cómo te llamas?"))
+}
+
+prueba "sin foto no se sube nada" {
+    comprobar(incluye(enviar("/subir", "titulo=x"), "Elige una imagen"))
+    comprobar_igual(visitar("/foto/no-existe.png"), visitar("/foto/otra.png"))
+}
+
+servir(8160)

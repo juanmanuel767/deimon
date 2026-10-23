@@ -60,7 +60,8 @@ sobrescriben al ejecutarlo:
 | `DEIMON_HILOS` | número de hilos trabajadores |
 | `DEIMON_MAX_CONEXIONES` | conexiones en espera antes de responder 503 |
 | `DEIMON_MAX_PETICION` | tamaño máximo de la petición, en bytes (413 si se pasa) |
-| `DEIMON_TIEMPO_ESPERA` | segundos máximos esperando la petición de una conexión (10 por defecto) |
+| `DEIMON_TIEMPO_ESPERA` | segundos máximos esperando la petición de una conexión (10 por defecto); mientras llegan datos de verdad, el plazo crece 1 segundo por cada 32 KB |
+| `DEIMON_MAX_SUBIDA` | tamaño máximo de un formulario con archivos, en bytes (2 MB, 10 MB o 50 MB según el perfil; 413 si se pasa) |
 
 `deimon entorno` muestra los núcleos y la memoria total del ordenador y recomienda
 un perfil: `pequeño` con menos de 1 GB de memoria o un solo núcleo, `servidor`

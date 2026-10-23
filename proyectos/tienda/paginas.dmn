@@ -24,7 +24,7 @@ ruta "/producto/:id" {
     si quedan > 0 {
         compra = "<p>Quedan " + quedan + "</p><form method='post' action='/carrito/agregar'><input type='hidden' name='id' value='" + id + "'><input name='cantidad' value='1' size='3'> <button>Añadir al carrito</button></form>"
     }
-    devolver pagina(p["nombre"], "<div class='tarjeta'><div class='icono'>" + p["icono"] + "</div><p>" + p["descripcion"] + "</p><p class='precio'>" + moneda(p["precio"]) + "</p>" + compra + "</div>")
+    devolver pagina(p["nombre"], "<div class='tarjeta'><div class='icono'>" + imagen_de(p) + "</div><p>" + p["descripcion"] + "</p><p class='precio'>" + moneda(p["precio"]) + "</p>" + compra + "</div>")
 }
 
 # ---- Carrito ----
@@ -166,7 +166,7 @@ ruta "/salir" {
 # ---- Panel del dueño ----
 
 funcion formulario_producto() {
-    devolver "<form method='post' action='/panel/producto' class='tarjeta'><h3>Nuevo producto</h3><p><input name='nombre' placeholder='nombre'> <input name='icono' placeholder='icono (emoji)' size='8'></p><p><input name='precio' placeholder='precio (12.50)' size='10'> <input name='existencias' placeholder='existencias' size='10'></p><p><textarea name='descripcion' placeholder='descripción' rows='2' cols='40'></textarea></p><button>Añadir</button></form>"
+    devolver "<form method='post' action='/panel/producto' enctype='multipart/form-data' class='tarjeta'><h3>Nuevo producto</h3><p>Foto (opcional): <input type='file' name='foto' accept='image/*'></p><p><input name='nombre' placeholder='nombre'> <input name='icono' placeholder='icono (emoji)' size='8'></p><p><input name='precio' placeholder='precio (12.50)' size='10'> <input name='existencias' placeholder='existencias' size='10'></p><p><textarea name='descripcion' placeholder='descripción' rows='2' cols='40'></textarea></p><button>Añadir</button></form>"
 }
 
 ruta "/panel" {
@@ -176,7 +176,8 @@ ruta "/panel" {
     sea filas = ""
     para id en listar_claves("productos") {
         sea p = leer("productos", id)
-        filas = filas + "<tr><td>" + p["icono"] + " " + p["nombre"] + "</td><td>" + moneda(p["precio"]) + "</td><td><form method='post' action='/panel/existencias'><input type='hidden' name='id' value='" + id + "'><input name='existencias' value='" + existencias_de(id) + "' size='5'> <button>Guardar</button></form></td></tr>"
+        sea cambiar_foto = "<form method='post' action='/panel/foto' enctype='multipart/form-data'><input type='hidden' name='id' value='" + id + "'><input type='file' name='foto' accept='image/*' style='max-width:160px'> <button>Cambiar foto</button></form>"
+        filas = filas + "<tr><td>" + p["icono"] + " " + p["nombre"] + cambiar_foto + "</td><td>" + moneda(p["precio"]) + "</td><td><form method='post' action='/panel/existencias'><input type='hidden' name='id' value='" + id + "'><input name='existencias' value='" + existencias_de(id) + "' size='5'> <button>Guardar</button></form></td></tr>"
     }
     sea pedidos = ""
     para id en pedidos_de(nada) {
@@ -208,8 +209,34 @@ ruta "/panel/producto" {
     si descripcion == nada {
         descripcion = ""
     }
-    nuevo_producto(recortar(nombre), a_numero(campo("precio")), descripcion, icono, a_numero(campo("existencias")))
+    sea foto = archivo_subido("foto")
+    si foto != nada y no foto["es_imagen"] {
+        devolver pagina("Panel", aviso("La foto debe ser una imagen JPG, PNG, GIF o WEBP.") + formulario_producto())
+    }
+    sea id = nuevo_producto(recortar(nombre), a_numero(campo("precio")), descripcion, icono, a_numero(campo("existencias")))
+    si foto != nada {
+        poner_foto(id)
+    }
     devolver redirigir("/panel")
+}
+
+ruta "/panel/foto" {
+    si no es_dueno(usuario_actual()) o no es_envio() {
+        devolver redirigir("/entrar")
+    }
+    sea foto = archivo_subido("foto")
+    si leer("productos", campo("id")) == nada o foto == nada o no foto["es_imagen"] {
+        devolver pagina("Panel", aviso("Elige una imagen JPG, PNG, GIF o WEBP.") + "<p><a href='/panel'>Volver al panel</a></p>")
+    }
+    poner_foto(campo("id"))
+    devolver redirigir("/panel")
+}
+
+# Fotos de los productos (se guardan en datos/archivos/productos).
+ruta "/foto/:nombre" {
+    si no responder_archivo("productos", nombre) {
+        devolver pagina("No encontrado", aviso("Esa foto no existe."))
+    }
 }
 
 ruta "/panel/existencias" {

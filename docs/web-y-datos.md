@@ -152,6 +152,57 @@ ruta "/contacto" {
 El tamaño del formulario cuenta para el límite `DEIMON_MAX_PETICION` (si se pasa,
 responde 413). Otros métodos que no sean visitar (GET) o enviar (POST) reciben 405.
 
+## Subir archivos
+
+Un formulario con `enctype='multipart/form-data'` puede mandar archivos:
+
+```deimon
+ruta "/" {
+    devolver "<form method='post' action='/subir' enctype='multipart/form-data'><input type='file' name='foto'> <button>Subir</button></form>"
+}
+
+ruta "/subir" {
+    sea foto = archivo_subido("foto")          # nada si no llegó archivo
+    si foto == nada o no foto["es_imagen"] {
+        devolver "Elige una imagen"
+    }
+    sea nombre = guardar_subida("foto", "fotos")
+    devolver "<img src='/foto/" + nombre + "'>"
+}
+
+ruta "/foto/:nombre" {
+    si no responder_archivo("fotos", nombre) {
+        devolver "Esa foto no existe"
+    }
+}
+```
+
+- `archivo_subido(campo)` da `nombre`, `tipo`, `tamano` y `es_imagen`. Si es imagen
+  se mira por su **contenido** (JPG, PNG, GIF o WEBP), no por lo que diga el navegador.
+- `guardar_subida(campo, carpeta)` lo guarda en `datos/archivos/<carpeta>/` con un
+  **nombre nuevo al azar** (nadie puede elegir dónde se escribe) y devuelve ese nombre.
+  Las imágenes y los PDF conservan su tipo; todo lo demás se guarda como `.bin`.
+- `responder_archivo(carpeta, nombre)` hace que la ruta responda con el archivo:
+  imágenes y PDF se ven en el navegador; cualquier otra cosa se **descarga**, así un
+  archivo subido nunca se abre como página (un `<script>` disfrazado no se ejecuta).
+  Devuelve `falso` si no existe; nombres con `/` o `..` no se aceptan.
+- Tamaño máximo: `DEIMON_MAX_SUBIDA` (10 MB por defecto). Una subida lenta pero real
+  llega aunque tarde más de 10 segundos.
+
+Ejemplo completo: `ejemplos-web/fotos.dmn` (galería de fotos).
+
+## Galletas (cookies)
+
+```deimon
+guardar_galleta("idioma", "es", 365)   # dura un año (0: hasta cerrar el navegador)
+sea idioma = leer_galleta("idioma")    # "es", o nada
+borrar_galleta("idioma")
+```
+
+Las galletas se guardan con `HttpOnly` (JavaScript no las puede leer), `SameSite=Lax`
+y, por HTTPS, `Secure`. Lo que se lee viene protegido como HTML. Los nombres que
+empiezan por `deimon_` están reservados para las sesiones.
+
 ## Sesión del visitante
 
 Para recordar cosas de cada navegador aunque nadie haya entrado como usuario

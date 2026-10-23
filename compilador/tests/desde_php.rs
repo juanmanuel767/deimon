@@ -210,3 +210,30 @@ fn funciones_de_arrays_y_textos_dan_lo_mismo_que_php() {
     assert!(texto.contains("Todo el PHP se pudo traducir"), "{}", texto);
     assert!(texto.contains("escriben exactamente lo mismo"), "{}", texto);
 }
+
+#[test]
+fn las_galletas_de_php_responden_igual_paso_a_paso() {
+    if Command::new("php").arg("-v").output().is_err() {
+        return;
+    }
+    let c = carpeta("galletas_php");
+    let sitio = c.join("galletas");
+    fs::create_dir_all(&sitio).unwrap();
+    fs::write(
+        sitio.join("index.php"),
+        "<?php\nif (isset($_GET['idioma'])) {\n    setcookie('idioma', $_GET['idioma'], time() + 86400 * 30);\n    header('Location: /index.php');\n    exit;\n}\nif (isset($_GET['olvidar'])) {\n    setcookie('idioma', '', time() - 3600);\n    header('Location: /index.php');\n    exit;\n}\necho \"<p>Idioma: \" . htmlspecialchars($_COOKIE['idioma'] ?? 'sin elegir') . \"</p>\";\n",
+    )
+    .unwrap();
+    let mut orden = Command::new(env!("CARGO_BIN_EXE_deimon"));
+    orden.args(["desde-php", sitio.to_str().unwrap(), "--comprobar"]);
+    for camino in ["/index.php", "/index.php?idioma=es", "/index.php", "/index.php?olvidar=1", "/index.php"] {
+        orden.args(["--visitar", camino]);
+    }
+    let o = orden.env("TMPDIR", &c).output().unwrap();
+    let texto = String::from_utf8_lossy(&o.stdout).to_string() + &String::from_utf8_lossy(&o.stderr);
+    assert_eq!(o.status.code(), Some(0), "{}", texto);
+    assert!(texto.contains("responden exactamente igual"), "{}", texto);
+    let codigo = fs::read_to_string(c.join("galletas.dmn")).unwrap();
+    assert!(codigo.contains("guardar_galleta(\"idioma\", campo(\"idioma\"), 30)"), "{}", codigo);
+    assert!(codigo.contains("borrar_galleta(\"idioma\")") && codigo.contains("leer_galleta(\"idioma\")"), "{}", codigo);
+}
