@@ -1,0 +1,58 @@
+# Inventario con las órdenes poner, quitar y ver
+usar modulo "texto"
+
+funcion posicion(lista, valor) {
+    sea i = 0
+    mientras i < medir(lista) {
+        si lista[i] == valor {
+            devolver i
+        }
+        i = i + 1
+    }
+    devolver -1
+}
+
+sea nombres = []
+sea cantidades = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(recortar(linea), " ")
+    sea orden = partes[0]
+    si orden == "poner" {
+        sea p = partes[1]
+        sea n = a_numero(partes[2])
+        sea pos = posicion(nombres, p)
+        si pos == -1 {
+            nombres = agregar(nombres, p)
+            cantidades = agregar(cantidades, n)
+        } sino {
+            cantidades[pos] = cantidades[pos] + n
+        }
+    } sino si orden == "quitar" {
+        sea p = partes[1]
+        sea n = a_numero(partes[2])
+        sea pos = posicion(nombres, p)
+        sea disponible = 0
+        si pos != -1 {
+            disponible = cantidades[pos]
+        }
+        si disponible < n {
+            mostrar("error: no hay " + a_texto(n) + " de " + p)
+        } sino {
+            cantidades[pos] = cantidades[pos] - n
+        }
+    } sino si orden == "ver" {
+        sea hay = falso
+        para k en ordenar(nombres) {
+            sea cant = cantidades[posicion(nombres, k)]
+            si cant > 0 {
+                mostrar(k + "=" + a_texto(cant))
+                hay = verdadero
+            }
+        }
+        si hay == falso {
+            mostrar("vacio")
+        }
+    }
+    linea = pedir_texto("")
+}

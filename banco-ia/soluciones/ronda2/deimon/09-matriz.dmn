@@ -1,0 +1,59 @@
+sea cabecera = partir_patron(recortar(pedir_texto("")), "\\s+")
+sea f = a_numero(cabecera[0])
+sea c = a_numero(cabecera[1])
+
+sea matriz = []
+sea fila = []
+sea partes = []
+sea r = 0
+mientras r < f {
+    fila = []
+    partes = partir_patron(recortar(pedir_texto("")), "\\s+")
+    para t en partes {
+        fila = agregar(fila, a_numero(t))
+    }
+    matriz = agregar(matriz, fila)
+    r = r + 1
+}
+
+sea res = []
+sea arriba = 0
+sea abajo = f - 1
+sea izq = 0
+sea der = c - 1
+sea j = 0
+sea i = 0
+mientras arriba <= abajo y izq <= der {
+    j = izq
+    mientras j <= der {
+        res = agregar(res, matriz[arriba][j])
+        j = j + 1
+    }
+    i = arriba + 1
+    mientras i <= abajo {
+        res = agregar(res, matriz[i][der])
+        i = i + 1
+    }
+    si arriba < abajo y izq < der {
+        j = der - 1
+        mientras j >= izq {
+            res = agregar(res, matriz[abajo][j])
+            j = j - 1
+        }
+        i = abajo - 1
+        mientras i > arriba {
+            res = agregar(res, matriz[i][izq])
+            i = i - 1
+        }
+    }
+    arriba = arriba + 1
+    abajo = abajo - 1
+    izq = izq + 1
+    der = der - 1
+}
+
+sea textos = []
+para x en res {
+    textos = agregar(textos, a_texto(x))
+}
+mostrar(unir(textos, " "))

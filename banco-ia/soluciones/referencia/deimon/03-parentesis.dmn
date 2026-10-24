@@ -1,0 +1,25 @@
+funcion equilibrada(texto) {
+    sea pila = []
+    sea pares = {")": "(", "]": "[", "}": "{"}
+    para i en rango(0, medir(texto) - 1) {
+        sea c = texto[i]
+        si incluye("([{", c) {
+            pila = agregar(pila, c)
+        } sino si incluye(")]}", c) {
+            si medir(pila) == 0 {
+                devolver falso
+            }
+            si pila[medir(pila) - 1] != pares[c] {
+                devolver falso
+            }
+            pila = cortar(pila, 0, medir(pila) - 1)
+        }
+    }
+    devolver medir(pila) == 0
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(elegir(equilibrada(linea), "si", "no"))
+    linea = pedir_texto("")
+}

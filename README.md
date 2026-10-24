@@ -16,6 +16,7 @@ deimon/
   ejemplos/       programas de ejemplo con su salida esperada
   ejemplos-web/   ejemplos de páginas web y de app
   ejemplos-nucleo/ DeimonOS: un sistema operativo escrito en Deimon que arranca solo en un PC
+  banco-ia/       tareas para medir si una IA acierta a la primera en Deimon, PHP y Python
   ejemplos-php/   programas de PHP para probar el traductor (desde-php)
   ejemplos-cobol/ programas de COBOL para probar el traductor (desde-cobol)
   proyectos/      proyectos reales hechos en Deimon (tienda/: tienda en línea completa)

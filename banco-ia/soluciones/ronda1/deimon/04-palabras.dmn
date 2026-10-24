@@ -1,0 +1,51 @@
+# Las 3 palabras más repetidas (en minúsculas, sin signos al principio y al final)
+usar modulo "texto"
+usar modulo "patrones"
+
+funcion posicion(lista, valor) {
+    sea i = 0
+    mientras i < medir(lista) {
+        si lista[i] == valor {
+            devolver i
+        }
+        i = i + 1
+    }
+    devolver -1
+}
+
+sea palabras = []
+sea conteos = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    para p en partir(minusculas(linea), " ") {
+        sea limpia = reemplazar_patron(p, "^[.,;:!?]+|[.,;:!?]+$", "")
+        si medir(limpia) > 0 {
+            sea pos = posicion(palabras, limpia)
+            si pos == -1 {
+                palabras = agregar(palabras, limpia)
+                conteos = agregar(conteos, 1)
+            } sino {
+                conteos[pos] = conteos[pos] + 1
+            }
+        }
+    }
+    linea = pedir_texto("")
+}
+
+sea claves = ordenar(palabras)
+sea elegidas = []
+para ronda en rango(1, 3) {
+    sea mejor = ""
+    sea mejor_veces = -1
+    para k en claves {
+        si incluye(elegidas, k) == falso {
+            sea veces = conteos[posicion(palabras, k)]
+            si veces > mejor_veces {
+                mejor = k
+                mejor_veces = veces
+            }
+        }
+    }
+    elegidas = agregar(elegidas, mejor)
+    mostrar(mejor + ": " + a_texto(mejor_veces))
+}

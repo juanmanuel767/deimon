@@ -1,0 +1,42 @@
+funcion cierre_de(apertura) {
+    si apertura == "(" {
+        devolver ")"
+    } sino si apertura == "[" {
+        devolver "]"
+    }
+    devolver "}"
+}
+
+funcion equilibrado(texto) {
+    sea pila = []
+    sea i = 0
+    sea c = ""
+    sea abre = ""
+    mientras i < medir(texto) {
+        c = cortar(texto, i, 1)
+        si c == "(" o c == "[" o c == "{" {
+            pila = agregar(pila, c)
+        } sino si c == ")" o c == "]" o c == "}" {
+            si medir(pila) == 0 {
+                devolver falso
+            }
+            abre = pila[medir(pila) - 1]
+            si cierre_de(abre) != c {
+                devolver falso
+            }
+            pila = cortar(pila, 0, medir(pila) - 1)
+        }
+        i = i + 1
+    }
+    devolver medir(pila) == 0
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si equilibrado(linea) {
+        mostrar("si")
+    } sino {
+        mostrar("no")
+    }
+    linea = pedir_texto("")
+}

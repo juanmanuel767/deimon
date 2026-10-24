@@ -1,0 +1,3 @@
+el: 5
+gato: 3
+perro: 2

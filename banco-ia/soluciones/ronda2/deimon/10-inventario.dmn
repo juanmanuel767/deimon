@@ -1,0 +1,46 @@
+sea inventario = {}
+sea linea = pedir_texto("")
+sea partes = []
+sea cantidad = 0
+sea producto = ""
+sea hay = 0
+sea claves = []
+mientras linea != nada {
+    partes = partir_patron(recortar(linea), "\\s+")
+    si partes[0] == "poner" {
+        producto = partes[1]
+        cantidad = a_numero(partes[2])
+        si tiene_clave(inventario, producto) {
+            inventario[producto] = inventario[producto] + cantidad
+        } sino {
+            inventario[producto] = cantidad
+        }
+    } sino si partes[0] == "quitar" {
+        producto = partes[1]
+        cantidad = a_numero(partes[2])
+        hay = 0
+        si tiene_clave(inventario, producto) {
+            hay = inventario[producto]
+        }
+        si hay >= cantidad {
+            inventario[producto] = hay - cantidad
+        } sino {
+            mostrar("error: no hay " + partes[2] + " de " + producto)
+        }
+    } sino si partes[0] == "ver" {
+        claves = []
+        para p en ordenar(listar_claves(inventario)) {
+            si inventario[p] > 0 {
+                claves = agregar(claves, p + "=" + a_texto(inventario[p]))
+            }
+        }
+        si medir(claves) == 0 {
+            mostrar("vacio")
+        } sino {
+            para entrada_ver en claves {
+                mostrar(entrada_ver)
+            }
+        }
+    }
+    linea = pedir_texto("")
+}

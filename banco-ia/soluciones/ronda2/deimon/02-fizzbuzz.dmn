@@ -1,0 +1,12 @@
+sea n = a_numero(recortar(pedir_texto("")))
+para i en rango(1, n) {
+    si i % 15 == 0 {
+        mostrar("FizzBuzz")
+    } sino si i % 3 == 0 {
+        mostrar("Fizz")
+    } sino si i % 5 == 0 {
+        mostrar("Buzz")
+    } sino {
+        mostrar(i)
+    }
+}

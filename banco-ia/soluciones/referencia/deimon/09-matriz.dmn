@@ -1,0 +1,39 @@
+usar modulo "texto"
+
+sea medidas = partir(pedir_texto(""), " ")
+sea filas = a_numero(medidas[0])
+sea columnas = a_numero(medidas[1])
+sea m = []
+para f en rango(1, filas) {
+    m = agregar(m, partir(pedir_texto(""), " "))
+}
+sea salida = []
+sea arriba = 0
+sea abajo = filas - 1
+sea izquierda = 0
+sea derecha = columnas - 1
+mientras arriba <= abajo y izquierda <= derecha {
+    para c en rango(izquierda, derecha) {
+        salida = agregar(salida, m[arriba][c])
+    }
+    arriba = arriba + 1
+    si arriba <= abajo {
+        para f en rango(arriba, abajo) {
+            salida = agregar(salida, m[f][derecha])
+        }
+    }
+    derecha = derecha - 1
+    si arriba <= abajo y izquierda <= derecha {
+        para c en invertir(rango(izquierda, derecha)) {
+            salida = agregar(salida, m[abajo][c])
+        }
+        abajo = abajo - 1
+    }
+    si izquierda <= derecha y arriba <= abajo {
+        para f en invertir(rango(arriba, abajo)) {
+            salida = agregar(salida, m[f][izquierda])
+        }
+        izquierda = izquierda + 1
+    }
+}
+mostrar(unir(salida, " "))

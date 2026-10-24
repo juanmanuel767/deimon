@@ -91,13 +91,25 @@ fn no_pisa_una_carpeta_que_ya_existe_ni_acepta_nombres_raros() {
 }
 
 #[test]
-fn una_funcion_de_modulo_sin_cargarlo_dice_que_modulo_falta() {
+fn los_modulos_sin_requisitos_se_cargan_solos_y_los_demas_dicen_cual_falta() {
     let base = carpeta("modulo");
-    fs::write(base.join("a.dmn"), "sea t = recortar(\" a \")\nsea r = raiz(9)\n").expect("programa");
-    let salida = deimon(&base, &["comprobar", "a.dmn"]);
+    fs::write(base.join("solos.dmn"), "mostrar(\"[\" + recortar(\" a \") + \"]\" + raiz(9))\n").expect("programa");
+    let solos = deimon(&base, &["ejecutar", "solos.dmn"]);
+    assert!(solos.status.success(), "{}", texto(&solos));
+    assert_eq!(String::from_utf8_lossy(&solos.stdout), "[a]3\n");
+
+    fs::write(base.join("propia.dmn"), "funcion recortar(x) {\n    devolver \"mia\"\n}\nmostrar(recortar(\" a \"))\n").expect("programa");
+    let propia = deimon(&base, &["ejecutar", "propia.dmn"]);
+    assert_eq!(String::from_utf8_lossy(&propia.stdout), "mia\n", "{}", texto(&propia));
+
+    fs::write(base.join("archivos.dmn"), "escribir_archivo(\"a.txt\", \"hola\")\n").expect("programa");
+    let salida = deimon(&base, &["comprobar", "archivos.dmn"]);
     assert_eq!(salida.status.code(), Some(1));
     let errores = texto(&salida);
-    assert!(errores.contains("'recortar' es del módulo 'texto': añade usar modulo \"texto\""), "{}", errores);
-    assert!(errores.contains("'raiz' es del módulo 'matematicas': añade usar modulo \"matematicas\""), "{}", errores);
-    assert!(!errores.contains("¿Quisiste decir 'cortar'?"), "{}", errores);
+    assert!(
+        errores.contains("'escribir_archivo' es del módulo 'archivos': añade usar modulo \"archivos\""),
+        "{}",
+        errores
+    );
+    assert!(!base.join("a.txt").exists());
 }

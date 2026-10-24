@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::ajenas;
 use crate::antiguas;
-use crate::ast::{Extension, FuncionExtension, Programa, Sentencia};
+use crate::ast::{Expresion, Extension, FuncionExtension, Programa, Sentencia};
 use crate::error::ErrorTraduccion;
 use crate::{biblioteca, fuentes, generador, integradas, lexer, parser, plantillas};
 
@@ -57,6 +57,7 @@ pub fn resolver_con_fuentes(
             }
         }
     }
+    cargar_modulos_sin_requisitos(&mut resolutor, &mut sentencias, &principal);
     resolutor.validar_extensiones();
     if resolutor.errores.is_empty() {
         let fuentes = resolutor.fuentes;
@@ -69,6 +70,103 @@ pub fn resolver_con_fuentes(
         ))
     } else {
         Err(resolutor.errores)
+    }
+}
+
+/// Los módulos de la biblioteca estándar que no piden nada (texto, matematicas, json...) se
+/// cargan solos cuando el programa llama a una de sus funciones sin escribir `usar modulo`:
+/// olvidarlo era el fallo más común al escribir Deimon. Una función propia con el mismo nombre
+/// gana, y los módulos con red o archivos se siguen pidiendo a mano.
+fn cargar_modulos_sin_requisitos(resolutor: &mut Resolutor, sentencias: &mut Vec<Sentencia>, principal: &Contexto) {
+    loop {
+        let mut definidas: HashSet<String> = resolutor
+            .extensiones
+            .iter()
+            .flat_map(|extension| extension.funciones.iter().map(|funcion| funcion.nombre.clone()))
+            .collect();
+        for sentencia in sentencias.iter() {
+            if let Sentencia::Funcion { nombre, .. } = sentencia {
+                definidas.insert(nombre.clone());
+            }
+        }
+        let mut llamadas = Vec::new();
+        llamadas_en(sentencias, &mut llamadas);
+        let pendiente = llamadas.into_iter().find_map(|(nombre, linea, columna)| {
+            if definidas.contains(&nombre) || integradas::buscar(&nombre).is_some() {
+                return None;
+            }
+            biblioteca::modulo_de_funcion(&nombre)
+                .filter(|modulo| biblioteca::modulo_sin_requisitos(modulo))
+                .map(|modulo| (modulo, linea, columna))
+        });
+        let Some((modulo, linea, columna)) = pendiente else { return };
+        let antes = resolutor.extensiones.len();
+        let mut nuevas = resolutor.cargar_modulo(modulo, linea, columna, principal);
+        if nuevas.is_empty() && resolutor.extensiones.len() == antes {
+            // Ya estaba cargado (o no se pudo cargar y ya hay error): no repetir.
+            return;
+        }
+        sentencias.append(&mut nuevas);
+    }
+}
+
+fn llamadas_en(sentencias: &[Sentencia], salida: &mut Vec<(String, usize, usize)>) {
+    for sentencia in sentencias {
+        match sentencia {
+            Sentencia::Declarar { valor, .. } | Sentencia::Asignar { valor, .. } | Sentencia::Expresion(valor) => {
+                llamadas_de(valor, salida)
+            }
+            Sentencia::AsignarIndice { indices, valor, .. } => {
+                indices.iter().for_each(|indice| llamadas_de(indice, salida));
+                llamadas_de(valor, salida);
+            }
+            Sentencia::Si { condicion, entonces, sino, .. } => {
+                llamadas_de(condicion, salida);
+                llamadas_en(entonces, salida);
+                llamadas_en(sino, salida);
+            }
+            Sentencia::Intentar { cuerpo, captura, .. } => {
+                llamadas_en(cuerpo, salida);
+                llamadas_en(captura, salida);
+            }
+            Sentencia::Mientras { condicion, cuerpo, .. } => {
+                llamadas_de(condicion, salida);
+                llamadas_en(cuerpo, salida);
+            }
+            Sentencia::Para { coleccion, cuerpo, .. } => {
+                llamadas_de(coleccion, salida);
+                llamadas_en(cuerpo, salida);
+            }
+            Sentencia::Funcion { cuerpo, .. } | Sentencia::Ruta { cuerpo, .. } | Sentencia::Prueba { cuerpo, .. } => {
+                llamadas_en(cuerpo, salida)
+            }
+            Sentencia::Devolver { valor: Some(valor), .. } => llamadas_de(valor, salida),
+            _ => {}
+        }
+    }
+}
+
+fn llamadas_de(expresion: &Expresion, salida: &mut Vec<(String, usize, usize)>) {
+    match expresion {
+        Expresion::Llamada { nombre, argumentos, linea, columna } => {
+            salida.push((nombre.clone(), *linea, *columna));
+            argumentos.iter().for_each(|argumento| llamadas_de(argumento, salida));
+        }
+        Expresion::Lista(elementos) => elementos.iter().for_each(|elemento| llamadas_de(elemento, salida)),
+        Expresion::Mapa(pares) => pares.iter().for_each(|(clave, valor)| {
+            llamadas_de(clave, salida);
+            llamadas_de(valor, salida);
+        }),
+        Expresion::Unaria { valor, .. } => llamadas_de(valor, salida),
+        Expresion::Binaria { izquierda, derecha, .. } => {
+            llamadas_de(izquierda, salida);
+            llamadas_de(derecha, salida);
+        }
+        Expresion::Indice { coleccion, indice, .. } => {
+            llamadas_de(coleccion, salida);
+            llamadas_de(indice, salida);
+        }
+        _ => {}
     }
 }
 

@@ -1,0 +1,19 @@
+sea claves = []
+sea suma_edades = 0
+sea n = 0
+sea linea = pedir_texto("")
+sea partes = []
+sea edad = 0
+mientras linea != nada {
+    partes = partir(recortar(linea), ",")
+    edad = a_numero(recortar(partes[1]))
+    claves = agregar(claves, rellenar_texto(a_texto(1000 - edad), 4, "0", "izquierda") + " " + recortar(partes[0]))
+    suma_edades = suma_edades + edad
+    n = n + 1
+    linea = pedir_texto("")
+}
+claves = ordenar(claves)
+para clave en claves {
+    mostrar(cortar(clave, 5, medir(clave) - 5) + " (" + a_texto(1000 - a_numero(cortar(clave, 0, 4))) + ")")
+}
+mostrar("media: " + formatear_texto("%.1f", [suma_edades / n]))

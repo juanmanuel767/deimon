@@ -1,0 +1,20 @@
+sea totales = {}
+sea total_general = 0
+sea linea = pedir_texto("")
+sea partes = []
+sea importe = 0
+mientras linea != nada {
+    partes = partir(recortar(linea), ";")
+    importe = a_numero(recortar(partes[1])) * a_numero(recortar(partes[2]))
+    si tiene_clave(totales, partes[0]) {
+        totales[partes[0]] = totales[partes[0]] + importe
+    } sino {
+        totales[partes[0]] = importe
+    }
+    total_general = total_general + importe
+    linea = pedir_texto("")
+}
+para producto en ordenar(listar_claves(totales)) {
+    mostrar(producto + ": " + formatear_texto("%.2f", [totales[producto]]))
+}
+mostrar("TOTAL: " + formatear_texto("%.2f", [total_general]))

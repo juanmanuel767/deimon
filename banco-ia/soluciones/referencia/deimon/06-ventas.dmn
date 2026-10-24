@@ -1,0 +1,16 @@
+usar modulo "texto"
+
+sea totales = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, ";")
+    sea importe = a_numero(partes[1]) * a_numero(partes[2])
+    totales[partes[0]] = elegir(tiene_clave(totales, partes[0]), totales[partes[0]], 0) + importe
+    linea = pedir_texto("")
+}
+sea todo = 0
+para p en ordenar(listar_claves(totales)) {
+    mostrar(p + ": " + formatear_numero(totales[p], 2, ".", ""))
+    todo = todo + totales[p]
+}
+mostrar("TOTAL: " + formatear_numero(todo, 2, ".", ""))

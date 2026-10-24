@@ -1,0 +1,40 @@
+# Total por producto (orden alfabético) y total general, con 2 decimales
+usar modulo "texto"
+
+funcion posicion(lista, valor) {
+    sea i = 0
+    mientras i < medir(lista) {
+        si lista[i] == valor {
+            devolver i
+        }
+        i = i + 1
+    }
+    devolver -1
+}
+
+sea productos = []
+sea totales = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si medir(recortar(linea)) > 0 {
+        sea partes = partir(recortar(linea), ";")
+        sea nombre = recortar(partes[0])
+        sea importe = a_numero(recortar(partes[1])) * a_numero(recortar(partes[2]))
+        sea pos = posicion(productos, nombre)
+        si pos == -1 {
+            productos = agregar(productos, nombre)
+            totales = agregar(totales, importe)
+        } sino {
+            totales[pos] = totales[pos] + importe
+        }
+    }
+    linea = pedir_texto("")
+}
+
+sea total_general = 0
+para p en ordenar(productos) {
+    sea t = totales[posicion(productos, p)]
+    total_general = total_general + t
+    mostrar(p + ": " + formatear_texto("%.2f", [t]))
+}
+mostrar("TOTAL: " + formatear_texto("%.2f", [total_general]))

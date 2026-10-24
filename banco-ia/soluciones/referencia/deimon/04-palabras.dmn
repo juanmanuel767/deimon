@@ -1,0 +1,36 @@
+usar modulo "texto"
+
+funcion limpiar(palabra) {
+    sea p = minusculas(palabra)
+    mientras medir(p) > 0 y incluye(".,;:!?", p[0]) {
+        p = cortar(p, 1, nada)
+    }
+    mientras medir(p) > 0 y incluye(".,;:!?", p[medir(p) - 1]) {
+        p = cortar(p, 0, medir(p) - 1)
+    }
+    devolver p
+}
+
+sea veces = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    para trozo en partir(linea, " ") {
+        sea p = limpiar(trozo)
+        si p != "" {
+            veces[p] = elegir(tiene_clave(veces, p), veces[p], 0) + 1
+        }
+    }
+    linea = pedir_texto("")
+}
+# Clave de orden: (1000 - veces) con ceros delante y la palabra; así ordenar() pone primero las más repetidas.
+sea claves = []
+para p en listar_claves(veces) {
+    claves = agregar(claves, rellenar_texto(a_texto(1000 - veces[p]), 4, "0", "izquierda") + " " + p)
+}
+sea orden = ordenar(claves)
+para i en rango(0, 2) {
+    si i < medir(orden) {
+        sea p = cortar(orden[i], 5, nada)
+        mostrar(p + ": " + veces[p])
+    }
+}

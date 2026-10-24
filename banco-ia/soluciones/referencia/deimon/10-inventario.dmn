@@ -1,0 +1,29 @@
+usar modulo "texto"
+
+sea inventario = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    si p[0] == "poner" {
+        inventario[p[1]] = elegir(tiene_clave(inventario, p[1]), inventario[p[1]], 0) + a_numero(p[2])
+    } sino si p[0] == "quitar" {
+        sea hay = elegir(tiene_clave(inventario, p[1]), inventario[p[1]], 0)
+        si hay < a_numero(p[2]) {
+            mostrar("error: no hay " + p[2] + " de " + p[1])
+        } sino {
+            inventario[p[1]] = hay - a_numero(p[2])
+        }
+    } sino si p[0] == "ver" {
+        sea alguno = falso
+        para nombre en ordenar(listar_claves(inventario)) {
+            si inventario[nombre] > 0 {
+                mostrar(nombre + "=" + inventario[nombre])
+                alguno = verdadero
+            }
+        }
+        si no alguno {
+            mostrar("vacio")
+        }
+    }
+    linea = pedir_texto("")
+}

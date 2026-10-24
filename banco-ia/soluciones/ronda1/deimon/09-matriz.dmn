@@ -1,0 +1,59 @@
+# Recorre una matriz en espiral y escribe los números en una línea
+usar modulo "texto"
+
+sea dims = partir(recortar(pedir_texto("")), " ")
+sea filas = a_numero(dims[0])
+sea cols = a_numero(dims[1])
+
+sea m = []
+sea f = 0
+mientras f < filas {
+    sea fila = []
+    para x en partir(recortar(pedir_texto("")), " ") {
+        si medir(x) > 0 {
+            fila = agregar(fila, a_numero(x))
+        }
+    }
+    m = agregar(m, fila)
+    f = f + 1
+}
+
+sea res = []
+sea arriba = 0
+sea abajo = filas - 1
+sea izq = 0
+sea der = cols - 1
+mientras arriba <= abajo y izq <= der {
+    sea j = izq
+    mientras j <= der {
+        res = agregar(res, m[arriba][j])
+        j = j + 1
+    }
+    arriba = arriba + 1
+    sea i = arriba
+    mientras i <= abajo {
+        res = agregar(res, m[i][der])
+        i = i + 1
+    }
+    der = der - 1
+    si arriba <= abajo y izq <= der {
+        j = der
+        mientras j >= izq {
+            res = agregar(res, m[abajo][j])
+            j = j - 1
+        }
+        abajo = abajo - 1
+        i = abajo
+        mientras i >= arriba {
+            res = agregar(res, m[i][izq])
+            i = i - 1
+        }
+        izq = izq + 1
+    }
+}
+
+sea salida = ""
+para v en res {
+    salida = salida + a_texto(v) + " "
+}
+mostrar(recortar(salida))

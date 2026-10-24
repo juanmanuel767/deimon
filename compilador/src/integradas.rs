@@ -442,7 +442,7 @@ pub const INTEGRADAS: &[Integrada] = &[
         nombre: "pedir_texto",
         parametros: &["aviso"],
         categoria: "máquina",
-        descripcion: "escribe el aviso, espera a que la persona escriba una línea y pulse Enter, y la devuelve (sin el salto); nada si la entrada se acabó",
+        descripcion: "escribe el aviso, espera a que la persona escriba una línea y pulse Enter, y la devuelve (sin el salto); nada si la entrada se acabó. Es también la forma de leer la entrada estándar línea a línea: sea l = pedir_texto(\"\") mientras l != nada { ... l = pedir_texto(\"\") }",
         ejemplo: "sea nombre = pedir_texto(\"¿Cómo te llamas? \")",
     },
     Integrada {

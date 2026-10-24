@@ -1,0 +1,15 @@
+sea valores = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+sea simbolos = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea n = a_numero(linea)
+    sea r = ""
+    para i en rango(0, medir(valores) - 1) {
+        mientras n >= valores[i] {
+            r = r + simbolos[i]
+            n = n - valores[i]
+        }
+    }
+    mostrar(r)
+    linea = pedir_texto("")
+}

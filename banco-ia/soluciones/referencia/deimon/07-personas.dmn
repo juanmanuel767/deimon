@@ -1,0 +1,19 @@
+usar modulo "texto"
+
+sea claves = []
+sea suma = 0
+sea cuantas = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, ",")
+    sea edad = a_numero(partes[1])
+    claves = agregar(claves, rellenar_texto(a_texto(1000 - edad), 4, "0", "izquierda") + "|" + partes[0] + "|" + partes[1])
+    suma = suma + edad
+    cuantas = cuantas + 1
+    linea = pedir_texto("")
+}
+para clave en ordenar(claves) {
+    sea partes = partir(clave, "|")
+    mostrar(partes[1] + " (" + partes[2] + ")")
+}
+mostrar("media: " + formatear_numero(suma / cuantas, 1, ".", ""))

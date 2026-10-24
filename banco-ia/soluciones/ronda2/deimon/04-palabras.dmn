@@ -1,0 +1,31 @@
+sea conteo = {}
+sea linea = pedir_texto("")
+sea partes = []
+sea w = ""
+mientras linea != nada {
+    partes = partir_patron(minusculas(linea), "\\s+")
+    para p en partes {
+        w = reemplazar_patron(p, "^[.,;:!?]+|[.,;:!?]+$", "")
+        si w != "" {
+            si tiene_clave(conteo, w) {
+                conteo[w] = conteo[w] + 1
+            } sino {
+                conteo[w] = 1
+            }
+        }
+    }
+    linea = pedir_texto("")
+}
+
+sea orden = []
+para clave en listar_claves(conteo) {
+    orden = agregar(orden, rellenar_texto(a_texto(100000 - conteo[clave]), 6, "0", "izquierda") + " " + clave)
+}
+orden = ordenar(orden)
+
+sea k = 0
+mientras k < 3 y k < medir(orden) {
+    partes = partir(orden[k], " ")
+    mostrar(partes[1] + ": " + a_texto(100000 - a_numero(partes[0])))
+    k = k + 1
+}

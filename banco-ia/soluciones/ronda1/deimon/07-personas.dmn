@@ -1,0 +1,22 @@
+# Personas ordenadas por edad (de mayor a menor) y nombre; después la media de edades
+usar modulo "texto"
+
+sea claves = []
+sea edades = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si medir(recortar(linea)) > 0 {
+        sea partes = partir(recortar(linea), ",")
+        sea nombre = recortar(partes[0])
+        sea edad = a_numero(recortar(partes[1]))
+        edades = agregar(edades, edad)
+        claves = agregar(claves, rellenar_texto(a_texto(999 - edad), 3, "0", "izquierda") + "|" + nombre)
+    }
+    linea = pedir_texto("")
+}
+
+para k en ordenar(claves) {
+    sea edad_persona = 999 - a_numero(cortar(k, 0, 3))
+    mostrar(cortar(k, 4, nada) + " (" + a_texto(edad_persona) + ")")
+}
+mostrar("media: " + formatear_texto("%.1f", [sumar_lista(edades) / medir(edades)]))

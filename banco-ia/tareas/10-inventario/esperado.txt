@@ -1,0 +1,7 @@
+clavo=5
+tornillo=7
+error: no hay 9 de clavo
+tornillo=7
+error: no hay 1 de tuerca
+arandela=2
+tornillo=7

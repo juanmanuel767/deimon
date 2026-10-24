@@ -1,0 +1,25 @@
+# Número romano de cada entero de la entrada
+
+funcion romano(n) {
+    sea valores = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+    sea simbolos = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+    sea resto = n
+    sea texto_romano = ""
+    sea i = 0
+    mientras i < medir(valores) {
+        mientras resto >= valores[i] {
+            texto_romano = texto_romano + simbolos[i]
+            resto = resto - valores[i]
+        }
+        i = i + 1
+    }
+    devolver texto_romano
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si medir(recortar(linea)) > 0 {
+        mostrar(romano(a_numero(recortar(linea))))
+    }
+    linea = pedir_texto("")
+}

@@ -117,6 +117,7 @@ pub const REGLAS: &[&str] = &[
     "Errores al ejecutar: «Error en la línea N (en ejecución): ...» y código de salida 1.",
     "usar \"ruta.dmn\" divide el programa: la ruta es relativa a la carpeta del archivo que la contiene y solo se cargan sus funciones, rutas y pruebas (sus demás instrucciones y su servir se ignoran).",
     "usar modulo \"nombre\" (solo en el nivel principal) carga un módulo: una carpeta con modulo.txt y funciones en Rust (funciones.txt + codigo.rs) y/o en Deimon (*.dmn). Se busca en modulos/<nombre>/ junto al archivo .dmn, después en ~/.deimon/modulos/<nombre>/ y por último en la biblioteca estándar (sus funciones están más abajo, en «Módulos de la biblioteca estándar»). deimon modulos los lista.",
+    "Los módulos estándar que no necesitan nada (texto, matematicas, json, tiempo, patrones y graficos) se cargan solos al llamar a una de sus funciones; los que usan red o archivos (archivos, web, correo, sql, pdf, excel, pagos...) y pantallas necesitan 'usar modulo \"nombre\"' escrito. Una función propia con el mismo nombre tiene prioridad.",
     "El estilo único del código (sangría de 4 espacios, espacios de los operadores, comentarios y líneas vacías) lo aplica deimon formatear. La gramática completa en EBNF, las reglas de nombres y el estilo están en docs/GRAMATICA.md.",
 ];
 

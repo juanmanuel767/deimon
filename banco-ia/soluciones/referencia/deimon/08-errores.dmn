@@ -1,0 +1,26 @@
+funcion es_entero(texto) {
+    si texto == "" {
+        devolver falso
+    }
+    para i en rango(0, medir(texto) - 1) {
+        sea c = texto[i]
+        si no (incluye("0123456789", c) o (i == 0 y c == "-" y medir(texto) > 1)) {
+            devolver falso
+        }
+    }
+    devolver verdadero
+}
+
+sea suma = 0
+sea n = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    n = n + 1
+    si es_entero(linea) {
+        suma = suma + a_numero(linea)
+    } sino {
+        mostrar("linea " + n + ": no es un numero: " + linea)
+    }
+    linea = pedir_texto("")
+}
+mostrar("suma: " + suma)

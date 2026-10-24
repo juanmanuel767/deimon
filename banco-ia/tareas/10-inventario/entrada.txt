@@ -1,0 +1,10 @@
+poner tornillo 10
+poner clavo 5
+quitar tornillo 3
+ver
+quitar clavo 9
+quitar clavo 5
+ver
+quitar tuerca 1
+poner arandela 2
+ver

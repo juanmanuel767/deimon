@@ -1,0 +1,40 @@
+# Comprueba si los paréntesis, corchetes y llaves de cada línea están equilibrados
+
+funcion abre_de(cierre) {
+    si cierre == ")" {
+        devolver "("
+    }
+    si cierre == "]" {
+        devolver "["
+    }
+    devolver "{"
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea pila = []
+    sea ok = verdadero
+    sea i = 0
+    mientras i < medir(linea) {
+        sea c = cortar(linea, i, 1)
+        si c == "(" o c == "[" o c == "{" {
+            pila = agregar(pila, c)
+        } sino si c == ")" o c == "]" o c == "}" {
+            si medir(pila) == 0 {
+                ok = falso
+            } sino {
+                si pila[medir(pila) - 1] != abre_de(c) {
+                    ok = falso
+                }
+                pila = cortar(pila, 0, medir(pila) - 1)
+            }
+        }
+        i = i + 1
+    }
+    si ok y medir(pila) == 0 {
+        mostrar("si")
+    } sino {
+        mostrar("no")
+    }
+    linea = pedir_texto("")
+}

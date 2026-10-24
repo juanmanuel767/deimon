@@ -1,0 +1,4 @@
+linea 2: no es un numero: veinte
+linea 4: no es un numero: 3.5
+linea 5: no es un numero: 1e3
+suma: 12

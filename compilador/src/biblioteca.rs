@@ -99,6 +99,23 @@ pub fn modulo_de_funcion(funcion: &str) -> Option<&'static str> {
     })
 }
 
+/// Dice si un módulo de la biblioteca estándar no pide nada (ni red, ni archivos, ni hilos):
+/// esos se cargan solos cuando el programa usa una de sus funciones.
+/// `pantallas` queda fuera: es solo para apps y sus nombres (titulo, boton...) son muy comunes.
+pub fn modulo_sin_requisitos(modulo: &str) -> bool {
+    let ruta = format!("{}/modulo.txt", modulo);
+    modulo != "pantallas" && ARCHIVOS.iter().any(|(otra, contenido)| {
+        *otra == ruta
+            && contenido.lines().all(|linea| {
+                linea
+                    .trim()
+                    .strip_prefix("requiere:")
+                    .map(|resto| resto.trim().is_empty())
+                    .unwrap_or(true)
+            })
+    })
+}
+
 pub fn nombres() -> Vec<&'static str> {
     let mut nombres: Vec<&str> = ARCHIVOS
         .iter()

@@ -1,0 +1,9 @@
+sea total = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si recortar(linea) != "" {
+        total = total + a_numero(recortar(linea))
+    }
+    linea = pedir_texto("")
+}
+mostrar(total)

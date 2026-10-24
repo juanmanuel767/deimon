@@ -1,0 +1,10 @@
+# Suma de los números de la entrada, uno por línea
+sea total = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si medir(recortar(linea)) > 0 {
+        total = total + a_numero(recortar(linea))
+    }
+    linea = pedir_texto("")
+}
+mostrar(total)

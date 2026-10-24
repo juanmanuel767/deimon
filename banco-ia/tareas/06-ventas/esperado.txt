@@ -1,0 +1,4 @@
+huevos: 3.00
+leche: 2.89
+pan: 4.80
+TOTAL: 10.69
