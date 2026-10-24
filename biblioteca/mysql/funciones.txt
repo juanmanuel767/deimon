@@ -3,7 +3,7 @@
 # enchufe local (/run/mysqld/mysqld.sock, o ?socket=/ruta). Con "" se lee de la variable DEIMON_MYSQL,
 # para no escribir la contraseña en el programa.
 # Los valores van SIEMPRE en la lista de parámetros (con ? en la consulta), nunca pegados al texto.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-ejecutar_mysql | 3 | ejecuta una orden (CREATE, INSERT, UPDATE, DELETE...) y devuelve cuántas filas cambió | ejecutar_mysql("", "INSERT INTO productos (nombre, precio) VALUES (?, ?)", ["taza", 8.5])
-consultar_mysql | 3 | ejecuta un SELECT y devuelve una lista de filas; cada fila es una lista con claves (columna -> valor) | para fila en consultar_mysql("", "SELECT nombre, precio FROM productos WHERE precio < ?", [10]) { mostrar(fila["nombre"]) }
-ultimo_id_mysql | 1 | número que MySQL dio a la última fila insertada por esta conexión (AUTO_INCREMENT) | sea id = ultimo_id_mysql("")
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+ejecutar_mysql | conexion, orden_sql, valores | ejecuta una orden (CREATE, INSERT, UPDATE, DELETE...) y devuelve cuántas filas cambió | ejecutar_mysql("", "INSERT INTO productos (nombre, precio) VALUES (?, ?)", ["taza", 8.5])
+consultar_mysql | conexion, consulta_sql, valores | ejecuta un SELECT y devuelve una lista de filas; cada fila es una lista con claves (columna -> valor) | para fila en consultar_mysql("", "SELECT nombre, precio FROM productos WHERE precio < ?", [10]) { mostrar(fila["nombre"]) }
+ultimo_id_mysql | conexion | número que MySQL dio a la última fila insertada por esta conexión (AUTO_INCREMENT) | sea id = ultimo_id_mysql("")

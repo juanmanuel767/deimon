@@ -1,5 +1,5 @@
 # Funciones del módulo "mercadopago" (Checkout Pro de Mercado Pago).
 # Necesitas el Access Token de tu cuenta (en las credenciales de prueba empieza por TEST-).
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-crear_pago_mercadopago | 6 | crea un pago (token, descripción, importe, moneda como "PEN", dirección de vuelta, referencia tuya) y devuelve la dirección donde la persona paga; al volver llegan campo("payment_id") y campo("status") | sea pagar = crear_pago_mercadopago(token, "Pedido 15", 29.9, "PEN", "https://mitienda.com/pago", "pedido-15")
-consultar_pago_mercadopago | 2 | pregunta a Mercado Pago por un pago (token, id del pago) y devuelve {estado, referencia, importe, moneda}; estado "approved" es pagado | si consultar_pago_mercadopago(token, campo("payment_id"))["estado"] == "approved" { ... }
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+crear_pago_mercadopago | token, descripcion, importe, moneda, direccion_vuelta, referencia | crea un pago (token, descripción, importe, moneda como "PEN", dirección de vuelta, referencia tuya) y devuelve la dirección donde la persona paga; al volver llegan campo("payment_id") y campo("status") | sea pagar = crear_pago_mercadopago(token, "Pedido 15", 29.9, "PEN", "https://mitienda.com/pago", "pedido-15")
+consultar_pago_mercadopago | token, id_pago | pregunta a Mercado Pago por un pago (token, id del pago) y devuelve {estado, referencia, importe, moneda}; estado "approved" es pagado | si consultar_pago_mercadopago(token, campo("payment_id"))["estado"] == "approved" { ... }

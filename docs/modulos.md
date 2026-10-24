@@ -191,18 +191,20 @@ Un patrón mal escrito da `patrón mal escrito, en la posición N: motivo`.
 Tiene una línea por función, con cuatro campos separados por `|`:
 
 ```text
-nombre | número_de_argumentos | descripción | ejemplo
+nombre | parámetros | descripción | ejemplo
 ```
 
 Las líneas vacías y las que empiezan por `#` se ignoran. Por ejemplo:
 
 ```text
 # Módulo de saludo
-saludar | 1 | devuelve un saludo para una persona | saludar("Ana")
+saludar | nombre | devuelve un saludo para una persona | saludar("Ana")
 ```
 
-El `nombre` es el que se escribe en el programa `.dmn` y el número de
-argumentos debe coincidir con el de la llamada (si no, sale el error `E007`).
+El `nombre` es el que se escribe en el programa `.dmn`. Los `parámetros` son sus
+nombres separados por comas (`texto, veces`), o `0` si no tiene; también vale poner
+solo cuántos son (`2`), aunque así `deimon modulos` y la guía no pueden decir qué es
+cada uno. La llamada debe llevar ese número de argumentos (si no, sale el error `E007`).
 La descripción y el ejemplo se muestran en `deimon guia archivo.dmn`.
 
 ### codigo.rs

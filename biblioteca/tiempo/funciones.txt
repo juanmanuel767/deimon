@@ -1,13 +1,13 @@
 # Funciones del módulo "tiempo" de la biblioteca estándar.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
 ahora | 0 | segundos que han pasado desde el 1 de enero de 1970 (UTC); puede llevar decimales | sea inicio = ahora()
-esperar | 1 | detiene el programa unos milisegundos | esperar(500)
-fecha | 1 | convierte segundos desde 1970 en un texto AAAA-MM-DD HH:MM:SS (UTC) | fecha(0)   # 1970-01-01 00:00:00
-crear_fecha | 6 | segundos de una fecha UTC (año, mes, día, hora, minuto, segundo); error si la fecha no existe | crear_fecha(2024, 2, 29, 12, 0, 0)
-leer_fecha | 1 | lee "AAAA-MM-DD", "AAAA-MM-DD HH:MM[:SS]", "AAAA-MM-DDTHH:MM:SS[Z o ±HH:MM]" o "DD/MM/AAAA" y devuelve segundos; nada si no se entiende | leer_fecha("2026-03-29T01:30:00+01:00")
-formatear_fecha | 3 | da formato a una fecha con los códigos de date() de PHP (Y m n d j H G i s D l N w z t L y A a g h U F M, con l y F/M en español) y la zona indicada | formatear_fecha(0, "Y-m-d H:i:s", "UTC")   # 1970-01-01 00:00:00
-sumar_tiempo | 3 | suma una cantidad entera de segundos, minutos, horas, dias, semanas, meses o años; los meses y años desbordan como PHP (31 enero + 1 mes = 3 marzo) | sumar_tiempo(0, 1, "dias")   # 86400
-diferencia_fechas | 3 | diferencia entera entre dos fechas en la unidad pedida (a - b); en meses y años cuenta meses completos | diferencia_fechas(86400, 0, "horas")   # 24
-dia_de_la_semana | 2 | día de la semana en la zona indicada: 1 lunes ... 7 domingo | dia_de_la_semana(0, "UTC")   # 4
-es_bisiesto | 1 | dice si un año es bisiesto | es_bisiesto(2024)   # verdadero
-dias_del_mes | 2 | días que tiene un mes de un año | dias_del_mes(2024, 2)   # 29
+esperar | milisegundos | detiene el programa unos milisegundos | esperar(500)
+fecha | segundos | convierte segundos desde 1970 en un texto AAAA-MM-DD HH:MM:SS (UTC) | fecha(0)   # 1970-01-01 00:00:00
+crear_fecha | anio, mes, dia, hora, minuto, segundo | segundos de una fecha UTC (año, mes, día, hora, minuto, segundo); error si la fecha no existe | crear_fecha(2024, 2, 29, 12, 0, 0)
+leer_fecha | texto | lee "AAAA-MM-DD", "AAAA-MM-DD HH:MM[:SS]", "AAAA-MM-DDTHH:MM:SS[Z o ±HH:MM]" o "DD/MM/AAAA" y devuelve segundos; nada si no se entiende | leer_fecha("2026-03-29T01:30:00+01:00")
+formatear_fecha | segundos, formato, zona | da formato a una fecha con los códigos de date() de PHP (Y m n d j H G i s D l N w z t L y A a g h U F M, con l y F/M en español) y la zona indicada | formatear_fecha(0, "Y-m-d H:i:s", "UTC")   # 1970-01-01 00:00:00
+sumar_tiempo | segundos, cantidad, unidad | suma una cantidad entera de segundos, minutos, horas, dias, semanas, meses o años; los meses y años desbordan como PHP (31 enero + 1 mes = 3 marzo) | sumar_tiempo(0, 1, "dias")   # 86400
+diferencia_fechas | a, b, unidad | diferencia entera entre dos fechas en la unidad pedida (a - b); en meses y años cuenta meses completos | diferencia_fechas(86400, 0, "horas")   # 24
+dia_de_la_semana | segundos, zona | día de la semana en la zona indicada: 1 lunes ... 7 domingo | dia_de_la_semana(0, "UTC")   # 4
+es_bisiesto | anio | dice si un año es bisiesto | es_bisiesto(2024)   # verdadero
+dias_del_mes | mes, anio | días que tiene un mes de un año | dias_del_mes(2024, 2)   # 29

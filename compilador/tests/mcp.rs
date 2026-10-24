@@ -49,7 +49,7 @@ fn una_ia_puede_comprobar_ejecutar_probar_y_buscar() {
     }
     assert!(respuestas[2].contains(r#"\"salida\":\"42\\n\""#) && respuestas[2].contains("\"isError\":false"), "{}", respuestas[2]);
     assert!(respuestas[3].contains("E025") && respuestas[3].contains("no se puede restar texto y número"), "{}", respuestas[3]);
-    assert!(respuestas[4].contains("mayusculas(1 argumento)") && respuestas[4].contains(r#"usar modulo \\\"texto\\\""#), "{}", respuestas[4]);
+    assert!(respuestas[4].contains("mayusculas(texto)") && respuestas[4].contains(r#"usar modulo \\\"texto\\\""#), "{}", respuestas[4]);
     assert!(respuestas[5].contains("no la inventes") && respuestas[5].contains("\"isError\":true"), "{}", respuestas[5]);
     assert!(respuestas[6].contains("\"isError\":false") && respuestas[6].contains("suma"), "{}", respuestas[6]);
     assert!(respuestas[7].contains(r#"sea x = 1\n"#), "{}", respuestas[7]);

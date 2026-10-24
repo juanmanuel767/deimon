@@ -682,7 +682,7 @@ fn leer_funciones(
             .con_codigo("E018")
             .en_columna(columna)
             .con_sugerencia(
-                "Cada línea debe ser: nombre | número_de_argumentos | descripción | ejemplo (las vacías y las que empiezan por # se ignoran)",
+                "Cada línea debe ser: nombre | parámetros separados por comas (o cuántos son; 0 si ninguno) | descripción | ejemplo (las vacías y las que empiezan por # se ignoran)",
             )
         };
         if partes.len() != 4 {
@@ -700,14 +700,19 @@ fn leer_funciones(
             )));
             continue;
         }
-        let aridad = match partes[1].parse::<usize>() {
-            Ok(aridad) => aridad,
+        // Nombres de los parámetros ("texto, buscado") o, como antes, solo cuántos son ("2").
+        let parametros = match partes[1].parse::<usize>() {
+            Ok(aridad) => parametros_extension(aridad),
             Err(_) => {
-                errores.push(mal(format!(
-                    "el número de argumentos '{}' no es un número entero",
-                    partes[1]
-                )));
-                continue;
+                let nombres: Vec<String> = partes[1].split(',').map(|n| n.trim().to_string()).collect();
+                if let Some(malo) = nombres.iter().find(|n| !identificador_valido(n)) {
+                    errores.push(mal(format!(
+                        "'{}' no es un nombre de parámetro válido (escribe los nombres separados por comas, o 0 si no tiene)",
+                        malo
+                    )));
+                    continue;
+                }
+                nombres
             }
         };
         if partes[2].is_empty() {
@@ -720,7 +725,7 @@ fn leer_funciones(
         }
         funciones.push(FuncionExtension {
             nombre: nombre.to_string(),
-            parametros: parametros_extension(aridad),
+            parametros,
             descripcion: partes[2].to_string(),
             ejemplo: partes[3].to_string(),
             linea_funciones: numero,

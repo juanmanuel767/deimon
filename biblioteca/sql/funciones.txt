@@ -1,6 +1,6 @@
 # Funciones del módulo "sql" de la biblioteca estándar (SQLite).
 # Los valores van SIEMPRE en la lista de parámetros (con ? en la consulta), nunca pegados al texto:
 # así nadie puede colar órdenes SQL por un formulario.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-ejecutar_sql | 3 | ejecuta una orden SQL (CREATE, INSERT, UPDATE, DELETE...) en un archivo de base de datos y devuelve cuántas filas cambió | ejecutar_sql("tienda.db", "INSERT INTO productos (nombre, precio) VALUES (?, ?)", ["taza", 8.5])
-consultar_sql | 3 | ejecuta un SELECT y devuelve una lista de filas (cada fila, una lista de valores) | consultar_sql("tienda.db", "SELECT nombre, precio FROM productos WHERE precio < ?", [10])
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+ejecutar_sql | base_datos, orden_sql, valores | ejecuta una orden SQL (CREATE, INSERT, UPDATE, DELETE...) en un archivo de base de datos y devuelve cuántas filas cambió | ejecutar_sql("tienda.db", "INSERT INTO productos (nombre, precio) VALUES (?, ?)", ["taza", 8.5])
+consultar_sql | base_datos, consulta_sql, valores | ejecuta un SELECT y devuelve una lista de filas (cada fila, una lista de valores) | consultar_sql("tienda.db", "SELECT nombre, precio FROM productos WHERE precio < ?", [10])

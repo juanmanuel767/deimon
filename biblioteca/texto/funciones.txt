@@ -1,17 +1,17 @@
 # Funciones del módulo "texto" de la biblioteca estándar.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-mayusculas | 1 | devuelve el texto en mayúsculas | mayusculas("hola")   # HOLA
-minusculas | 1 | devuelve el texto en minúsculas | minusculas("HOLA")   # hola
-recortar | 1 | quita los espacios del principio y del final | recortar("  hola  ")
-contiene | 2 | dice si el texto contiene otro texto | contiene("hola mundo", "mundo")   # verdadero
-reemplazar | 3 | cambia todas las apariciones de un texto por otro | reemplazar("a-b", "-", "+")
-partir | 2 | divide el texto por un separador y devuelve una lista | partir("a,b", ",")
-empieza_con | 2 | dice si el texto empieza por otro texto | empieza_con("hola", "ho")   # verdadero
-termina_con | 2 | dice si el texto termina en otro texto | termina_con("hola", "la")   # verdadero
-repetir | 2 | repite un texto varias veces | repetir("ja", 3)   # jajaja
-unir | 2 | une los elementos de una lista en un texto con un separador | unir(["a", "b"], "-")   # a-b
-formatear_texto | 2 | rellena una plantilla como sprintf: %s texto, %d entero, %.2f decimales, %05d con ceros; los valores van en una lista | formatear_texto("%s tiene %d años", ["Ana", 30])   # Ana tiene 30 años
-formatear_numero | 4 | formatea un número con decimales y separadores como number_format de PHP: redondea como PHP y solo pone el signo si el resultado no es cero | formatear_numero(1234.5678, 2, ".", ",")   # 1,234.57
-rellenar_texto | 4 | rellena un texto hasta un largo por la derecha, por la izquierda o por los dos lados, contando caracteres (acentos y ñ) | rellenar_texto("hola", 8, "-", "izquierda")   # ----hola
-primera_mayuscula | 1 | pone en mayúscula la primera letra, también con acentos | primera_mayuscula("ñandú")   # Ñandú
-texto_completo | 1 | devuelve como texto cualquier valor, igual que print_r de PHP (para verlo: escribir(texto_completo(v))), con listas y listas con claves anidadas y sangría | texto_completo({"a": 2})   # Array (...)
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+mayusculas | texto | devuelve el texto en mayúsculas | mayusculas("hola")   # HOLA
+minusculas | texto | devuelve el texto en minúsculas | minusculas("HOLA")   # hola
+recortar | texto | quita los espacios del principio y del final | recortar("  hola  ")
+contiene | texto, buscado | dice si el texto contiene otro texto | contiene("hola mundo", "mundo")   # verdadero
+reemplazar | texto, buscado, nuevo | cambia todas las apariciones de un texto por otro | reemplazar("a-b", "-", "+")
+partir | texto, separador | divide el texto por un separador y devuelve una lista | partir("a,b", ",")
+empieza_con | texto, inicio | dice si el texto empieza por otro texto | empieza_con("hola", "ho")   # verdadero
+termina_con | texto, final | dice si el texto termina en otro texto | termina_con("hola", "la")   # verdadero
+repetir | texto, veces | repite un texto varias veces | repetir("ja", 3)   # jajaja
+unir | lista, separador | une los elementos de una lista en un texto con un separador | unir(["a", "b"], "-")   # a-b
+formatear_texto | plantilla, valores | rellena una plantilla como sprintf: %s texto, %d entero, %.2f decimales, %05d con ceros; los valores van en una lista | formatear_texto("%s tiene %d años", ["Ana", 30])   # Ana tiene 30 años
+formatear_numero | numero, decimales, separador_decimal, separador_miles | formatea un número con decimales y separadores como number_format de PHP: redondea como PHP y solo pone el signo si el resultado no es cero | formatear_numero(1234.5678, 2, ".", ",")   # 1,234.57
+rellenar_texto | texto, largo, relleno, lado | rellena un texto hasta un largo por la derecha, por la izquierda o por los dos lados, contando caracteres (acentos y ñ) | rellenar_texto("hola", 8, "-", "izquierda")   # ----hola
+primera_mayuscula | texto | pone en mayúscula la primera letra, también con acentos | primera_mayuscula("ñandú")   # Ñandú
+texto_completo | valor | devuelve como texto cualquier valor, igual que print_r de PHP (para verlo: escribir(texto_completo(v))), con listas y listas con claves anidadas y sangría | texto_completo({"a": 2})   # Array (...)

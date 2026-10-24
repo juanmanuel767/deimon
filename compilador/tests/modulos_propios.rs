@@ -178,7 +178,7 @@ fn un_funciones_txt_mal_formado_da_e018() {
     extension(
         &c,
         "rota",
-        "mayusculas | uno | descripción | ejemplo\n",
+        "mayusculas | 1 texto | descripción | ejemplo\n",
         CODIGO,
     );
     let principal = escribir(

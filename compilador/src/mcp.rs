@@ -287,7 +287,12 @@ fn buscar_funcion(argumentos: &Json) -> Result<String, String> {
             if nombre.contains(&texto) || descripcion.to_lowercase().contains(&texto) || modulo == texto {
                 encontradas.push(format!(
                     "{{\"firma\":{},\"descripcion\":{},\"ejemplo\":{},\"necesita\":{}}}",
-                    json_texto(&format!("{}({} {})", nombre, cuantos, if cuantos == "1" { "argumento" } else { "argumentos" })),
+                    json_texto(&match cuantos.parse::<usize>() {
+                        Ok(0) => format!("{}()", nombre),
+                        Ok(1) => format!("{}(1 argumento)", nombre),
+                        Ok(n) => format!("{}({} argumentos)", nombre, n),
+                        Err(_) => format!("{}({})", nombre, cuantos),
+                    }),
                     json_texto(descripcion),
                     json_texto(ejemplo),
                     json_texto(&format!("usar modulo \"{}\"", modulo))

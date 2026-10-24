@@ -1,6 +1,6 @@
 # Funciones del módulo "paypal" (PayPal Orders v2).
 # Necesitas el Client ID y el Secret de tu app en developer.paypal.com. Para el entorno de
 # pruebas pon DEIMON_PAYPAL_URL=https://api-m.sandbox.paypal.com al ejecutar.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-crear_pago_paypal | 6 | crea un pago (client id, secret, importe, moneda como "USD", dirección de vuelta, dirección si cancela) y devuelve la dirección donde la persona lo aprueba; al volver llega campo("token") con el id del pedido | sea aprobar = crear_pago_paypal(id, secreto, 29.9, "USD", "https://mitienda.com/paypal", "https://mitienda.com/carrito")
-cobrar_pago_paypal | 3 | cobra el pago ya aprobado (client id, secret, id del pedido) y devuelve verdadero si quedó cobrado | si cobrar_pago_paypal(id, secreto, campo("token")) { ... }
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+crear_pago_paypal | client_id, secreto, importe, moneda, direccion_vuelta, direccion_cancelar | crea un pago (client id, secret, importe, moneda como "USD", dirección de vuelta, dirección si cancela) y devuelve la dirección donde la persona lo aprueba; al volver llega campo("token") con el id del pedido | sea aprobar = crear_pago_paypal(id, secreto, 29.9, "USD", "https://mitienda.com/paypal", "https://mitienda.com/carrito")
+cobrar_pago_paypal | client_id, secreto, id_pedido | cobra el pago ya aprobado (client id, secret, id del pedido) y devuelve verdadero si quedó cobrado | si cobrar_pago_paypal(id, secreto, campo("token")) { ... }

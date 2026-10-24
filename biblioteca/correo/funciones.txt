@@ -1,4 +1,4 @@
 # Funciones del módulo "correo" de la biblioteca estándar.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-enviar_correo | 3 | envía un correo de texto (destinatario, asunto, texto) con el sendmail del sistema; verdadero si lo aceptó | enviar_correo("ana@ejemplo.com", "Bienvenida", "Hola, Ana")
-es_correo_valido | 1 | dice si un texto tiene forma de dirección de correo | es_correo_valido("ana@ejemplo.com")   # verdadero
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+enviar_correo | destinatario, asunto, texto | envía un correo de texto (destinatario, asunto, texto) con el sendmail del sistema; verdadero si lo aceptó | enviar_correo("ana@ejemplo.com", "Bienvenida", "Hola, Ana")
+es_correo_valido | texto | dice si un texto tiene forma de dirección de correo | es_correo_valido("ana@ejemplo.com")   # verdadero

@@ -1,7 +1,7 @@
 # Funciones del módulo "whatsapp" (WhatsApp Cloud API de Meta).
 # Necesitas una app en developers.facebook.com con WhatsApp: el token de acceso y el id del número.
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-enviar_whatsapp | 4 | envía un mensaje de texto (token, id del número, teléfono con prefijo de país, texto) y devuelve el id del mensaje; solo vale si esa persona te escribió en las últimas 24 horas | enviar_whatsapp(token, id_numero, "51987654321", "Tu pedido salió")
-enviar_plantilla_whatsapp | 5 | envía una plantilla aprobada por Meta (token, id del número, teléfono, nombre de la plantilla, idioma como "es"); sirve para escribir primero | enviar_plantilla_whatsapp(token, id_numero, "51987654321", "hello_world", "en_US")
-verificar_whatsapp | 1 | en la ruta del aviso (webhook), responde a la comprobación de Meta si la clave coincide; devuelve el texto a devolver o nada | sea r = verificar_whatsapp("mi-clave")   # dentro de ruta "/whatsapp": si r != nada, devolver r
-mensajes_whatsapp | 1 | lee los mensajes que mandó Meta al aviso (webhook) comprobando su firma con el secreto de la app; lista de {de, nombre, texto, id} | para m en mensajes_whatsapp(secreto_app) { mostrar(m["texto"]) }
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+enviar_whatsapp | token, id_numero, telefono, texto | envía un mensaje de texto (token, id del número, teléfono con prefijo de país, texto) y devuelve el id del mensaje; solo vale si esa persona te escribió en las últimas 24 horas | enviar_whatsapp(token, id_numero, "51987654321", "Tu pedido salió")
+enviar_plantilla_whatsapp | token, id_numero, telefono, plantilla, idioma | envía una plantilla aprobada por Meta (token, id del número, teléfono, nombre de la plantilla, idioma como "es"); sirve para escribir primero | enviar_plantilla_whatsapp(token, id_numero, "51987654321", "hello_world", "en_US")
+verificar_whatsapp | clave | en la ruta del aviso (webhook), responde a la comprobación de Meta si la clave coincide; devuelve el texto a devolver o nada | sea r = verificar_whatsapp("mi-clave")   # dentro de ruta "/whatsapp": si r != nada, devolver r
+mensajes_whatsapp | secreto_app | lee los mensajes que mandó Meta al aviso (webhook) comprobando su firma con el secreto de la app; lista de {de, nombre, texto, id} | para m en mensajes_whatsapp(secreto_app) { mostrar(m["texto"]) }

@@ -1,4 +1,4 @@
 # Funciones del módulo "pagos" de la biblioteca estándar (Stripe Checkout).
-# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
-crear_pago | 6 | crea un pago en Stripe (clave secreta, céntimos, moneda, descripción, dirección de éxito, dirección de cancelar) y devuelve la dirección donde la persona paga; a la de éxito se le añade ?sesion=ID | sea pagar_en = crear_pago(clave, 1500, "eur", "Camiseta", "https://mitienda.com/gracias", "https://mitienda.com/carrito")
-pago_completado | 2 | verdadero si la sesión de pago de Stripe ya está pagada (clave secreta, id de la sesión) | si pago_completado(clave, campo("sesion")) { ... }
+# Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
+crear_pago | clave_secreta, centimos, moneda, descripcion, direccion_exito, direccion_cancelar | crea un pago en Stripe (clave secreta, céntimos, moneda, descripción, dirección de éxito, dirección de cancelar) y devuelve la dirección donde la persona paga; a la de éxito se le añade ?sesion=ID | sea pagar_en = crear_pago(clave, 1500, "eur", "Camiseta", "https://mitienda.com/gracias", "https://mitienda.com/carrito")
+pago_completado | clave_secreta, id_sesion | verdadero si la sesión de pago de Stripe ya está pagada (clave secreta, id de la sesión) | si pago_completado(clave, campo("sesion")) { ... }

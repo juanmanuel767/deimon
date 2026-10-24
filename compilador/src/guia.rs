@@ -115,11 +115,59 @@ pub const REGLAS: &[&str] = &[
     "Una prueba es como una función sin parámetros; si falla una comprobación, termina y sigue la siguiente.",
     "Errores al ejecutar: «Error en la línea N (en ejecución): ...» y código de salida 1.",
     "usar \"ruta.dmn\" divide el programa: la ruta es relativa a la carpeta del archivo que la contiene y solo se cargan sus funciones, rutas y pruebas (sus demás instrucciones y su servir se ignoran).",
-    "usar modulo \"nombre\" (solo en el nivel principal) carga un módulo: una carpeta con modulo.txt y funciones en Rust (funciones.txt + codigo.rs) y/o en Deimon (*.dmn). Se busca en modulos/<nombre>/ junto al archivo .dmn, después en ~/.deimon/modulos/<nombre>/ y por último en la biblioteca estándar (matematicas, texto, tiempo). deimon modulos los lista.",
+    "usar modulo \"nombre\" (solo en el nivel principal) carga un módulo: una carpeta con modulo.txt y funciones en Rust (funciones.txt + codigo.rs) y/o en Deimon (*.dmn). Se busca en modulos/<nombre>/ junto al archivo .dmn, después en ~/.deimon/modulos/<nombre>/ y por último en la biblioteca estándar (sus funciones están más abajo, en «Módulos de la biblioteca estándar»). deimon modulos los lista.",
     "El estilo único del código (sangría de 4 espacios, espacios de los operadores, comentarios y líneas vacías) lo aplica deimon formatear. La gramática completa en EBNF, las reglas de nombres y el estilo están en docs/GRAMATICA.md.",
 ];
 
 /// La guía completa como texto.
+/// Un módulo de la biblioteca estándar y sus funciones en Rust (nombre, firma, descripción,
+/// ejemplo), leídos de los mismos `modulo.txt` y `funciones.txt` que usa el traductor.
+struct ModuloEstandar {
+    nombre: &'static str,
+    descripcion: String,
+    necesita: String,
+    funciones: Vec<(String, String, String, String)>,
+}
+
+fn modulos_estandar() -> Vec<ModuloEstandar> {
+    let mut modulos = Vec::new();
+    for (ruta, contenido) in crate::biblioteca::ARCHIVOS {
+        let Some(nombre) = ruta.strip_suffix("/funciones.txt") else { continue };
+        let ficha = crate::biblioteca::ARCHIVOS
+            .iter()
+            .find(|(otra, _)| *otra == format!("{}/modulo.txt", nombre))
+            .map(|(_, texto)| *texto)
+            .unwrap_or("");
+        let campo = |clave: &str| {
+            ficha
+                .lines()
+                .find_map(|linea| linea.trim().strip_prefix(clave).map(|resto| resto.trim().to_string()))
+                .unwrap_or_default()
+        };
+        let mut funciones = Vec::new();
+        for linea in contenido.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+            let partes: Vec<&str> = linea.splitn(4, '|').map(str::trim).collect();
+            let [funcion, parametros, descripcion, ejemplo] = partes[..] else { continue };
+            let parametros = if parametros == "0" { "" } else { parametros };
+            funciones.push((
+                funcion.to_string(),
+                format!("{}({})", funcion, parametros),
+                descripcion.to_string(),
+                ejemplo.to_string(),
+            ));
+        }
+        let necesita = campo("requiere:");
+        modulos.push(ModuloEstandar {
+            nombre,
+            descripcion: campo("descripcion:"),
+            necesita: if necesita.is_empty() { "nada".to_string() } else { necesita },
+            funciones,
+        });
+    }
+    modulos.sort_by_key(|modulo| modulo.nombre);
+    modulos
+}
+
 pub fn texto() -> String {
     texto_con_extensiones(&[])
 }
@@ -167,6 +215,17 @@ pub fn texto_con_extensiones(extensiones: &[Extension]) -> String {
             integrada.descripcion,
             integrada.ejemplo
         ));
+    }
+
+    salida.push_str("\n## Módulos de la biblioteca estándar (se cargan con: usar modulo \"nombre\")\n");
+    for modulo in modulos_estandar() {
+        salida.push_str(&format!(
+            "### {} (necesita: {}): {}\n",
+            modulo.nombre, modulo.necesita, modulo.descripcion
+        ));
+        for (_, firma, descripcion, ejemplo) in &modulo.funciones {
+            salida.push_str(&format!("- {}: {}. Ej: {}\n", firma, descripcion, ejemplo));
+        }
     }
 
     salida.push_str("\n## Rutas web, datos y pruebas\n");
@@ -270,6 +329,31 @@ pub fn json_con_extensiones(extensiones: &[Extension]) -> String {
         })
         .collect();
     let reglas: Vec<String> = REGLAS.iter().map(|r| json::texto(r)).collect();
+    let biblioteca: Vec<String> = modulos_estandar()
+        .iter()
+        .map(|modulo| {
+            let funciones: Vec<String> = modulo
+                .funciones
+                .iter()
+                .map(|(nombre, firma, descripcion, ejemplo)| {
+                    format!(
+                        "{{\"nombre\":{},\"firma\":{},\"descripcion\":{},\"ejemplo\":{}}}",
+                        json::texto(nombre),
+                        json::texto(firma),
+                        json::texto(descripcion),
+                        json::texto(ejemplo)
+                    )
+                })
+                .collect();
+            format!(
+                "{{\"modulo\":{},\"descripcion\":{},\"necesita\":{},\"funciones\":[{}]}}",
+                json::texto(modulo.nombre),
+                json::texto(&modulo.descripcion),
+                json::texto(&modulo.necesita),
+                funciones.join(",")
+            )
+        })
+        .collect();
     let usadas: Vec<String> = extensiones
         .iter()
         .flat_map(|extension| {
@@ -286,13 +370,14 @@ pub fn json_con_extensiones(extensiones: &[Extension]) -> String {
         })
         .collect();
     format!(
-        "{{\"lenguaje\":\"deimon\",\"reglas\":[{}],\"palabras_clave\":{},\"operadores\":{},\"tipos\":{},\"perfiles\":{},\"integradas\":[{}],\"modulos_usados\":[{}],\"ordenes\":{},\"variables_de_entorno\":{},\"desde_otro_lenguaje\":{},\"codigos_de_error\":{}}}",
+        "{{\"lenguaje\":\"deimon\",\"reglas\":[{}],\"palabras_clave\":{},\"operadores\":{},\"tipos\":{},\"perfiles\":{},\"integradas\":[{}],\"biblioteca\":[{}],\"modulos_usados\":[{}],\"ordenes\":{},\"variables_de_entorno\":{},\"desde_otro_lenguaje\":{},\"codigos_de_error\":{}}}",
         reglas.join(","),
         pares_json(PALABRAS_CLAVE, "palabra", "descripcion"),
         pares_json(OPERADORES, "operador", "descripcion"),
         pares_json(TIPOS, "tipo", "descripcion"),
         pares_json(PERFILES, "perfil", "descripcion"),
         integradas.join(","),
+        biblioteca.join(","),
         usadas.join(","),
         pares_json(ORDENES, "orden", "descripcion"),
         pares_json(VARIABLES_DE_ENTORNO, "variable", "descripcion"),
