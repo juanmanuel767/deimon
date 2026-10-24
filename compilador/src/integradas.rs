@@ -89,6 +89,13 @@ pub const INTEGRADAS: &[Integrada] = &[
         ejemplo: "mostrar(ordenar([3, 1, 2]))   # [1, 2, 3]",
     },
     Integrada {
+        nombre: "ordenar_por",
+        parametros: &["lista", "campos"],
+        categoria: "listas y textos",
+        descripcion: "ordena una lista de listas con claves por uno o varios campos; \"-campo\" va de mayor a menor; los empates quedan en su orden",
+        ejemplo: "mostrar(ordenar_por([{\"n\": \"Ana\", \"e\": 30}, {\"n\": \"Bea\", \"e\": 41}], [\"-e\", \"n\"]))   # [{n: Bea, e: 41}, {n: Ana, e: 30}]",
+    },
+    Integrada {
         nombre: "invertir",
         parametros: &["lista"],
         categoria: "listas y textos",

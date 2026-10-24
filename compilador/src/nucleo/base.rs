@@ -1079,6 +1079,89 @@ fn ordenar(lista: &Valor) -> Valor {
     Valor::Lista(Rc::new(nuevos))
 }
 
+/// `ordenar_por(lista, claves)`: ordena una lista de listas con claves por uno o varios
+/// campos. `claves` es un texto o una lista de textos; "-campo" ordena de mayor a menor. Si dos
+/// elementos empatan en todos los campos, quedan en el orden en que estaban.
+fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
+    let elementos = match lista {
+        Valor::Lista(elementos) => elementos,
+        otro => fallo(format!("ordenar_por() espera una lista como primer argumento, no {}", otro.tipo())),
+    };
+    let criterios: Vec<Valor> = match claves {
+        Valor::Texto(_) => vec![claves.clone()],
+        Valor::Lista(criterios) if !criterios.is_empty() => criterios.to_vec(),
+        otro => fallo(format!(
+            "ordenar_por() espera como segundo argumento un campo o una lista de campos, como [\"-edad\", \"nombre\"], no {}",
+            otro.tipo()
+        )),
+    };
+    let mut campos: Vec<(String, bool)> = Vec::new();
+    for criterio in &criterios {
+        match criterio {
+            Valor::Texto(texto) => match texto.strip_prefix('-') {
+                Some(campo) => campos.push((campo.to_string(), true)),
+                None => campos.push((texto.to_string(), false)),
+            },
+            otro => fallo(format!("ordenar_por(): cada campo debe ser un texto, no {}", otro.tipo())),
+        }
+    }
+    // Se sacan antes los valores de cada campo para dar un error claro si falta alguno.
+    let mut filas: Vec<(Vec<Valor>, Valor)> = Vec::new();
+    for (posicion, elemento) in elementos.iter().enumerate() {
+        let mapa = match elemento {
+            Valor::Mapa(mapa) => mapa,
+            otro => fallo(format!(
+                "ordenar_por() necesita una lista de listas con claves, pero el elemento {} es {}",
+                posicion,
+                otro.tipo()
+            )),
+        };
+        let mut valores = Vec::new();
+        for (campo, _) in &campos {
+            match mapa.valores.get(campo) {
+                Some(valor @ (Valor::Numero(_) | Valor::Texto(_))) => valores.push(valor.clone()),
+                Some(otro) => fallo(format!(
+                    "ordenar_por(): el campo '{}' del elemento {} es {}; solo se ordena por números o textos",
+                    campo,
+                    posicion,
+                    otro.tipo()
+                )),
+                None => fallo(format!("ordenar_por(): el elemento {} no tiene el campo '{}'", posicion, campo)),
+            }
+        }
+        filas.push((valores, elemento.clone()));
+    }
+    for (indice, (campo, _)) in campos.iter().enumerate() {
+        let es_numero = filas.first().map(|(v, _)| matches!(v[indice], Valor::Numero(_)));
+        if let Some(es_numero) = es_numero {
+            if let Some((posicion, _)) = filas
+                .iter()
+                .enumerate()
+                .find(|(_, (v, _))| matches!(v[indice], Valor::Numero(_)) != es_numero)
+            {
+                fallo(format!(
+                    "ordenar_por(): el campo '{}' mezcla números y textos (mira el elemento {})",
+                    campo, posicion
+                ));
+            }
+        }
+    }
+    filas.sort_by(|(a, _), (b, _)| {
+        for (indice, (_, al_reves)) in campos.iter().enumerate() {
+            let orden = match (&a[indice], &b[indice]) {
+                (Valor::Numero(x), Valor::Numero(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+                (x, y) => texto_de(x).cmp(&texto_de(y)),
+            };
+            let orden = if *al_reves { orden.reverse() } else { orden };
+            if orden != std::cmp::Ordering::Equal {
+                return orden;
+            }
+        }
+        std::cmp::Ordering::Equal
+    });
+    Valor::Lista(Rc::new(filas.into_iter().map(|(_, elemento)| elemento).collect()))
+}
+
 /// Lista o texto al revés.
 fn invertir(valor: &Valor) -> Valor {
     match valor {

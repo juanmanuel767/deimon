@@ -49,7 +49,7 @@ fn tipo_de_integrada(nombre: &str) -> Tipo {
     match nombre {
         "a_texto" | "proteger_html" => Tipo::Texto,
         "a_numero" | "medir" | "contar" | "sumar_lista" => Tipo::Numero,
-        "ordenar" | "agregar" | "rango" | "listar_claves" => Tipo::Lista,
+        "ordenar" | "ordenar_por" | "agregar" | "rango" | "listar_claves" => Tipo::Lista,
         "tiene_clave" | "incluye" => Tipo::Logico,
         _ => Tipo::Desconocido,
     }
