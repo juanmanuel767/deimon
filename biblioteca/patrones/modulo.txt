@@ -1,0 +1,3 @@
+nombre: patrones
+descripcion: expresiones regulares (patrones) para buscar, cambiar y partir textos
+requiere:

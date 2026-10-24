@@ -1,0 +1,6 @@
+# 10 millones de vueltas con un para sobre un rango
+sea total = 0
+para i en rango(1, 10000000) {
+    total = total + i * 2 - 1
+}
+mostrar(total)

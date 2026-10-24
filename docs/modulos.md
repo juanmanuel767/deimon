@@ -74,13 +74,35 @@ Un módulo se incluye una sola vez aunque se use desde varios archivos.
 
 `deimon modulos` lista los módulos disponibles con sus funciones.
 
+### Compartir módulos
+
+```bash
+deimon modulo instalar https://github.com/alguien/modulo-saludos.git
+deimon modulo actualizar saludos
+deimon modulo quitar saludos
+```
+
+- El origen es una dirección `https://` de git o una carpeta de tu ordenador.
+  Hace falta tener `git` instalado. Se rechaza `http://` sin `s`.
+- Se instala en `~/.deimon/modulos/<nombre>/`; con `--aqui`, en `modulos/<nombre>/`
+  junto a tu programa. Antes se comprueba que tiene `modulo.txt` (y `funciones.txt`
+  si trae Rust), que el nombre usa solo `a-z`, `0-9` y `_`, y que no es un módulo
+  de la biblioteca estándar.
+- Si ya está instalado da error: usa `actualizar` (hace `git pull --ff-only` y
+  vuelve a validar). `quitar` borra solo la carpeta de ese módulo.
+- Un módulo trae código Rust que se ejecuta en tu equipo: instala solo módulos
+  de quien confíes.
+- La variable `DEIMON_CASA` cambia la carpeta que hace de casa (por defecto `HOME`),
+  útil en pruebas.
+
 ## Biblioteca estándar
 
 | Módulo | Funciones |
 |---|---|
 | `matematicas` | `raiz(x)`, `potencia(x, y)`, `absoluto(x)`, `redondear(x)`, `suelo(x)`, `techo(x)`, `minimo(a, b)`, `maximo(a, b)`, `aleatorio()` (entre 0 y 1), `entero_al_azar(minimo, maximo)` (como `rand`), y en Deimon `factorial(n)`, `es_par(n)` |
-| `texto` | `mayusculas(t)`, `minusculas(t)`, `recortar(t)`, `contiene(t, buscado)`, `reemplazar(t, de, a)`, `partir(t, separador)` (lista), `empieza_con(t, inicio)`, `termina_con(t, fin)`, `repetir(t, veces)`, `unir(lista, separador)`, `formatear_texto(plantilla, [valores])` (como `sprintf`: `%s`, `%d`, `%.2f`, `%05d`, `%-8s`) |
-| `tiempo` | `ahora()` (segundos desde 1970), `esperar(milisegundos)`, `fecha(segundos)` (texto `AAAA-MM-DD HH:MM:SS`, hora universal) |
+| `texto` | `mayusculas(t)`, `minusculas(t)`, `recortar(t)`, `contiene(t, buscado)`, `reemplazar(t, de, a)`, `partir(t, separador)` (lista), `empieza_con(t, inicio)`, `termina_con(t, fin)`, `repetir(t, veces)`, `unir(lista, separador)`, `formatear_texto(plantilla, [valores])` (como `sprintf`: `%s`, `%d`, `%.2f`, `%05d`, `%-8s`), `formatear_numero(n, decimales, separador_decimal, separador_miles)` (como `number_format`), `rellenar_texto(t, largo, relleno, lado)` (como `str_pad`, con `"derecha"`, `"izquierda"` o `"ambos"` y contando caracteres), `primera_mayuscula(t)` (como `ucfirst`, también con acentos), `texto_completo(v)` (devuelve el texto, como `print_r`, con listas y listas con claves anidadas) |
+| `patrones` | expresiones regulares: `coincide_patron(t, patron)` (verdadero/falso), `buscar_patron(t, patron)` (lista `[todo, grupo1, ...]` o nada), `buscar_todos_patron(t, patron)` (lista de esas listas), `buscar_columnas_patron(t, patron)` (como `PREG_PATTERN_ORDER` de PHP), `reemplazar_patron(t, patron, nuevo)` (con `$1`, `$2`, `${1}` en `nuevo`), `partir_patron(t, patron)`. Ver [Patrones](#patrones-expresiones-regulares) |
+| `tiempo` | `ahora()` (segundos desde 1970, pueden llevar decimales), `esperar(milisegundos)`, `fecha(segundos)` (texto `AAAA-MM-DD HH:MM:SS` en UTC), `crear_fecha(año, mes, día, hora, minuto, segundo)` (segundos UTC; error claro si la fecha no existe, como el 31 de febrero), `leer_fecha(texto)` (`AAAA-MM-DD`, `AAAA-MM-DD HH:MM[:SS]`, `AAAA-MM-DDTHH:MM:SS[Z o ±HH:MM]` o `DD/MM/AAAA`; devuelve nada si no se entiende), `formatear_fecha(segundos, formato, zona)` (códigos de `date()` de PHP: `Y m n d j H G i s D l N w z t L y A a g h U F M`, escapando con `\`; `l`, `F` y `M` en español), `sumar_tiempo(segundos, cantidad, unidad)` (`segundos`, `minutos`, `horas`, `dias`, `semanas`, `meses`, `años`), `diferencia_fechas(a, b, unidad)` (entero en esa unidad, `a - b`), `dia_de_la_semana(segundos, zona)` (1 lunes ... 7 domingo), `es_bisiesto(año)`, `dias_del_mes(año, mes)` |
 | `json` | `leer_json(texto, "usuario.nombre")` (también `lista[0]`), `listar_claves_json(texto, camino)`, `a_json(valor)`, `desde_json(texto)` (todo el JSON: los objetos pasan a listas con claves) |
 | `archivos` | `escribir_archivo(ruta, texto)`, `leer_archivo(ruta)` (nada si no existe), `existe_archivo`, `borrar_archivo`, `listar_archivos(carpeta)` |
 | `excel` | `crear_excel("x.xlsx", filas)` (Excel, LibreOffice, Google Sheets), `crear_csv("x.csv", filas)` (con `;`, como Excel en español), `leer_csv("x.csv")` |
@@ -92,8 +114,58 @@ Un módulo se incluye una sola vez aunque se use desde varios archivos.
 | `correo` | `enviar_correo(para, asunto, texto)` (usa el `sendmail` del sistema, como `mail()` de PHP), `es_correo_valido(texto)` |
 | `web` | `pedir_web(dirección)` y `enviar_web(dirección, datos)`: hablan con otros sitios por HTTP o HTTPS (usa `curl`) |
 | `pagos` | `crear_pago(clave, céntimos, moneda, descripción, dirección_éxito, dirección_cancelar)` devuelve dónde pagar con Stripe; `pago_completado(clave, sesión)` |
+| `google` | `direccion_google(id_cliente, dirección_vuelta)` devuelve a dónde mandar a la persona para entrar con Google; `usuario_google(id_cliente, secreto, dirección_vuelta)` en la vuelta devuelve `{id, email, nombre, verificado, foto}` o nada si algo no cuadra |
+| `mercadopago` | `crear_pago_mercadopago(token, descripción, importe, moneda, dirección_vuelta, referencia)` devuelve dónde pagar con Mercado Pago; `consultar_pago_mercadopago(token, id)` devuelve `{estado, detalle, referencia, importe, moneda}` |
+| `paypal` | `crear_pago_paypal(id_cliente, secret, importe, moneda, dirección_vuelta, dirección_cancelar)` devuelve dónde aprobar el pago con PayPal; `cobrar_pago_paypal(id_cliente, secret, id_pedido)` cobra el pedido aprobado |
+| `whatsapp` | `enviar_whatsapp(token, id_número, teléfono, texto)`, `enviar_plantilla_whatsapp(token, id_número, teléfono, plantilla, idioma)`, `verificar_whatsapp(clave)` para la comprobación de Meta y `mensajes_whatsapp(secreto_app)` para leer los avisos firmados |
+
+### Notas sobre `tiempo` y las zonas horarias
+
+- Una fecha es un número de segundos desde el 1 de enero de 1970 (UTC), igual que
+  devuelve `ahora()`. `crear_fecha` y `leer_fecha` también trabajan en UTC.
+- `formatear_fecha` y `dia_de_la_semana` aceptan como `zona` `"UTC"`, un desfase
+  fijo (`"-05:00"`, `"+01:00"`, `"-0500"`, `"+01"`) o un nombre IANA
+  (`"America/Lima"`, `"Europe/Madrid"`). Los nombres se leen del archivo TZif de
+  `/usr/share/zoneinfo`, con los cambios de horario de verano; si falta el
+  archivo se explica con un error claro.
+- `sumar_tiempo` con `"meses"` y `"años"` funciona como PHP: no recorta al
+  último día del mes. Por ejemplo, el 31 de enero de 2026 más 1 mes es el 3 de
+  marzo de 2026 (febrero tiene 28 días); en 2024, al tener 29, es el 2 de marzo.
+- `diferencia_fechas` devuelve `a - b` truncado hacia cero en las unidades fijas;
+  en `"meses"` y `"años"` cuenta meses completos (31 de enero a 1 de marzo son
+  0 meses y 29 días).
+- Nombres en español: `l` da `lunes`...`domingo`, `F` da `enero`...`diciembre` y
+  `M` da `ene`...`dic`. `D` sigue el formato corto inglés de PHP (`Mon`...`Sun`)
+  para que los formatos importados de PHP no cambien de significado.
 
 Ejemplo completo: `ejemplos/biblioteca.dmn`. El código está en `biblioteca/`.
+
+### Patrones (expresiones regulares)
+
+El módulo `patrones` trae su propio motor, sin programas externos, y trabaja con
+caracteres (acentos y ñ incluidos).
+
+Soporta: letras normales, `.`, clases `[a-z]` y `[^...]`, `\d \w \s \D \W \S`,
+`\b \B`, `^ $`, grupos `( )` y `(?: )`, alternativa `|`, repeticiones
+`* + ? {n} {n,} {n,m}` y sus versiones perezosas `*? +? ?? {n,m}?`, escapes
+(`\.` `\\` `\/` `\n` `\t`) y `(?i)` al principio para no distinguir mayúsculas.
+
+No soporta: mirar adelante o atrás (`(?=`, `(?<`), referencias a grupos (`\1`),
+grupos con nombre ni modo multilínea. `\w` incluye letras con acento y `\d` solo
+0-9; `$` solo casa al final del texto; un grupo que no participa da `""`.
+
+```
+usar modulo "patrones"
+sea f = buscar_patron("pedido 2024-05-17", "(\\d+)-(\\d+)-(\\d+)")
+mostrar(f[1])                                              # 2024
+mostrar(reemplazar_patron("2024-05", "(\\d+)-(\\d+)", "$2/$1"))   # 05/2024
+```
+
+Dentro de un texto de Deimon la barra se escribe doble (`"\\d+"`).
+
+Protección: cada búsqueda tiene un límite de pasos; un patrón que tardaría
+muchísimo (como `(a+)+b` sobre `aaaa...c`) da un error claro en vez de colgarse.
+Un patrón mal escrito da `patrón mal escrito, en la posición N: motivo`.
 
 ### Notas sobre pdf, correo, web y pagos
 

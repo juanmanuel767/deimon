@@ -369,3 +369,55 @@ fn la_orden_guia_imprime_texto_y_json() {
     assert!(salida(&o).starts_with('{'));
     let _ = fs::remove_dir_all(&c);
 }
+
+/// E025: operaciones que fallarían seguro, vistas sin ejecutar.
+#[test]
+fn los_tipos_que_no_encajan_se_ven_sin_ejecutar() {
+    let casos = [
+        ("sea n = \"Ana\"\nmostrar(n - 1)\n", 2, "no se puede restar texto y número"),
+        ("sea edad = 30\nsi edad {\n    mostrar(1)\n}\n", 2, "la condición debe ser verdadero o falso, no número"),
+        ("mostrar(\"a\" < 5)\n", 1, "no se pueden comparar texto y número con menor que"),
+        ("para c en 10 {\n    mostrar(c)\n}\n", 1, "para necesita una lista, no número"),
+        ("sea t = medir(\"hola\") * 2\nmostrar(t / \"dos\")\n", 2, "no se puede dividir número y texto"),
+        ("sea x = 3\nmostrar(x[0])\n", 2, "solo se puede acceder con corchetes a una lista o a un texto, no a número"),
+        ("mostrar(verdadero + [1])\n", 1, "no se puede sumar lógico y lista"),
+        ("mostrar(-\"a\")\n", 1, "no se puede negar texto"),
+        ("ruta \"/u/:id\" {\n    devolver id * 2\n}\n", 2, "no se puede multiplicar texto y número"),
+    ];
+    for (fuente, linea, mensaje) in casos {
+        let errores = deimon::comprobar(fuente);
+        let error = errores
+            .iter()
+            .find(|e| e.codigo == "E025")
+            .unwrap_or_else(|| panic!("no se vio el error en:\n{}", fuente));
+        assert!(error.mensaje.contains(mensaje), "{} → {}", fuente, error.mensaje);
+        assert_eq!(error.linea, linea, "{}", fuente);
+    }
+}
+
+/// Lo que puede funcionar no se marca nunca (sin falsas alarmas).
+#[test]
+fn la_revision_de_tipos_no_da_falsas_alarmas() {
+    let correctos = [
+        "sea n = \"Ana\"\nmostrar(n + 30)\n",
+        "funcion f(x) {\n    devolver x - 1\n}\nmostrar(f(2))\n",
+        "sea l = [1]\nmostrar(l + [2])\n",
+        "sea x = 1\nsi verdadero {\n    x = \"uno\"\n}\nmostrar(x + 1)\n",
+        "sea x = \"a\"\nmientras falso {\n    x = 1\n}\nmostrar(x)\n",
+        "sea x = 0\nmientras x < 3 {\n    x = x + 1\n}\nmostrar(x - 1)\n",
+        "sea d = []\nd[\"a\"] = 1\nmostrar(d[\"a\"])\n",
+        "sea t = \"hola\"\nmostrar(t[0])\n",
+        "para i en rango(1, 3) {\n    mostrar(i * 2)\n}\n",
+        "intentar {\n    provocar_error(\"x\")\n} si falla e {\n    mostrar(e[\"mensaje\"] + \"!\")\n}\n",
+        "sea a = 1\nmostrar(a == \"1\")\n",
+    ];
+    for fuente in correctos {
+        let errores = deimon::comprobar(fuente);
+        assert!(
+            errores.iter().all(|e| e.codigo != "E025"),
+            "falsa alarma en:\n{}\n{:?}",
+            fuente,
+            errores.iter().map(|e| &e.mensaje).collect::<Vec<_>>()
+        );
+    }
+}

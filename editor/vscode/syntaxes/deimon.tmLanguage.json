@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Deimon",
+  "scopeName": "source.deimon",
+  "patterns": [
+    { "include": "#comentario" },
+    { "include": "#texto" },
+    { "include": "#numero" },
+    { "include": "#definicion-funcion" },
+    { "include": "#constante" },
+    { "include": "#operador-palabra" },
+    { "include": "#palabra-clave" },
+    { "include": "#integrada" },
+    { "include": "#llamada" },
+    { "include": "#operador" }
+  ],
+  "repository": {
+    "comentario": {
+      "name": "comment.line.number-sign.deimon",
+      "match": "#.*$"
+    },
+    "texto": {
+      "name": "string.quoted.double.deimon",
+      "begin": "\"",
+      "end": "\"|$",
+      "patterns": [
+        { "name": "constant.character.escape.deimon", "match": "\\\\[nt\"\\\\]" }
+      ]
+    },
+    "numero": {
+      "name": "constant.numeric.deimon",
+      "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+    },
+    "definicion-funcion": {
+      "match": "\\b(funcion)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)",
+      "captures": {
+        "1": { "name": "keyword.other.deimon" },
+        "2": { "name": "entity.name.function.deimon" }
+      }
+    },
+    "constante": {
+      "name": "constant.language.deimon",
+      "match": "(?<![\\p{L}\\p{N}_])(verdadero|falso|nada)(?![\\p{L}\\p{N}_])"
+    },
+    "operador-palabra": {
+      "name": "keyword.operator.word.deimon",
+      "match": "(?<![\\p{L}\\p{N}_])(y|o|no|en)(?![\\p{L}\\p{N}_])"
+    },
+    "palabra-clave": {
+      "name": "keyword.control.deimon",
+      "match": "(?<![\\p{L}\\p{N}_])(sea|usar|funcion|ruta|prueba|extension|modulo|devolver|romper|continuar|si|sino|mientras|para|intentar|falla)(?![\\p{L}\\p{N}_])"
+    },
+    "integrada": {
+      "name": "support.function.builtin.deimon",
+      "match": "(?<![\\p{L}\\p{N}_])(mostrar|provocar_error|escribir|elegir|a_numero|a_texto|medir|agregar|incluye|ordenar|invertir|cortar|rango|sumar_lista|archivo_subido|guardar_subida|responder_archivo|redirigir_fuera|cuerpo_recibido|cabecera_recibida|leer_galleta|guardar_galleta|borrar_galleta|plantilla|rellenar_plantilla|tiene_clave|quitar_clave|guardar|leer|borrar|contar|listar_claves|incrementar|campo|es_envio|proteger_html|redirigir|crear_usuario|comprobar_clave|iniciar_sesion|usuario_actual|cerrar_sesion|cuenta_bloqueada|cambiar_clave|crear_codigo_recuperacion|restablecer_clave|guardar_en_sesion|leer_de_sesion|agregar_a_sesion|borrar_de_sesion|vaciar_sesion|servir|visitar|enviar|comprobar_igual|comprobar)(?![\\p{L}\\p{N}_])"
+    },
+    "llamada": {
+      "match": "([\\p{L}_][\\p{L}\\p{N}_]*)(?=\\s*\\()",
+      "captures": { "1": { "name": "entity.name.function.call.deimon" } }
+    },
+    "operador": {
+      "name": "keyword.operator.deimon",
+      "match": "==|!=|<=|>=|<|>|=|\\+|-|\\*|/|%"
+    }
+  }
+}

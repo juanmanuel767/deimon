@@ -1,0 +1,118 @@
+# DeimonOS: un sistema operativo de consola escrito en Deimon.
+# En Linux:          deimon ejecutar consola.dmn
+# Como PC de verdad: deimon arrancar consola.dmn   (o deimon compilar --destino pc-sin-sistema)
+usar modulo "texto"
+usar "piezas/calculadora.dmn"
+usar "piezas/procesos.dmn"
+
+funcion cabecera() {
+    poner_color("blanco", "azul")
+    escribir_en(0, 0, rellenar_texto(" DeimonOS 0.1 · escrito en Deimon", 80, " ", "derecha"))
+    poner_color("gris", "negro")
+    escribir_en(1, 0, "")
+    mostrar("Escribe 'ayuda' para ver las órdenes.")
+}
+
+funcion ayuda() {
+    mostrar("Órdenes:")
+    mostrar("  ayuda               esta lista")
+    mostrar("  calc <cuenta>       calcula, por ejemplo: calc 2 + 3 * (4 - 1)")
+    mostrar("  nota <texto>        apunta una nota")
+    mostrar("  notas               muestra las notas")
+    mostrar("  procesos            reparte el procesador entre tres programas")
+    mostrar("  colores             prueba los colores de la pantalla")
+    mostrar("  eco <texto>         repite el texto")
+    mostrar("  limpiar             borra la pantalla")
+    mostrar("  apagar / reiniciar  apaga o reinicia el ordenador")
+}
+
+funcion demostrar_procesos() {
+    sea s = crear_planificador(8)
+    s = lanzar(s, "editor", 5, 3)
+    s = lanzar(s, "navegador", 9, 4)
+    s = lanzar(s, "reloj", 2, 1)
+    mostrar("memoria: " + s["memoria"])
+    intentar {
+        s = lanzar(s, "juego", 4, 2)
+    } si falla e {
+        mostrar("aviso: " + e["mensaje"])
+    }
+    sea r = planificar(s, 3)
+    para linea en r["diario"] {
+        mostrar(linea)
+    }
+    mostrar("memoria al final: " + r["sistema"]["memoria"])
+}
+
+funcion demostrar_colores() {
+    para color en ["rojo", "verde", "amarillo", "azul_claro", "rosa", "blanco"] {
+        poner_color(color, "negro")
+        escribir(color + " ")
+    }
+    poner_color("gris", "negro")
+    mostrar("")
+}
+
+# Atiende una orden y devuelve la lista de notas (puede haber cambiado).
+funcion atender(linea, notas) {
+    sea partes = partir(recortar(linea), " ")
+    sea orden = partes[0]
+    sea resto = recortar(cortar(recortar(linea), medir(orden), nada))
+    si orden == "" {
+        devolver notas
+    }
+    si orden == "ayuda" {
+        ayuda()
+    } sino si orden == "calc" {
+        intentar {
+            mostrar(resto + " = " + calcular(resto))
+        } si falla e {
+            mostrar("error: " + e["mensaje"])
+        }
+    } sino si orden == "nota" {
+        notas = agregar(notas, resto)
+        mostrar("apuntada (" + medir(notas) + " en total)")
+    } sino si orden == "notas" {
+        si medir(notas) == 0 {
+            mostrar("no hay notas")
+        }
+        sea n = 1
+        para nota en notas {
+            mostrar(n + ". " + nota)
+            n = n + 1
+        }
+    } sino si orden == "procesos" {
+        demostrar_procesos()
+    } sino si orden == "colores" {
+        demostrar_colores()
+    } sino si orden == "eco" {
+        mostrar(resto)
+    } sino si orden == "limpiar" {
+        limpiar_pantalla()
+        cabecera()
+    } sino si orden == "apagar" {
+        apagar_maquina()
+    } sino si orden == "reiniciar" {
+        reiniciar_maquina()
+    } sino {
+        mostrar("no conozco la orden '" + orden + "'; escribe 'ayuda'")
+    }
+    devolver notas
+}
+
+prueba "la consola atiende órdenes" {
+    comprobar_igual(atender("nota comprar pan", []), ["comprar pan"])
+    comprobar_igual(atender("  ", ["a"]), ["a"])
+    comprobar_igual(atender("calc 1 + 1", []), [])
+}
+
+limpiar_pantalla()
+cabecera()
+sea notas = []
+mientras verdadero {
+    sea linea = pedir_texto("deimon> ")
+    si linea == nada {
+        romper
+    }
+    notas = atender(linea, notas)
+}

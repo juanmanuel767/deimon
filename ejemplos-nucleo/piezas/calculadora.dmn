@@ -1,0 +1,87 @@
+# Calculadora: convierte "2 + 3 * (4 - 1)" en fichas y la evalúa con precedencia.
+# Cada paso recibe las fichas y la posición, y devuelve {"v": valor, "p": posición}.
+
+funcion es_digito(c) {
+    devolver incluye("0123456789.", c)
+}
+
+funcion fichas(entrada) {
+    sea lista = []
+    sea i = 0
+    mientras i < medir(entrada) {
+        sea c = entrada[i]
+        si c == " " {
+            i = i + 1
+            continuar
+        }
+        si es_digito(c) {
+            sea numero = ""
+            mientras i < medir(entrada) y es_digito(entrada[i]) {
+                numero = numero + entrada[i]
+                i = i + 1
+            }
+            lista = agregar(lista, {"tipo": "numero", "valor": a_numero(numero)})
+        } sino si incluye("+-*/()", c) {
+            lista = agregar(lista, {"tipo": c, "valor": nada})
+            i = i + 1
+        } sino {
+            provocar_error("carácter no válido: " + c)
+        }
+    }
+    devolver agregar(lista, {"tipo": "fin", "valor": nada})
+}
+
+funcion factor(f, p) {
+    sea ficha = f[p]
+    si ficha["tipo"] == "numero" {
+        devolver {"v": ficha["valor"], "p": p + 1}
+    }
+    si ficha["tipo"] == "-" {
+        sea r = factor(f, p + 1)
+        devolver {"v": -r["v"], "p": r["p"]}
+    }
+    si ficha["tipo"] == "(" {
+        sea r = suma(f, p + 1)
+        si f[r["p"]]["tipo"] != ")" {
+            provocar_error("falta un ')'")
+        }
+        devolver {"v": r["v"], "p": r["p"] + 1}
+    }
+    provocar_error("no esperaba '" + ficha["tipo"] + "'")
+}
+
+funcion producto(f, p) {
+    sea r = factor(f, p)
+    mientras f[r["p"]]["tipo"] == "*" o f[r["p"]]["tipo"] == "/" {
+        sea op = f[r["p"]]["tipo"]
+        sea d = factor(f, r["p"] + 1)
+        r = {"v": elegir(op == "*", r["v"] * d["v"], r["v"] / d["v"]), "p": d["p"]}
+    }
+    devolver r
+}
+
+funcion suma(f, p) {
+    sea r = producto(f, p)
+    mientras f[r["p"]]["tipo"] == "+" o f[r["p"]]["tipo"] == "-" {
+        sea op = f[r["p"]]["tipo"]
+        sea d = producto(f, r["p"] + 1)
+        r = {"v": elegir(op == "+", r["v"] + d["v"], r["v"] - d["v"]), "p": d["p"]}
+    }
+    devolver r
+}
+
+funcion calcular(entrada) {
+    sea f = fichas(entrada)
+    sea r = suma(f, 0)
+    si f[r["p"]]["tipo"] != "fin" {
+        provocar_error("sobra algo al final")
+    }
+    devolver r["v"]
+}
+
+
+prueba "la calculadora respeta la precedencia" {
+    comprobar_igual(calcular("1 + 2 * 3"), 7)
+    comprobar_igual(calcular("(1 + 2) * 3"), 9)
+    comprobar_igual(calcular("-(2.5 * 4) / 5"), -2)
+}

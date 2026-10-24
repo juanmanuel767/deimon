@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deimon: probar código</title>
+<style>
+:root { --fondo:#f7f6fb; --tarjeta:#fff; --texto:#1d1b26; --suave:#6b6880; --borde:#d9d6e6; --marca:#7c3aed; --error:#b42318; --errorfondo:#fef0ee; }
+@media (prefers-color-scheme: dark) {
+  :root { --fondo:#14121c; --tarjeta:#1d1a29; --texto:#ece9f7; --suave:#a29fb8; --borde:#38344c; --marca:#a78bfa; --error:#ff8a7a; --errorfondo:#2d1a1a; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--fondo); color:var(--texto); font:16px/1.5 system-ui,sans-serif; }
+main { max-width:900px; margin:0 auto; padding:16px; }
+h1 { font-size:1.3rem; margin:0 0 4px; color:var(--marca); }
+p.ayuda { margin:0 0 12px; color:var(--suave); font-size:.9rem; }
+.barra { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+select, button { font:inherit; padding:8px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--tarjeta); color:var(--texto); }
+button { background:var(--marca); color:#fff; border-color:var(--marca); cursor:pointer; font-weight:600; }
+button:disabled { opacity:.6; cursor:wait; }
+textarea, pre { font:14px/1.5 ui-monospace,Consolas,monospace; }
+textarea { width:100%; min-height:260px; padding:12px; border-radius:8px; border:1px solid var(--borde); background:var(--tarjeta); color:var(--texto); resize:vertical; tab-size:4; }
+h2 { font-size:1rem; margin:16px 0 6px; }
+pre { margin:0; padding:12px; min-height:60px; border-radius:8px; border:1px solid var(--borde); background:var(--tarjeta); white-space:pre-wrap; word-break:break-word; overflow:auto; max-height:50vh; }
+.error { border-color:var(--error); background:var(--errorfondo); }
+.error b { color:var(--error); }
+.aviso { color:var(--suave); font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Deimon: probar código</h1>
+<p class="ayuda">Escribe tu programa y pulsa «Ejecutar» (o Ctrl+Enter). Todo pasa en este ordenador.</p>
+<div class="barra">
+  <select id="ejemplos" aria-label="Ejemplos"><option value="">Elige un ejemplo...</option></select>
+  <button id="ejecutar" type="button">Ejecutar</button>
+</div>
+<textarea id="codigo" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Código">mostrar("Hola desde Deimon")
+</textarea>
+<h2>Resultado</h2>
+<pre id="resultado">Aquí verás lo que escribe tu programa.</pre>
+</main>
+<script>
+const CLAVE = "{{CLAVE}}";
+const EJEMPLOS = {{EJEMPLOS}};
+const codigo = document.getElementById("codigo");
+const resultado = document.getElementById("resultado");
+const boton = document.getElementById("ejecutar");
+const lista = document.getElementById("ejemplos");
+
+EJEMPLOS.forEach((e, i) => {
+  const o = document.createElement("option");
+  o.value = i;
+  o.textContent = e.nombre;
+  lista.appendChild(o);
+});
+lista.addEventListener("change", () => {
+  if (lista.value !== "") codigo.value = EJEMPLOS[Number(lista.value)].codigo;
+});
+
+function mostrar(texto, esError) {
+  resultado.className = esError ? "error" : "";
+  resultado.textContent = texto;
+}
+
+function mostrarErrores(errores) {
+  resultado.className = "error";
+  resultado.textContent = "";
+  errores.forEach(e => {
+    const b = document.createElement("b");
+    b.textContent = "Línea " + e.linea + ": ";
+    resultado.appendChild(b);
+    resultado.appendChild(document.createTextNode(e.mensaje + "\n"));
+    if (e.sugerencia) resultado.appendChild(document.createTextNode("   Sugerencia: " + e.sugerencia + "\n"));
+    resultado.appendChild(document.createTextNode("\n"));
+  });
+}
+
+async function ejecutar() {
+  boton.disabled = true;
+  mostrar("Preparando y ejecutando... (puede tardar unos segundos)", false);
+  try {
+    const r = await fetch("/ejecutar", {
+      method: "POST",
+      headers: { "X-Deimon-Clave": CLAVE, "Content-Type": "text/plain; charset=utf-8" },
+      body: codigo.value
+    });
+    const d = await r.json();
+    if (d.error) { mostrar(d.error, true); return; }
+    if (d.errores && d.errores.length) { mostrarErrores(d.errores); return; }
+    let t = d.salida || "";
+    if (d.recortado) t += "\n[La salida era demasiado larga y se ha recortado.]";
+    if (d.agotado) t += "\n[El programa tardó más de 15 segundos y se detuvo.]";
+    else if (d.codigo !== 0) t += "\n[El programa terminó con error (código " + d.codigo + ").]";
+    mostrar(t === "" ? "(el programa no escribió nada)" : t, d.agotado || d.codigo !== 0);
+  } catch (e) {
+    mostrar("No se pudo hablar con Deimon. ¿Sigue abierta la terminal?", true);
+  } finally {
+    boton.disabled = false;
+  }
+}
+boton.addEventListener("click", ejecutar);
+codigo.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ejecutar(); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Funciones del módulo "google" (entrar con Google, OpenID Connect).
+# Necesitas un "ID de cliente de OAuth" de tipo aplicación web en console.cloud.google.com,
+# con la dirección de vuelta añadida en "URI de redireccionamiento autorizados".
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+direccion_google | 2 | dirección a la que mandar a la persona para entrar con Google (client id, dirección de vuelta) | devolver redirigir_fuera(direccion_google(cliente, "https://mitienda.com/google"))
+usuario_google | 3 | en la ruta de vuelta: comprueba lo que manda Google y devuelve {id, email, nombre, verificado, foto}, o nada si falló (client id, client secret, dirección de vuelta) | sea u = usuario_google(cliente, secreto, "https://mitienda.com/google")

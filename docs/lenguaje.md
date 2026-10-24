@@ -98,6 +98,22 @@ mientras condicion {
 Dentro de un `mientras` o un `para`, `romper` sale del bucle y `continuar` salta
 a la siguiente vuelta.
 
+### Atrapar errores
+
+```deimon
+intentar {
+    mostrar(10 / 0)
+} si falla e {
+    mostrar("Algo falló: " + e["mensaje"] + " (línea " + a_texto(e["linea"]) + ")")
+}
+```
+
+Si algo falla dentro de `intentar` (una división entre cero, un índice fuera de
+rango, o un error que tú provocas con `provocar_error("mensaje")`), el programa
+no se detiene: salta al bloque `si falla`. Ahí `e` es un mapa con `"mensaje"` y
+`"linea"`. Se pueden anidar, y dentro valen `romper`, `continuar` y `devolver`.
+Un error fuera de `intentar` sigue terminando el programa.
+
 Para elegir entre dos valores en una sola línea: `elegir(condicion, a, b)`
 devuelve `a` si se cumple y `b` si no, y solo calcula el que elige:
 `mostrar(elegir(edad >= 18, "adulto", "menor"))`.

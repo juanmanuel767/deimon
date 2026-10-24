@@ -97,9 +97,31 @@ fn sentencia_numerica(sentencia: &Sentencia, ambito: &mut Ambito, numericas: &Ha
             ambito.bloques.pop();
             bien
         }
+        Sentencia::Para { nombre, coleccion, cuerpo, .. } => {
+            let Some((desde, hasta)) = limites_de_rango(coleccion) else {
+                return false;
+            };
+            if !es_numero(desde, ambito, numericas) || !es_numero(hasta, ambito, numericas) {
+                return false;
+            }
+            ambito.bloques.push(HashSet::from([nombre.clone()]));
+            let bien = sentencias_numericas(cuerpo, ambito, numericas);
+            ambito.bloques.pop();
+            bien
+        }
         Sentencia::Devolver { valor: Some(valor), .. } => es_numero(valor, ambito, numericas),
         Sentencia::Romper { .. } | Sentencia::Continuar { .. } => true,
         _ => false,
+    }
+}
+
+/// Si la colección de un `para` es `rango(desde, hasta)`, devuelve sus dos límites.
+fn limites_de_rango(coleccion: &Expresion) -> Option<(&Expresion, &Expresion)> {
+    match coleccion {
+        Expresion::Llamada { nombre, argumentos, .. } if nombre == "rango" && argumentos.len() == 2 => {
+            Some((&argumentos[0], &argumentos[1]))
+        }
+        _ => None,
     }
 }
 
@@ -149,16 +171,21 @@ fn es_logico(e: &Expresion, ambito: &Ambito, numericas: &HashMap<String, usize>)
 }
 
 /// Nombre de la versión numérica de una función.
+/// Nombre, en el Rust generado, de la profundidad de llamadas que lleva el camino rápido
+/// (no choca con las variables del programa, que empiezan por `var_`).
+const PROFUNDIDAD: &str = "profundidad_llamadas";
+
 pub fn nombre_numerico(nombre: &str) -> String {
     format!("num_{}", crate::generador::nombre_funcion(nombre))
 }
 
 /// Código Rust de la versión numérica de una función (que ya se sabe que cumple).
 pub fn generar(nombre: &str, parametros: &[String], cuerpo: &[Sentencia]) -> String {
-    let parametros_rust: Vec<String> = parametros
+    let mut parametros_rust: Vec<String> = parametros
         .iter()
-        .map(|p| format!("{}: f64", crate::generador::nombre_variable(p)))
+        .map(|p| format!("mut {}: f64", crate::generador::nombre_variable(p)))
         .collect();
+    parametros_rust.push(format!("{}: usize", PROFUNDIDAD));
     let mut salida = format!(
         "\n#[allow(unreachable_code, unused_mut, unused_variables, non_snake_case)]\nfn {}({}) -> f64 {{\n",
         nombre_numerico(nombre),
@@ -191,6 +218,25 @@ fn sentencias_rust(lista: &[Sentencia], nivel: usize, salida: &mut String) {
                 sentencias_rust(cuerpo, nivel + 1, salida);
                 salida.push_str(&format!("{}}}\n", sangria));
             }
+            Sentencia::Para { nombre, coleccion, cuerpo, linea } => {
+                let (desde, hasta) = limites_de_rango(coleccion).expect("un rango");
+                salida.push_str(&format!("{}{{\n", sangria));
+                salida.push_str(&format!(
+                    "{}    let (rg_desde, rg_hasta, rg_al_reves) = rango_numerico({}, {}, {});\n",
+                    sangria,
+                    numero_rust(desde),
+                    numero_rust(hasta),
+                    linea
+                ));
+                salida.push_str(&format!("{}    for rg_paso in 0..=(rg_hasta - rg_desde) {{\n", sangria));
+                salida.push_str(&format!(
+                    "{}        let mut {}: f64 = (if rg_al_reves {{ rg_hasta - rg_paso }} else {{ rg_desde + rg_paso }}) as f64;\n",
+                    sangria,
+                    crate::generador::nombre_variable(nombre)
+                ));
+                sentencias_rust(cuerpo, nivel + 2, salida);
+                salida.push_str(&format!("{}    }}\n{}}}\n", sangria, sangria));
+            }
             Sentencia::Devolver { valor: Some(valor), .. } => {
                 salida.push_str(&format!("{}return {};\n", sangria, numero_rust(valor)));
             }
@@ -216,8 +262,9 @@ fn numero_rust(e: &Expresion) -> String {
                 _ => format!("resto_numerico({}, {}, {})", a, b, linea),
             }
         }
-        Expresion::Llamada { nombre, argumentos, .. } => {
-            let partes: Vec<String> = argumentos.iter().map(numero_rust).collect();
+        Expresion::Llamada { nombre, argumentos, linea, .. } => {
+            let mut partes: Vec<String> = argumentos.iter().map(numero_rust).collect();
+            partes.push(format!("llamada_numerica({}, {})", PROFUNDIDAD, linea));
             format!("{}({})", nombre_numerico(nombre), partes.join(", "))
         }
         _ => unreachable!("expresión que no es numérica"),
@@ -272,9 +319,33 @@ pub fn bucle_numerico(
 /// Código Rust del bucle rápido; las variables de fuera ya existen como `f64` mutables.
 pub fn generar_bucle(condicion: &Expresion, cuerpo: &[Sentencia], nivel: usize) -> String {
     let sangria = "    ".repeat(nivel);
-    let mut salida = format!("{}while {} {{\n", sangria, logico_rust(condicion));
+    let mut salida = format!("{}#[allow(unused_variables)] let {} = profundidad_actual();\n", sangria, PROFUNDIDAD);
+    salida.push_str(&format!("{}while {} {{\n", sangria, logico_rust(condicion)));
     sentencias_rust(cuerpo, nivel + 1, &mut salida);
     salida.push_str(&format!("{}}}\n", sangria));
+    salida
+}
+
+/// Igual que `bucle_numerico`, para un `para x en rango(a, b)` cuyo cuerpo solo hace cuentas.
+pub fn para_numerico(sentencia: &Sentencia, numericas: &HashMap<String, usize>) -> Option<Vec<String>> {
+    let Sentencia::Para { coleccion, cuerpo, .. } = sentencia else {
+        return None;
+    };
+    limites_de_rango(coleccion)?;
+    if contiene_devolver(cuerpo) {
+        return None;
+    }
+    let mut libres = Vec::new();
+    let mut locales = vec![HashSet::new()];
+    variables_de_sentencias(std::slice::from_ref(sentencia), &mut locales, &mut libres);
+    let mut ambito = Ambito::nuevo(&libres);
+    sentencia_numerica(sentencia, &mut ambito, numericas).then_some(libres)
+}
+
+/// Código Rust del `para` rápido; las variables de fuera ya existen como `f64` mutables.
+pub fn generar_para(sentencia: &Sentencia, nivel: usize) -> String {
+    let mut salida = format!("{}#[allow(unused_variables)] let {} = profundidad_actual();\n", "    ".repeat(nivel), PROFUNDIDAD);
+    sentencias_rust(std::slice::from_ref(sentencia), nivel, &mut salida);
     salida
 }
 
@@ -336,6 +407,12 @@ fn variables_de_sentencias(lista: &[Sentencia], locales: &mut Vec<HashSet<String
             Sentencia::Mientras { condicion, cuerpo, .. } => {
                 variables_de_expresion(condicion, locales, libres);
                 locales.push(HashSet::new());
+                variables_de_sentencias(cuerpo, locales, libres);
+                locales.pop();
+            }
+            Sentencia::Para { nombre, coleccion, cuerpo, .. } => {
+                variables_de_expresion(coleccion, locales, libres);
+                locales.push(HashSet::from([nombre.clone()]));
                 variables_de_sentencias(cuerpo, locales, libres);
                 locales.pop();
             }

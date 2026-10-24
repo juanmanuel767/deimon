@@ -1,0 +1,8 @@
+# Funciones del módulo "patrones" de la biblioteca estándar (expresiones regulares).
+# Cada línea es: nombre | número_de_argumentos | descripción en español | ejemplo de una línea
+coincide_patron | 2 | dice si el patrón aparece en alguna parte del texto | coincide_patron("pedido 42", "\\d+")   # verdadero
+buscar_patron | 2 | busca la primera coincidencia: devuelve una lista [todo, grupo1, grupo2...] o nada | buscar_patron("ana@x.es", "(\\w+)@(\\w+)")   # [ana@x, ana, x]
+buscar_todos_patron | 2 | busca todas las coincidencias: devuelve una lista con una lista [todo, grupo1...] por cada una | buscar_todos_patron("a1 b22", "[a-z](\\d+)")
+reemplazar_patron | 3 | cambia las coincidencias por otro texto; en el nuevo texto $1, $2... son los grupos | reemplazar_patron("2024-05", "(\\d+)-(\\d+)", "$2/$1")   # 05/2024
+partir_patron | 2 | divide el texto en cada coincidencia del patrón y devuelve una lista | partir_patron("a, b;c", "[,;]\\s*")
+buscar_columnas_patron | 2 | como buscar_todos_patron pero ordenado por columnas: [todas las coincidencias, todos los grupo1, ...] | buscar_columnas_patron("a1 b2", "([a-z])(\\d)")

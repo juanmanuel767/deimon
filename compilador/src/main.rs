@@ -1,8 +1,13 @@
 mod android;
+mod compartir_modulos;
 mod comprobar;
 mod destinos;
+mod empaquetar;
 mod entorno;
+mod jugar;
+mod mcp;
 mod listar_modulos;
+mod traducir_cobol;
 mod traducir_php;
 mod publicar;
 mod probar;
@@ -38,6 +43,8 @@ fn emblema() -> String {
 }
 
 fn main() {
+    // Un programa empaquetado (`deimon empaquetar`) se ejecuta directamente.
+    empaquetar::ejecutar_si_es_paquete();
     let argumentos: Vec<String> = env::args().collect();
     if matches!(
         argumentos.get(1).map(String::as_str),
@@ -47,6 +54,13 @@ fn main() {
         println!("\nEmpieza con: deimon ejecutar hola.dmn · todas las órdenes: deimon guia");
         return;
     }
+    if argumentos.get(1).map(String::as_str) == Some(probar::ORDEN_INTERNA) {
+        if let Err((mensaje, codigo)) = probar::probar_con_interprete(&argumentos[2..]) {
+            eprintln!("{}", mensaje);
+            process::exit(codigo);
+        }
+        return;
+    }
     if argumentos.get(1).map(String::as_str) == Some("app") {
         if let Err((mensaje, codigo)) = android::app(&argumentos[2..]) {
             eprintln!("{}", mensaje);
@@ -54,7 +68,7 @@ fn main() {
         }
         return;
     }
-    let subordenes: [(&str, fn(&[String]) -> Result<(), (String, i32)>); 10] = [
+    let subordenes: [(&str, fn(&[String]) -> Result<(), (String, i32)>); 16] = [
         ("entorno", entorno::entorno),
         ("probar", probar::probar),
         ("comprobar", comprobar::comprobar),
@@ -62,9 +76,15 @@ fn main() {
         ("guia", comprobar::guia),
         ("destinos", destinos::listar),
         ("modulos", listar_modulos::listar),
+        ("modulo", compartir_modulos::modulo),
         ("desde-php", traducir_php::desde_php),
+        ("desde-cobol", traducir_cobol::desde_cobol),
         ("publicar", publicar::publicar),
         ("compilar", destinos::compilar),
+        ("arrancar", destinos::arrancar),
+        ("jugar", jugar::jugar),
+        ("empaquetar", empaquetar::empaquetar),
+        ("mcp", mcp::mcp),
     ];
     for (nombre, orden) in subordenes {
         if argumentos.get(1).map(String::as_str) == Some(nombre) {
@@ -92,11 +112,11 @@ fn main() {
             }
             if let Some(otra) = otra {
                 eprintln!(
-                    "Error: la orden '{}' no existe. Usa 'traducir', 'ejecutar', 'comprobar', 'formatear', 'probar', 'compilar', 'destinos', 'modulos', 'desde-php', 'publicar', 'entorno', 'guia' o 'app'.",
+                    "Error: la orden '{}' no existe. Usa 'traducir', 'ejecutar', 'comprobar', 'formatear', 'probar', 'compilar', 'arrancar', 'destinos', 'modulos', 'modulo', 'desde-php', 'desde-cobol', 'publicar', 'jugar', 'empaquetar', 'mcp', 'entorno', 'guia' o 'app'.",
                     otra
                 );
             }
-            eprintln!("Uso: deimon <traducir|ejecutar> archivo.dmn [--perfil NOMBRE] | deimon app archivo.dmn [--nombre N] [--paquete P] [--perfil NOMBRE] | deimon compilar archivo.dmn [--destino NOMBRE] [--salida RUTA] [--perfil NOMBRE] | deimon probar archivo.dmn [--json] | deimon comprobar archivo.dmn [--json] [--arreglar] | deimon formatear archivo.dmn [--comprobar] | deimon destinos [--json] | deimon modulos [archivo.dmn] [--json] | deimon entorno [archivo.dmn] [--json] | deimon guia [archivo.dmn] [--json]");
+            eprintln!("Uso: deimon <traducir|ejecutar> archivo.dmn [--perfil NOMBRE] | deimon app archivo.dmn [--nombre N] [--paquete P] [--perfil NOMBRE] | deimon compilar archivo.dmn [--destino NOMBRE] [--salida RUTA] [--perfil NOMBRE] | deimon arrancar archivo.dmn [--sin-ventana] [--memoria MB] | deimon probar archivo.dmn [--json] | deimon comprobar archivo.dmn [--json] [--arreglar] | deimon formatear archivo.dmn [--comprobar] | deimon desde-cobol archivo.cob [--salida x.dmn] [--comprobar] | deimon destinos [--json] | deimon modulos [archivo.dmn] [--json] | deimon modulo <instalar|actualizar|quitar> <origen|nombre> [--aqui] | deimon entorno [archivo.dmn] [--json] | deimon guia [archivo.dmn] [--json] | deimon jugar [--puerto N] [--sin-abrir] | deimon empaquetar archivo.dmn [--salida RUTA] [--perfil NOMBRE] | deimon mcp");
             process::exit(2);
         }
     };
@@ -148,6 +168,23 @@ fn ejecutar(argumentos: &[String]) -> Result<(), (String, i32)> {
     let fuente = leer_archivo(&archivo)?;
     let rust = deimon::traducir_archivo_varios_con_perfil(&fuente, Path::new(&archivo), perfil)
         .map_err(|errores| (deimon::texto_de_errores(&errores), 1))?;
+
+    // Motor: el intérprete propio (instantáneo) cuando el programa solo usa lo que sabe hacer;
+    // si no, el modo Rust de siempre. `DEIMON_MOTOR=rust|interprete` fuerza uno.
+    if env::var("DEIMON_MOTOR").as_deref() != Ok("rust") {
+        match deimon::compilar_para_interprete(&fuente, Path::new(&archivo)) {
+            Ok(codigo) => {
+                deimon::interprete::elegir_perfil(perfil);
+                deimon::interprete::ejecutar(&codigo);
+                return Ok(());
+            }
+            Err(motivo) => {
+                if env::var_os("DEIMON_MOTOR_MOTIVO").is_some() {
+                    eprintln!("(modo Rust: {})", motivo);
+                }
+            }
+        }
+    }
 
     let base = nombre_temporal();
     let ruta_rust = base.with_extension("rs");

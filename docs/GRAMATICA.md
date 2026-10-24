@@ -29,6 +29,7 @@ sentencia       = declaracion
                 | condicional
                 | bucle_mientras
                 | bucle_para
+                | intento
                 | devolucion
                 | "romper"
                 | "continuar"
@@ -95,6 +96,15 @@ bucle_para      = "para", identificador, "en", expresion, bloque ;
   valor en orden. Con una lista con claves, `elemento` recibe cada clave.
 - `romper` sale del bucle en el que está; `continuar` salta a la siguiente
   vuelta. Fuera de un `mientras` o un `para` son un error (E011).
+- `intentar { ... } si falla e { ... }` ejecuta el primer bloque; si algo falla
+  (una división entre cero, un índice fuera de rango, `provocar_error(...)`),
+  salta al segundo bloque. `e` es un mapa con `"mensaje"` y `"linea"`. Se pueden
+  anidar, y dentro valen `romper`, `continuar` y `devolver`. Un error fuera de
+  `intentar` sigue terminando el programa.
+
+```ebnf
+intento         = "intentar", bloque, "si", "falla", identificador, bloque ;
+```
 
 ## 4. Devolver, asignar y expresiones sueltas
 
@@ -236,6 +246,8 @@ Estas son todas las palabras que el lexer reconoce como parte del lenguaje:
 | `sino` | rama alternativa de un `si` |
 | `mientras` | bucle con condición |
 | `para` | recorre una lista |
+| `intentar` | ejecuta un bloque y atrapa sus errores |
+| `falla` | en `si falla e { ... }`, el bloque que se ejecuta si hubo un error |
 | `en` | separa la variable y la lista en `para` |
 | `y` | y lógico |
 | `o` | o lógico |

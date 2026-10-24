@@ -127,6 +127,14 @@ pub enum Sentencia {
         sino: Vec<Sentencia>,
         linea: usize,
     },
+    /// `intentar { ... } si falla e { ... }`: captura los errores de ejecución del bloque.
+    Intentar {
+        cuerpo: Vec<Sentencia>,
+        nombre: String,
+        captura: Vec<Sentencia>,
+        linea: usize,
+        columna: usize,
+    },
     Mientras {
         condicion: Expresion,
         cuerpo: Vec<Sentencia>,

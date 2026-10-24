@@ -65,7 +65,7 @@ fn en_expresion(expresion: &mut Expresion, carpeta: &Path, errores: &mut Vec<Err
             if nombre == "plantilla" && argumentos.len() == 2 {
                 if let Expresion::Texto(ruta) = &argumentos[0] {
                     let completa = carpeta.join(ruta);
-                    match std::fs::read_to_string(&completa) {
+                    match crate::fuentes::leer_texto(&completa) {
                         Ok(texto) => match lectura::analizar_plantilla(&texto) {
                             Ok(_) => {
                                 *nombre = "rellenar_plantilla".to_string();

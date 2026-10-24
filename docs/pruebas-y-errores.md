@@ -50,6 +50,8 @@ Pruebas: 2 · correctas: 1 · fallidas: 1
 ```
 
 `deimon probar` termina con código 0 solo si hay al menos una prueba y todas pasan.
+
+Las pruebas se corren con el intérprete propio, sin Rust y casi al instante (las 6 pruebas de `proyectos/tienda` tardan unos 3 s, frente a unos 35 s compilando). Si el programa usa algo que el intérprete no lleva (por ejemplo el módulo `sql`), se compilan con Rust como antes, con el mismo resultado. `DEIMON_MOTOR=rust deimon probar ...` obliga a usar Rust.
 Solo corre las pruebas: no ejecuta el resto del programa ni arranca el
 servidor. Usa una carpeta de datos temporal que se borra al terminar, así que
 tus datos reales nunca se tocan. `deimon ejecutar` ignora las pruebas.
@@ -133,6 +135,7 @@ Dentro de `deimon probar`, el detalle de la prueba termina con `(línea N)`.
 | E022 | palabra reservada usada como nombre |
 | E023 | se intenta cambiar un texto por partes |
 | E024 | plantilla HTML que no existe o está mal escrita |
+| E025 | operación con tipos que no encajan (fallaría seguro al ejecutarse) |
 | E999 | otro error |
 
 ## Comprobar un programa
@@ -142,6 +145,14 @@ deimon comprobar archivo.dmn              # lista todos los errores
 deimon comprobar archivo.dmn --json       # lo mismo, escrito para que lo lea otro programa
 deimon comprobar archivo.dmn --arreglar   # aplica los arreglos automáticos seguros
 ```
+
+Antes de ejecutar nada, Deimon revisa también los tipos (`E025`): avisa de las operaciones
+que fallarían seguro al llegar a ellas, como restar un texto (`"Ana" - 1`), comparar con `<`
+algo que no es un número, usar un número como condición (`si edad { ... }`), recorrer un
+número con `para` o poner corchetes a un número. Solo avisa cuando está seguro del tipo (un
+valor escrito tal cual, una variable que solo ha recibido ese tipo, el resultado de
+`a_texto`, `medir`...); si duda, calla, así que nunca da falsas alarmas. Los mensajes son los
+mismos que daría el programa al fallar, con «(se ve sin ejecutar el programa)».
 
 `deimon comprobar` traduce el programa sin compilarlo ni ejecutarlo. Los errores de nombres,
 argumentos y estructura se recogen todos a la vez; los de caracteres y de sintaxis

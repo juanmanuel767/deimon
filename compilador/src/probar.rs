@@ -152,9 +152,43 @@ fn correr_con(
             error
         )
     })?;
-    let resultado = correr_en(&trabajo, &rust, &informacion.pruebas);
+    // Con el intérprete las pruebas empiezan al instante y no hace falta Rust; si el programa
+    // usa algo que el intérprete no lleva (por ejemplo `sql`), se compila con Rust como siempre.
+    let resultado = match programa_interpretable(fuente, archivo) {
+        Some((ejecutable, ruta)) => {
+            let mut orden = Command::new(ejecutable);
+            orden.arg(ORDEN_INTERNA).arg(ruta);
+            correr_orden(&trabajo, &mut orden, &informacion.pruebas)
+        }
+        None => correr_en(&trabajo, &rust, &informacion.pruebas),
+    };
     let _ = fs::remove_dir_all(&trabajo);
     resultado
+}
+
+/// Orden oculta con la que `deimon probar` se llama a sí mismo para correr las pruebas con
+/// el intérprete en un proceso aparte (como el programa de pruebas del modo Rust).
+pub const ORDEN_INTERNA: &str = "__probar-con-interprete";
+
+/// El propio `deimon` y la ruta completa del programa, si el intérprete puede con él.
+fn programa_interpretable(fuente: &str, archivo: Option<&Path>) -> Option<(PathBuf, PathBuf)> {
+    if env::var("DEIMON_MOTOR").as_deref() == Ok("rust") {
+        return None;
+    }
+    let archivo = archivo?;
+    deimon::compilar_para_interprete(fuente, archivo).ok()?;
+    Some((env::current_exe().ok()?, fs::canonicalize(archivo).ok()?))
+}
+
+/// La orden oculta: corre las pruebas de `archivo` con el intérprete.
+pub fn probar_con_interprete(argumentos: &[String]) -> Result<(), Fallo> {
+    let archivo = argumentos.first().ok_or_else(|| ("Error: falta el archivo.".to_string(), 2))?;
+    let fuente = fs::read_to_string(archivo)
+        .map_err(|error| (format!("Error: no se pudo leer '{}': {}", archivo, error), 1))?;
+    let codigo = deimon::compilar_para_interprete(&fuente, Path::new(archivo))
+        .map_err(|motivo| (format!("Error: el intérprete no puede con este programa: {}", motivo), 1))?;
+    deimon::interprete::ejecutar_pruebas(&codigo);
+    Ok(())
 }
 
 fn en_una_linea(texto: &str) -> String {
@@ -168,7 +202,6 @@ fn correr_en(
 ) -> Result<Vec<ResultadoPrueba>, String> {
     let ruta_rust = trabajo.join("programa.rs");
     let ruta_bin = trabajo.join("programa.bin");
-    let datos: PathBuf = trabajo.join("datos");
     fs::write(&ruta_rust, rust).map_err(|error| {
         format!(
             "Error: no se pudo escribir el archivo temporal '{}': {}",
@@ -197,8 +230,19 @@ fn correr_en(
         ));
     }
 
+    correr_orden(trabajo, &mut Command::new(&ruta_bin), nombres)
+}
+
+/// Ejecuta el programa de pruebas (el compilado con Rust o el intérprete) en la carpeta de
+/// trabajo, con datos nuevos, y recoge el resultado de cada prueba.
+fn correr_orden(
+    trabajo: &Path,
+    orden: &mut Command,
+    nombres: &[String],
+) -> Result<Vec<ResultadoPrueba>, String> {
+    let datos: PathBuf = trabajo.join("datos");
     let ejecucion = ejecutar_con_limite(
-        Command::new(&ruta_bin)
+        orden
             .current_dir(trabajo)
             .env("DEIMON_DATOS", &datos)
             .env_remove("DEIMON_PUERTO"),

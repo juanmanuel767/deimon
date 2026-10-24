@@ -47,6 +47,8 @@ fn es_palabra(tipo: &Tipo) -> bool {
             | Tipo::Continuar
             | Tipo::Si
             | Tipo::Sino
+            | Tipo::Intenta
+            | Tipo::Falla
             | Tipo::Mientras
             | Tipo::Para
             | Tipo::En
@@ -89,6 +91,8 @@ fn texto_token(tipo: &Tipo) -> String {
         Tipo::Continuar => "continuar".to_string(),
         Tipo::Si => "si".to_string(),
         Tipo::Sino => "sino".to_string(),
+        Tipo::Intenta => "intentar".to_string(),
+        Tipo::Falla => "falla".to_string(),
         Tipo::Mientras => "mientras".to_string(),
         Tipo::Para => "para".to_string(),
         Tipo::En => "en".to_string(),
@@ -196,10 +200,12 @@ impl Formateador {
                     self.cerrar_linea();
                 }
                 tipo => {
-                    let siguiente = tokens[i + 1..]
+                    let mut siguiente_lista = tokens[i + 1..]
                         .iter()
-                        .find(|t| !matches!(t.tipo, Tipo::NuevaLinea));
-                    self.codigo(tipo, token.linea, siguiente);
+                        .filter(|t| !matches!(t.tipo, Tipo::NuevaLinea));
+                    let siguiente = siguiente_lista.next();
+                    let siguiente2 = siguiente_lista.next();
+                    self.codigo(tipo, token.linea, siguiente, siguiente2);
                 }
             }
             i += 1;
@@ -334,7 +340,26 @@ impl Formateador {
         self.ignorar_salto = true;
     }
 
-    fn codigo(&mut self, tipo: &Tipo, linea: usize, siguiente: Option<&Token>) {
+    fn codigo(
+        &mut self,
+        tipo: &Tipo,
+        linea: usize,
+        siguiente: Option<&Token>,
+        siguiente2: Option<&Token>,
+    ) {
+        if matches!(tipo, Tipo::Si)
+            && self.pendiente_cierre
+            && siguiente.map(|t| matches!(t.tipo, Tipo::Falla)).unwrap_or(false)
+        {
+            self.escribir("si", true);
+            self.pendiente_cierre = false;
+            self.pendiente_sino = true;
+            self.unir_siguiente = true;
+            self.pegado = false;
+            self.separar = true;
+            self.recordar(tipo, linea);
+            return;
+        }
         if matches!(tipo, Tipo::Sino) && self.pendiente_cierre {
             self.escribir("sino", true);
             self.pendiente_cierre = false;
@@ -421,7 +446,13 @@ impl Formateador {
                 let clase = self.pila.pop().unwrap_or(ClaseBloque::Otro);
                 self.pendiente_cierre = true;
                 self.unir_siguiente = siguiente
-                    .map(|t| matches!(t.tipo, Tipo::Sino))
+                    .map(|t| {
+                        matches!(t.tipo, Tipo::Sino)
+                            || (matches!(t.tipo, Tipo::Si)
+                                && siguiente2
+                                    .map(|segundo| matches!(segundo.tipo, Tipo::Falla))
+                                    .unwrap_or(false))
+                    })
                     .unwrap_or(false);
                 self.pegado = false;
                 self.separar = false;

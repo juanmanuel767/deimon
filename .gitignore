@@ -13,3 +13,4 @@ rendimiento/*_gen.rs
 .env*
 # Notas internas de traspaso (rutas privadas del ordenador del autor)
 docs/TRASPASO.md
+*.iso

@@ -77,5 +77,24 @@ Para medirla: `bash rendimiento/medir.sh` (compila y ejecuta los programas de `r
 | bucle de 20 millones con `%` | 1,8 s | 0,79 s | 0,76 s |
 | lista de 20 000 con `agregar` | 4,1 s | 0,009 s | — |
 | texto concatenado 100 000 veces | — | 0,014 s | — |
+| `para i en rango(1, 10000000)` con cuentas | 0,12 s de CPU (más la lista de 10 millones) | 0,025 s | 0,025 s |
 
 Lo que cambió: las operaciones trabajan sobre referencias en vez de copiar los valores; los textos y las listas se comparten y solo se copian si se modifican; `x = agregar(x, v)` amplía la lista en su sitio. La prueba `compilador/tests/rendimiento.rs` falla si las listas o los textos vuelven a ser lentos.
+
+`para` sobre un rango: si el cuerpo solo hace cuentas con números (y los límites del `rango` son números), el bucle se recorre con `f64` directos sin crear la lista, igual que `mientras`. Los errores no cambian (límites no enteros, más de 10 millones, división o resto entre cero, con su línea). Si alguna variable no es un número, se usa el camino de siempre. También se corrigió que un bucle de cuentas o una asignación a un parámetro dentro de una función no compilaba. Tiempos medidos con `user` en un ordenador con carga: son orientativos.
+
+## Dos motores: intérprete propio y modo Rust
+
+`deimon ejecutar` usa un intérprete propio (`compilador/src/interprete/`) cuando el programa solo usa lo que sabe hacer, y el modo Rust de siempre en los demás casos (ver «Dos motores» en `docs/ordenes.md`). El intérprete convierte el programa en un código intermedio con las variables por posición y lo ejecuta en una máquina virtual; reutiliza el mismo núcleo que los programas traducidos, por eso dan los mismos resultados.
+
+Tiempos medidos (el ordenador tenía mucha carga, así que son orientativos; mejor de tres):
+
+| Programa | Intérprete | Modo Rust (compilar + ejecutar) | Modo Rust (solo ejecutar, ya compilado) |
+|---|---|---|---|
+| `hola` | 0,015 a 0,03 s | 1,4 s | 0,007 s |
+| `fib(32)` recursivo | 0,5 a 0,75 s | 1,1 a 2,0 s | 0,03 a 0,1 s |
+| bucle de 20 millones con `%` | 2,4 a 4,4 s | 1,8 a 3,3 s | 0,7 a 0,85 s |
+
+Páginas web: la tienda de `proyectos/tienda` está lista para recibir visitas en 0,1 s con el intérprete y en 15,5 s con el modo Rust (que primero compila); después, las dos responden igual de rápido (200 visitas seguidas en unos 2 s) porque usan el mismo servidor.
+
+Lectura: para programas cortos (lo habitual al escribir y probar) el intérprete gana por mucho porque no espera a `rustc`. En cuentas muy pesadas, el modo Rust ya compilado sigue siendo entre 4 y 20 veces más rápido: para eso están `deimon compilar` y `deimon app`, o `DEIMON_MOTOR=rust`. El intérprete aún no tiene las versiones numéricas rápidas del modo Rust; es un buen sitio para seguir mejorando.

@@ -104,7 +104,46 @@ pub const DESTINOS: &[Destino] = &[
             "sudo apt install gcc-mingw-w64-x86-64",
         ],
     },
+    Destino {
+        nombre: SIN_SISTEMA,
+        triple: "x86_64-unknown-none",
+        enlazador: Enlazador::PorDefecto,
+        capacidades: Capacidades {
+            red: false,
+            archivos: false,
+            hilos: false,
+        },
+        descripcion: "PC de 64 bits sin sistema operativo: el programa ES el sistema. Crea una imagen .iso que arranca con GRUB (en QEMU, en una máquina virtual o grabada en un USB); usa la pantalla y el teclado de verdad.",
+        instalar: &[
+            "rustup target add x86_64-unknown-none",
+            "sudo apt install grub-pc-bin xorriso mtools",
+        ],
+    },
 ];
+
+/// Nombre del destino en el que el programa es el sistema operativo.
+pub const SIN_SISTEMA: &str = "pc-sin-sistema";
+
+/// Guion del enlazador para el núcleo: se carga en 1 MB, con la cabecera multiboot2 delante.
+const ENLACE_SIN_SISTEMA: &str = "ENTRY(_start)
+SECTIONS {
+    . = 1M;
+    .boot : { KEEP(*(.multiboot)) }
+    .text : { *(.text .text.*) }
+    .rodata : { *(.rodata .rodata.*) }
+    .data : { *(.data .data.*) }
+    .bss : { *(.bss .bss.*) *(COMMON) }
+}
+";
+
+/// Menú de GRUB de la imagen: arranca el programa sin esperar.
+const GRUB_SIN_SISTEMA: &str = "set timeout=0
+set default=0
+menuentry \"Deimon\" {
+    multiboot2 /boot/deimon.elf
+    boot
+}
+";
 
 struct Faltante {
     que: String,
@@ -324,8 +363,13 @@ pub fn compilar(argumentos: &[String]) -> Result<(), Fallo> {
             1,
         )
     })?;
-    let rust = deimon::traducir_archivo_varios_con_perfil(&fuente, &ruta_fuente, perfil)
-        .map_err(|errores| (deimon::texto_de_errores(&errores), 1))?;
+    let sin_sistema = destino.nombre == SIN_SISTEMA;
+    let rust = if sin_sistema {
+        deimon::traducir_archivo_sin_sistema(&fuente, &ruta_fuente, perfil)
+    } else {
+        deimon::traducir_archivo_varios_con_perfil(&fuente, &ruta_fuente, perfil)
+    }
+    .map_err(|errores| (deimon::texto_de_errores(&errores), 1))?;
     comprobar_capacidades(destino, &fuente, &ruta_fuente)?;
 
     // Antes de compilar se ejecutan las pruebas del programa en el ordenador.
@@ -387,10 +431,23 @@ pub fn compilar(argumentos: &[String]) -> Result<(), Fallo> {
     if let Some(enlazador) = &estado.enlazador {
         orden.arg("-C").arg(format!("linker={}", enlazador.display()));
     }
-    orden.arg(&ruta_rust).arg("-o").arg(&salida);
+    let ruta_enlace = ruta_rust.with_extension("ld");
+    let ruta_elf = ruta_rust.with_extension("elf");
+    if sin_sistema {
+        fs::write(&ruta_enlace, ENLACE_SIN_SISTEMA).map_err(|error| {
+            (format!("Error: no se pudo escribir '{}': {}", ruta_enlace.display(), error), 1)
+        })?;
+        orden.args(["--edition", "2021", "-C", "panic=abort", "-C", "relocation-model=static"]);
+        orden.arg("-C").arg(format!("link-arg=-T{}", ruta_enlace.display()));
+        orden.args(["-C", "link-arg=-zmax-page-size=0x1000"]);
+        orden.arg(&ruta_rust).arg("-o").arg(&ruta_elf);
+    } else {
+        orden.arg(&ruta_rust).arg("-o").arg(&salida);
+    }
 
     let compilacion = orden.output();
     let _ = fs::remove_file(&ruta_rust);
+    let _ = fs::remove_file(&ruta_enlace);
     match compilacion {
         Ok(salida_rustc) if salida_rustc.status.success() => {}
         Ok(salida_rustc) => {
@@ -405,6 +462,12 @@ pub fn compilar(argumentos: &[String]) -> Result<(), Fallo> {
                 1,
             ))
         }
+    }
+
+    if sin_sistema {
+        let resultado = crear_imagen_arrancable(&ruta_elf, &salida);
+        let _ = fs::remove_file(&ruta_elf);
+        resultado?;
     }
 
     println!(
@@ -422,6 +485,75 @@ pub fn compilar(argumentos: &[String]) -> Result<(), Fallo> {
         Err(_) => println!("Tamaño del ejecutable: desconocido"),
     }
     Ok(())
+}
+
+/// `deimon arrancar archivo.dmn [--sin-ventana] [--memoria MB]`: compila el programa para
+/// `pc-sin-sistema` y lo enciende en QEMU, como si fuera el sistema de un PC.
+pub fn arrancar(argumentos: &[String]) -> Result<(), Fallo> {
+    let uso = "Uso: deimon arrancar archivo.dmn [--sin-ventana] [--memoria MB]";
+    let mut archivo = None;
+    let mut sin_ventana = false;
+    let mut memoria = 512u32;
+    let mut i = 0;
+    while i < argumentos.len() {
+        match argumentos[i].as_str() {
+            "--sin-ventana" => sin_ventana = true,
+            "--memoria" => {
+                i += 1;
+                memoria = argumentos
+                    .get(i)
+                    .and_then(|valor| valor.parse().ok())
+                    .filter(|mb| *mb >= 256)
+                    .ok_or_else(|| ("Error: --memoria necesita los megas, 256 o más (el programa reserva 192 MB).".to_string(), 2))?;
+            }
+            otra if otra.starts_with("--") => {
+                return Err((format!("Error: la opción '{}' no existe.\n{}", otra, uso), 2))
+            }
+            otro if archivo.is_none() => archivo = Some(otro.to_string()),
+            otro => return Err((format!("Error: sobra el argumento '{}'.\n{}", otro, uso), 2)),
+        }
+        i += 1;
+    }
+    let archivo = archivo.ok_or_else(|| (uso.to_string(), 2))?;
+    if !android::existe_en_path("qemu-system-x86_64") {
+        return Err((
+            "Error: falta QEMU, el programa que hace de PC de pruebas.\nInstálalo con: sudo apt install qemu-system-x86".to_string(),
+            1,
+        ));
+    }
+    let iso = archivo_temporal().with_extension("iso");
+    let yo = env::current_exe().map_err(|error| (format!("Error: no sé dónde está deimon: {}", error), 1))?;
+    let compilacion = Command::new(yo)
+        .arg("compilar")
+        .arg(&archivo)
+        .args(["--destino", SIN_SISTEMA, "--salida"])
+        .arg(&iso)
+        .output()
+        .map_err(|error| (format!("Error: no se pudo compilar: {}", error), 1))?;
+    if !compilacion.status.success() {
+        let _ = fs::remove_file(&iso);
+        let mut mensaje = String::from_utf8_lossy(&compilacion.stdout).into_owned();
+        mensaje.push_str(&String::from_utf8_lossy(&compilacion.stderr));
+        return Err((mensaje.trim_end().to_string(), 1));
+    }
+    let mut qemu = Command::new("qemu-system-x86_64");
+    qemu.arg("-m").arg(format!("{}M", memoria));
+    qemu.arg("-cdrom").arg(&iso);
+    // apagar_maquina() cierra QEMU por este puerto: 0 → código 1, error → código 3.
+    qemu.args(["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-no-reboot"]);
+    if sin_ventana {
+        qemu.args(["-display", "none", "-serial", "stdio"]);
+    } else {
+        eprintln!("Arrancando {} en QEMU (cierra la ventana o usa apagar_maquina() para terminar)...", archivo);
+    }
+    let estado = qemu.status();
+    let _ = fs::remove_file(&iso);
+    match estado.map(|estado| estado.code()) {
+        Ok(Some(0)) | Ok(Some(1)) | Ok(None) => Ok(()),
+        Ok(Some(3)) => Err((String::new(), 1)),
+        Ok(Some(codigo)) => Err((format!("QEMU terminó con el código {}.", codigo), 1)),
+        Err(error) => Err((format!("Error: no se pudo ejecutar QEMU: {}", error), 1)),
+    }
 }
 
 fn error_desconocido(nombre: &str) -> Fallo {
@@ -474,6 +606,8 @@ fn ruta_por_defecto(ruta: &Path, destino: &Destino) -> PathBuf {
         .unwrap_or_else(|| "programa".to_string());
     let extension = if destino.triple.contains("windows") {
         ".exe"
+    } else if destino.nombre == SIN_SISTEMA {
+        ".iso"
     } else {
         ""
     };
@@ -509,6 +643,23 @@ fn disponibilidad(destino: &Destino) -> Disponibilidad {
         });
     }
 
+    if destino.nombre == SIN_SISTEMA {
+        for programa in ["grub-mkrescue", "xorriso"] {
+            if !android::existe_en_path(programa) {
+                faltantes.push(Faltante {
+                    que: format!("el programa '{}' (crea la imagen que arranca)", programa),
+                    instalar: destino.instalar[1],
+                });
+            }
+        }
+        if !Path::new("/usr/lib/grub/i386-pc").is_dir() {
+            faltantes.push(Faltante {
+                que: "el arranque de GRUB para PC (grub-pc-bin)".to_string(),
+                instalar: destino.instalar[1],
+            });
+        }
+    }
+
     let enlazador = match destino.enlazador {
         Enlazador::PorDefecto => None,
         Enlazador::Programa(programa) => {
@@ -537,6 +688,32 @@ fn disponibilidad(destino: &Destino) -> Disponibilidad {
     Disponibilidad {
         enlazador,
         faltantes,
+    }
+}
+
+/// Mete el núcleo en una imagen .iso con GRUB (multiboot2) que arranca en un PC con BIOS.
+fn crear_imagen_arrancable(elf: &Path, iso: &Path) -> Result<(), Fallo> {
+    let carpeta = elf.with_extension("iso.d");
+    let grub = carpeta.join("boot").join("grub");
+    let preparar = fs::create_dir_all(&grub)
+        .and_then(|_| fs::copy(elf, carpeta.join("boot").join("deimon.elf")).map(|_| ()))
+        .and_then(|_| fs::write(grub.join("grub.cfg"), GRUB_SIN_SISTEMA));
+    if let Err(error) = preparar {
+        let _ = fs::remove_dir_all(&carpeta);
+        return Err((format!("Error: no se pudo preparar la imagen: {}", error), 1));
+    }
+    let resultado = Command::new("grub-mkrescue").arg("-o").arg(iso).arg(&carpeta).output();
+    let _ = fs::remove_dir_all(&carpeta);
+    match resultado {
+        Ok(salida) if salida.status.success() => Ok(()),
+        Ok(salida) => Err((
+            format!(
+                "Error: grub-mkrescue no pudo crear la imagen:\n{}",
+                String::from_utf8_lossy(&salida.stderr).trim_end()
+            ),
+            1,
+        )),
+        Err(error) => Err((format!("Error: no se pudo ejecutar 'grub-mkrescue': {}", error), 1)),
     }
 }
 

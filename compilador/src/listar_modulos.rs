@@ -1,8 +1,7 @@
 //! `deimon modulos [archivo.dmn] [--json]`: lista los módulos que se pueden usar con
 //! `usar modulo "nombre"` y las funciones de cada uno.
 
-use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use deimon::modulos::{fichas_en, Ficha};
 
@@ -31,9 +30,7 @@ pub fn listar(argumentos: &[String]) -> Result<(), Fallo> {
             .join("modulos");
         fichas.extend(fichas_en(&carpeta, "junto al programa"));
     }
-    if let Some(casa) = env::var_os("HOME") {
-        fichas.extend(fichas_en(&PathBuf::from(casa).join(".deimon").join("modulos"), "~/.deimon/modulos"));
-    }
+    fichas.extend(fichas_en(&deimon::modulos::carpeta_personal(), "~/.deimon/modulos"));
     if let Some(carpeta) = deimon::biblioteca::carpeta() {
         fichas.extend(fichas_en(&carpeta, "biblioteca estándar"));
     }

@@ -1,0 +1,3 @@
+nombre: whatsapp
+descripcion: enviar y recibir mensajes de WhatsApp con la API oficial de Meta (WhatsApp Cloud API)
+requiere: red

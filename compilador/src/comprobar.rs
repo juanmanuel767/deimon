@@ -86,7 +86,7 @@ pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
     }
 }
 
-fn a_json(archivo: &str, errores: &[ErrorTraduccion], aplicados: Option<usize>) -> String {
+pub fn a_json(archivo: &str, errores: &[ErrorTraduccion], aplicados: Option<usize>) -> String {
     let lista: Vec<String> = errores
         .iter()
         .map(|e| {

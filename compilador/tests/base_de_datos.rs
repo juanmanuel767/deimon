@@ -150,7 +150,12 @@ fn los_usuarios_no_se_pueden_leer_con_leer() {
 #[test]
 fn el_cifrado_de_claves_coincide_con_los_valores_oficiales() {
     // Extrae SHA-256 y PBKDF2 del código que genera Deimon y los compara con RFC 7914.
-    let generador = fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/generador.rs")).unwrap();
+    let nucleo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/nucleo");
+    let generador = ["base.rs", "servidor.rs"]
+        .iter()
+        .map(|archivo| fs::read_to_string(nucleo.join(archivo)).unwrap())
+        .collect::<Vec<_>>()
+        .join("\n");
     let funcion = |nombre: &str| {
         let inicio = generador.find(&format!("fn {}(", nombre)).unwrap();
         let fin = generador[inicio..].find("\n}\n").unwrap() + inicio + 3;

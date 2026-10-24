@@ -201,6 +201,7 @@ impl Analizador {
             Tipo::Ruta => self.ruta(),
             Tipo::Prueba => self.prueba(),
             Tipo::Si => self.condicional(),
+            Tipo::Intenta => self.intentar_bloque(),
             Tipo::Mientras => self.bucle(),
             Tipo::Para => self.para_bucle(),
             Tipo::Devolver => self.devolucion(),
@@ -547,6 +548,57 @@ impl Analizador {
         Ok((condicion, entonces, sino))
     }
 
+    fn intentar_bloque(&mut self) -> Result<Sentencia, ErrorTraduccion> {
+        let linea = self.linea();
+        let columna = self.actual().columna;
+        self.avanzar();
+        self.saltar_nuevas_lineas();
+        let cuerpo = self.bloque()?;
+        self.saltar_nuevas_lineas();
+        if !matches!(self.tipo(), Tipo::Si) {
+            return Err(self
+                .error("E003", "después de 'intentar { ... }' falta 'si falla e { ... }'")
+                .con_sugerencia(
+                    "La forma es: intentar { ... } si falla e { mostrar(e[\"mensaje\"]) }",
+                ));
+        }
+        self.avanzar();
+        self.saltar_nuevas_lineas();
+        if !matches!(self.tipo(), Tipo::Falla) {
+            return Err(self
+                .error("E003", "después de 'si' falta 'falla'")
+                .con_sugerencia(
+                    "Escribe 'si falla e { ... }' para recoger el error en la variable e",
+                ));
+        }
+        self.avanzar();
+        let token = self.avanzar();
+        let nombre = match &token.tipo {
+            Tipo::Ident(nombre) => nombre.clone(),
+            otro => {
+                if let Some(palabra) = palabra_reservada(otro) {
+                    return Err(self.error_reservada(palabra, &token));
+                }
+                return Err(ErrorTraduccion::nuevo(
+                    token.linea,
+                    "se esperaba el nombre de la variable del error",
+                )
+                .con_codigo("E003")
+                .en_columna(token.columna)
+                .con_sugerencia("La forma es: si falla e { ... }"));
+            }
+        };
+        self.saltar_nuevas_lineas();
+        let captura = self.bloque()?;
+        Ok(Sentencia::Intentar {
+            cuerpo,
+            nombre,
+            captura,
+            linea,
+            columna,
+        })
+    }
+
     fn bucle(&mut self) -> Result<Sentencia, ErrorTraduccion> {
         let linea = self.linea();
         self.avanzar();
@@ -889,6 +941,8 @@ fn palabra_reservada(tipo: &Tipo) -> Option<&'static str> {
         Tipo::Continuar => Some("continuar"),
         Tipo::Si => Some("si"),
         Tipo::Sino => Some("sino"),
+        Tipo::Intenta => Some("intentar"),
+        Tipo::Falla => Some("falla"),
         Tipo::Mientras => Some("mientras"),
         Tipo::Para => Some("para"),
         Tipo::En => Some("en"),
@@ -963,6 +1017,8 @@ fn describir(tipo: &Tipo) -> String {
         Tipo::Continuar => "'continuar'".to_string(),
         Tipo::Si => "'si'".to_string(),
         Tipo::Sino => "'sino'".to_string(),
+        Tipo::Intenta => "'intentar'".to_string(),
+        Tipo::Falla => "'falla'".to_string(),
         Tipo::Mientras => "'mientras'".to_string(),
         Tipo::Para => "'para'".to_string(),
         Tipo::En => "'en'".to_string(),

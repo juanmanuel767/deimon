@@ -1,0 +1,40 @@
+{
+  "name": "deimon",
+  "displayName": "Deimon",
+  "description": "Soporte para el lenguaje Deimon (.dmn): colores y avisos de errores en español.",
+  "version": "0.1.0",
+  "publisher": "deimon",
+  "license": "MIT",
+  "icon": "imagenes/icono.png",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages", "Linters"],
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:deimon"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "deimon",
+        "aliases": ["Deimon", "deimon"],
+        "extensions": [".dmn"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "deimon",
+        "scopeName": "source.deimon",
+        "path": "./syntaxes/deimon.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Deimon",
+      "properties": {
+        "deimon.ruta": {
+          "type": "string",
+          "default": "deimon",
+          "description": "Ruta del programa deimon que se usa para buscar errores."
+        }
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// (ruta dentro de la biblioteca, contenido).
-const ARCHIVOS: &[(&str, &str)] = &[
+pub const ARCHIVOS: &[(&str, &str)] = &[
     ("matematicas/modulo.txt", include_str!("../../biblioteca/matematicas/modulo.txt")),
     ("matematicas/funciones.txt", include_str!("../../biblioteca/matematicas/funciones.txt")),
     ("matematicas/codigo.rs", include_str!("../../biblioteca/matematicas/codigo.rs")),
@@ -27,6 +27,22 @@ const ARCHIVOS: &[(&str, &str)] = &[
     ("sql/modulo.txt", include_str!("../../biblioteca/sql/modulo.txt")),
     ("sql/funciones.txt", include_str!("../../biblioteca/sql/funciones.txt")),
     ("sql/codigo.rs", include_str!("../../biblioteca/sql/codigo.rs")),
+    ("whatsapp/modulo.txt", include_str!("../../biblioteca/whatsapp/modulo.txt")),
+    ("whatsapp/funciones.txt", include_str!("../../biblioteca/whatsapp/funciones.txt")),
+    ("whatsapp/codigo.rs", include_str!("../../biblioteca/whatsapp/codigo.rs")),
+    ("whatsapp/dependencias.dmn", include_str!("../../biblioteca/whatsapp/dependencias.dmn")),
+    ("mercadopago/modulo.txt", include_str!("../../biblioteca/mercadopago/modulo.txt")),
+    ("mercadopago/funciones.txt", include_str!("../../biblioteca/mercadopago/funciones.txt")),
+    ("mercadopago/codigo.rs", include_str!("../../biblioteca/mercadopago/codigo.rs")),
+    ("mercadopago/dependencias.dmn", include_str!("../../biblioteca/mercadopago/dependencias.dmn")),
+    ("paypal/modulo.txt", include_str!("../../biblioteca/paypal/modulo.txt")),
+    ("paypal/funciones.txt", include_str!("../../biblioteca/paypal/funciones.txt")),
+    ("paypal/codigo.rs", include_str!("../../biblioteca/paypal/codigo.rs")),
+    ("paypal/dependencias.dmn", include_str!("../../biblioteca/paypal/dependencias.dmn")),
+    ("google/modulo.txt", include_str!("../../biblioteca/google/modulo.txt")),
+    ("google/funciones.txt", include_str!("../../biblioteca/google/funciones.txt")),
+    ("google/codigo.rs", include_str!("../../biblioteca/google/codigo.rs")),
+    ("google/dependencias.dmn", include_str!("../../biblioteca/google/dependencias.dmn")),
     ("mysql/modulo.txt", include_str!("../../biblioteca/mysql/modulo.txt")),
     ("mysql/funciones.txt", include_str!("../../biblioteca/mysql/funciones.txt")),
     ("mysql/codigo.rs", include_str!("../../biblioteca/mysql/codigo.rs")),
@@ -42,6 +58,9 @@ const ARCHIVOS: &[(&str, &str)] = &[
     ("pantallas/codigo.rs", include_str!("../../biblioteca/pantallas/codigo.rs")),
     ("pdf/modulo.txt", include_str!("../../biblioteca/pdf/modulo.txt")),
     ("pdf/funciones.txt", include_str!("../../biblioteca/pdf/funciones.txt")),
+    ("patrones/modulo.txt", include_str!("../../biblioteca/patrones/modulo.txt")),
+    ("patrones/funciones.txt", include_str!("../../biblioteca/patrones/funciones.txt")),
+    ("patrones/codigo.rs", include_str!("../../biblioteca/patrones/codigo.rs")),
     ("pdf/codigo.rs", include_str!("../../biblioteca/pdf/codigo.rs")),
     ("texto/modulo.txt", include_str!("../../biblioteca/texto/modulo.txt")),
     ("texto/funciones.txt", include_str!("../../biblioteca/texto/funciones.txt")),
@@ -67,6 +86,10 @@ pub fn nombres() -> Vec<&'static str> {
 
 /// Carpeta donde está escrita la biblioteca estándar (la escribe si todavía no existe).
 pub fn carpeta() -> Option<PathBuf> {
+    // Un programa empaquetado lee la biblioteca de dentro del propio ejecutable.
+    if crate::fuentes::en_paquete() {
+        return Some(PathBuf::from(crate::fuentes::RAIZ_BIBLIOTECA));
+    }
     let carpeta = env::temp_dir().join(format!("deimon-biblioteca-{:016x}", huella()));
     if carpeta.join(".completa").is_file() {
         return Some(carpeta);

@@ -1,0 +1,3 @@
+nombre: mercadopago
+descripcion: cobrar con Mercado Pago (Checkout Pro): crear el pago y comprobar si se aprobó
+requiere: red

@@ -17,6 +17,10 @@ pub const PALABRAS_CLAVE: &[(&str, &str)] = &[
     ("si", "condicional: si cond { ... } sino si otra { ... } sino { ... }"),
     ("sino", "rama alternativa de un 'si' (va en la misma línea que la '}')"),
     ("mientras", "bucle mientras la condición sea verdadera: mientras i < 3 { ... }"),
+    ("romper", "sale del bucle 'mientras' o 'para' en el que está: si x == 0 { romper }"),
+    ("continuar", "salta a la siguiente vuelta del bucle: si x == 0 { continuar }"),
+    ("intentar", "atrapa los errores de un bloque: intentar { ... } si falla e { mostrar(e[\"mensaje\"]) }; e es una lista con claves {\"mensaje\", \"linea\"}; provocar_error(m) lanza uno"),
+    ("falla", "parte de 'intentar { ... } si falla e { ... }' (va en la misma línea que la '}')"),
     ("para", "recorre una lista: para x en lista { ... }"),
     ("en", "separa la variable y la lista en 'para'"),
     ("ruta", "página web (solo en el nivel principal): ruta \"/saludo/:nombre\" { devolver \"hola \" + nombre }"),
@@ -48,7 +52,8 @@ pub const TIPOS: &[(&str, &str)] = &[
     ("texto", r#"entre comillas dobles, con escapes \n \t \" \\; en una sola línea"#),
     ("lógico", "verdadero o falso; las condiciones deben ser lógicas (no hay verdad por defecto)"),
     ("nada", "el valor nada; leer() de una clave inexistente lo devuelve"),
-    ("lista", "[1, \"a\", verdadero]; puede mezclar tipos y no se puede guardar en los datos"),
+    ("lista", "[1, \"a\", verdadero]; puede mezclar tipos; l[0] es el primero y l[i] = v cambia uno"),
+    ("lista con claves", "{\"nombre\": \"Ana\", \"edad\": 30}; recuerda el orden de las claves; m[\"edad\"] lee y m[\"edad\"] = 31 cambia o añade; listar_claves(m), tiene_clave(m, c) y quitar_clave(m, c)"),
 ];
 
 pub const ORDENES: &[(&str, &str)] = &[
@@ -59,11 +64,17 @@ pub const ORDENES: &[(&str, &str)] = &[
     ("deimon probar archivo.dmn [--json]", "corre las pruebas del programa sin ejecutar el resto"),
     ("deimon entorno [archivo.dmn] [--json]", "revisa que el ordenador tenga todo lo necesario y recomienda un perfil"),
     ("deimon app archivo.dmn [--nombre N] [--paquete P] [--salida ruta.apk] [--perfil NOMBRE]", "crea una app de Android a partir de un programa con rutas"),
+    ("deimon mcp", "servidor MCP para una IA: herramientas deimon_buscar_funcion, deimon_guia, deimon_comprobar, deimon_ejecutar, deimon_probar y deimon_formatear (JSON-RPC por la entrada y la salida)"),
+    ("deimon empaquetar archivo.dmn [--salida RUTA] [--perfil NOMBRE]", "corre las pruebas y crea un solo ejecutable con deimon y el programa dentro (con sus archivos usar, módulos .dmn y plantillas); no necesita Rust ni para crearlo ni para abrirlo; para este mismo sistema"),
     ("deimon compilar archivo.dmn [--destino NOMBRE] [--salida RUTA] [--perfil NOMBRE]", "traduce, corre las pruebas y compila para otro sistema o procesador; sin --destino usa el de este ordenador; al final muestra el tamaño en KB"),
+    ("deimon arrancar archivo.dmn [--sin-ventana] [--memoria MB]", "compila el programa para pc-sin-sistema (el programa es el sistema operativo) y lo enciende en QEMU; --sin-ventana usa la terminal como pantalla y teclado"),
     ("deimon publicar archivo.dmn --prueba | --dominio midominio.com", "pone HTTPS delante del programa con Caddy (certificados automáticos); --prueba en este ordenador, --dominio prepara la carpeta para un servidor"),
     ("deimon desde-php archivo.php [--salida archivo.dmn] [--comprobar]", "traduce un programa de PHP a Deimon, avisa de lo que no puede traducir y, con --comprobar, demuestra que los dos escriben lo mismo"),
     ("deimon modulos [archivo.dmn] [--json]", "lista los módulos disponibles (biblioteca estándar, ~/.deimon/modulos y modulos/ junto al programa) con lo que necesitan y sus funciones"),
-    ("deimon destinos [--json]", "lista los destinos de compilación (linux-x64, linux-x64-estatico, android-arm64, android-arm32, linux-arm64, windows-x64) con lo que falta y cómo instalarlo"),
+    ("deimon modulo instalar <https://... | carpeta> [--aqui]", "instala un módulo de la comunidad (git) en ~/.deimon/modulos, o en modulos/ con --aqui; trae código Rust: instala solo módulos de quien confíes"),
+    ("deimon modulo actualizar <nombre> [--aqui]", "trae la última versión de un módulo instalado y la vuelve a validar"),
+    ("deimon modulo quitar <nombre> [--aqui]", "borra un módulo instalado"),
+    ("deimon destinos [--json]", "lista los destinos de compilación (linux-x64, linux-x64-estatico, android-arm64, android-arm32, linux-arm64, windows-x64, pc-sin-sistema) con lo que falta y cómo instalarlo"),
     ("deimon guia [--json]", "imprime esta referencia"),
 ];
 
@@ -83,6 +94,7 @@ pub const PERFILES: &[(&str, &str)] = &[
 ];
 
 pub const VARIABLES_DE_ENTORNO: &[(&str, &str)] = &[
+    ("DEIMON_CASA", "carpeta que hace de casa para ~/.deimon/modulos (por defecto HOME)"),
     ("DEIMON_PUERTO", "sustituye el puerto escrito en servir(...)"),
     ("DEIMON_DATOS", "carpeta de datos (por defecto ./datos); cada colección es un archivo <nombre>.datos"),
     ("DEIMON_HILOS", "número de hilos trabajadores del servidor (por defecto, según el perfil)"),
@@ -171,7 +183,13 @@ pub fn texto_con_extensiones(extensiones: &[Extension]) -> String {
     salida.push_str("\n## Compilar para otros sistemas\n");
     salida.push_str("- deimon destinos muestra cada destino con ✓ o ✗, lo que falta y la orden exacta para instalarlo.\n");
     salida.push_str("- deimon compilar archivo.dmn --destino NOMBRE traduce el programa, corre sus pruebas y llama a rustc con el triple del destino; sin --destino usa el del ordenador actual.\n");
-    salida.push_str("- La salida por defecto es <nombre>-<destino> junto al .dmn (con .exe en windows); --salida RUTA elige otro lugar.\n");
+    salida.push_str("- La salida por defecto es <nombre>-<destino> junto al .dmn (con .exe en windows y .iso en pc-sin-sistema); --salida RUTA elige otro lugar.\n");
+
+    salida.push_str("\n## Sistema operativo propio (destino pc-sin-sistema)\n");
+    salida.push_str("- deimon compilar archivo.dmn --destino pc-sin-sistema crea una imagen .iso que arranca sola en un PC (GRUB, sin Linux): el programa ES el sistema. deimon arrancar archivo.dmn la enciende en QEMU.\n");
+    salida.push_str("- Funciona todo el lenguaje (también intentar), las integradas básicas, de conversiones, de listas y textos y de máquina, y el módulo texto o módulos escritos solo en Deimon. No hay disco, red ni navegador: guardar, rutas, sesiones y módulos con Rust dan el error E026 al compilar.\n");
+    salida.push_str("- Pantalla de 80 × 25: limpiar_pantalla, escribir_en(fila, columna, texto), poner_color(letra, fondo), mostrar y escribir. Teclado español: leer_tecla y pedir_texto. apagar_maquina y reiniciar_maquina.\n");
+    salida.push_str("- Las mismas funciones van en la terminal: prueba el programa con deimon ejecutar y deimon probar antes de arrancarlo. Un error sin intentar se escribe en rojo y detiene la máquina.\n");
 
     salida.push_str("\n## Perfiles de recursos (--perfil en ejecutar, compilar y app)\n");
     for (perfil, descripcion) in PERFILES {

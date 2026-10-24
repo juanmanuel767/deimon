@@ -26,6 +26,8 @@ pub const CODIGOS: &[(&str, &str)] = &[
     ("E022", "palabra reservada usada como nombre"),
     ("E023", "se intenta cambiar un texto por partes"),
     ("E024", "plantilla HTML que no existe o está mal escrita"),
+    ("E025", "operación con tipos que no encajan (fallaría seguro al ejecutarse)"),
+    ("E026", "función, ruta o módulo que no existe en el destino pc-sin-sistema (sin disco, red ni navegador)"),
     ("E999", "otro error"),
 ];
 

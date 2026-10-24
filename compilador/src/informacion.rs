@@ -81,6 +81,9 @@ fn buscar_en_sentencia(sentencia: &Sentencia) -> Option<Option<u16>> {
         Sentencia::Mientras {
             condicion, cuerpo, ..
         } => buscar_en_expresion(condicion).or_else(|| buscar_en_sentencias(cuerpo)),
+        Sentencia::Intentar { cuerpo, captura, .. } => {
+            buscar_en_sentencias(cuerpo).or_else(|| buscar_en_sentencias(captura))
+        }
         Sentencia::Para {
             coleccion, cuerpo, ..
         } => buscar_en_expresion(coleccion).or_else(|| buscar_en_sentencias(cuerpo)),

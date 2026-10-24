@@ -98,28 +98,53 @@ redirección, saludo y página de gracias) y su traducción `ejemplos-php/sitio.
 | `true` `false` `null` `PHP_EOL` | `verdadero` `falso` `nada` `"\n"` |
 | HTML fuera de `<?php ?>` y `<?= ... ?>` | `escribir("...")` |
 | `strlen` `count` `strval` `floatval` | `medir` `medir` `a_texto` `a_numero` |
-| `strtoupper` `strtolower` `trim` `str_contains` `str_starts_with` `str_ends_with` `str_replace` `explode` `implode` `str_repeat` | módulo `texto` (se añade `usar modulo "texto"` solo) |
+| `strtoupper` `strtolower` `trim` `str_contains` `str_starts_with` `str_ends_with` `str_replace` `explode` `implode` `str_repeat` `ucfirst` | módulo `texto` (se añade `usar modulo "texto"` solo) |
+| `preg_match` (con o sin `$grupos`), `preg_match_all`, `preg_replace`, `preg_split` con patrón fijo `/.../`, `#...#` o `~...~` (modificadores `i` y `u`) | módulo `patrones`: `buscar_patron` / `coincide_patron`, `buscar_columnas_patron`, `reemplazar_patron`, `partir_patron` (la `i` pasa a `(?i)`) |
+| `number_format`, `str_pad` (con `STR_PAD_LEFT`, `STR_PAD_RIGHT`, `STR_PAD_BOTH`) | `formatear_numero` y `rellenar_texto` del módulo `texto` (se rellenan los argumentos que PHP deja por defecto) |
+| `print_r`, `var_dump` | `texto_completo` del módulo `texto` (formato legible de `print_r`; `var_dump` se muestra con ese mismo formato) |
 | `sqrt` `pow` `abs` `round` `floor` `ceil` `min` `max` `intval` | módulo `matematicas` |
+| `date(formato[, ts])`, `time()` | `formatear_fecha(ts o ahora(), formato, zona)` y `suelo(ahora())` del módulo `tiempo`; la zona es la de `date_default_timezone_set('...')` si aparece (si no, `"UTC"`) |
+| `mktime(h, i, s, m, d, Y)`, `checkdate(m, d, Y)`, `cal_days_in_month(CAL_GREGORIAN, m, Y)` | `crear_fecha`, `dias_del_mes` y una comprobación con `dias_del_mes` del módulo `tiempo` |
+| `strtotime("AAAA-MM-DD...")`, `strtotime("+N day(s)/week(s)/month(s)/year(s)"[, base])` | `leer_fecha` para fechas absolutas y `sumar_tiempo(base o ahora(), N, unidad)` para las relativas (el texto tiene que ser fijo) |
+
+Las fechas de PHP se traducen al módulo `tiempo`. `date()` usa la zona de
+`date_default_timezone_set('...')` (o `"UTC"` si no aparece); `mktime` y las
+fechas absolutas de `strtotime` se interpretan en UTC, igual que `crear_fecha` y
+`leer_fecha`. `strtotime` con textos dinámicos solo traduce fechas absolutas, y
+lo avisa. Los formatos de fecha aceptados son `AAAA-MM-DD`,
+`AAAA-MM-DD HH:MM[:SS]`, `AAAA-MM-DDTHH:MM:SS[Z o ±HH:MM]` y `DD/MM/AAAA`.
 
 Los nombres de PHP que chocan con palabras de Deimon (`$si`, `$prueba`, una
 función `medir`...) se renombran con `_php` al final.
+
+## Errores: try, catch y throw
+
+`try { } catch (Exception $e) { }` pasa a `intentar { } si falla e { }`,
+`$e->getMessage()` a `e["mensaje"]` y `throw new Exception(m)` a
+`provocar_error(m)`. También vale `catch (Throwable $e)`. Con `finally`, con
+varios `catch`, con otros tipos de error o con varios tipos en un `catch`, deja
+un aviso `# PENDIENTE`.
 
 ## Qué NO traduce (y lo avisa)
 
 Nada se pierde en silencio: cada cosa que no sabe traducir aparece al principio
 del archivo como `# PENDIENTE (línea N del PHP): motivo` y en la pantalla.
 
-- Clases y objetos (`class`, `new`, `->`), excepciones (`try`), un `case` de
+- Clases y objetos (`class`, `new`, `->`), un `case` de
   `switch` que sigue en el siguiente sin `break`, `break 2`, y `break` dentro
   de un `if` de un `case`.
 - Arrays que mezclan valores con clave y sin clave (`[1, 'a' => 2]`).
 - `$_FILES` y `move_uploaded_file` (en Deimon: `archivo_subido` y `guardar_subida`) y `header()` que no sea una redirección.
-- Funciones de PHP sin equivalente todavía (por ejemplo `print_r`, `var_dump`,
-  `number_format`, `str_pad`, `ucfirst`).
+- Expresiones regulares con mirar adelante o atrás (`(?=`, `(?<`), referencias
+  (`\1`), escapes como `\A` o `\p{L}`, modificadores distintos de `i` y `u`
+  (`m`, `s`, `x`...), un patrón que no es un texto fijo, `preg_replace` con
+  límite, `preg_split` con opciones o `preg_match_all` con opciones. En un
+  `preg_match` con `$grupos`, el traductor guarda los grupos justo antes de la
+  instrucción (no funciona dentro de la condición de un `elseif` ni de un `while`).
 - `include`/`require` (se traduce cada archivo y se usa `usar "archivo.dmn"`).
 
 Diferencias sutiles que el traductor avisa: `intval()` con números negativos.
-Otras que `--comprobar` detecta: `echo true` escribe `1` en PHP y `verdadero` en
+Otras que `--comprobar` detecta: `echo preg_match(...)` escribe `1` en PHP y `verdadero` en Deimon, `echo true` escribe `1` en PHP y `verdadero` en
 Deimon, y algunos decimales se muestran con más cifras en Deimon.
 
 Ejemplos: `ejemplos-php/tienda.php`, `fizzbuzz.php`, `dificil.php` (todos dan la

@@ -1,0 +1,3 @@
+# El módulo "whatsapp" habla por HTTPS con el módulo "web" y lee las respuestas con "json".
+usar modulo "web"
+usar modulo "json"

@@ -36,6 +36,10 @@ fn deimon(carpeta: &Path, argumentos: &[&str]) -> Output {
     ln_con(Path::new(env!("CARGO_BIN_EXE_deimon")), carpeta, argumentos)
 }
 
+fn hay_php() -> bool {
+    Command::new("php").arg("-v").output().map(|o| o.status.success()).unwrap_or(false)
+}
+
 fn todo(o: &Output) -> String {
     format!(
         "{}{}",
@@ -48,6 +52,71 @@ fn ejecutar(nombre: &str, fuente: &str) -> Output {
     let c = carpeta(nombre);
     escribir(&c, "programa.dmn", fuente);
     deimon(&c, &["ejecutar", "programa.dmn"])
+}
+
+/// Servidor de imitación en 127.0.0.1 que responde a cada petición con lo que diga `responder`.
+/// Devuelve el puerto libre y las peticiones recibidas, para poder revisarlas.
+fn servidor_imitacion<F>(responder: F) -> (u16, std::sync::Arc<std::sync::Mutex<Vec<String>>>)
+where
+    F: Fn(&str) -> String + Send + 'static,
+{
+    use std::io::{Read, Write};
+    let servidor = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let puerto = servidor.local_addr().unwrap().port();
+    let recibidas = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let copia = recibidas.clone();
+    std::thread::spawn(move || {
+        for conexion in servidor.incoming().flatten() {
+            let mut conexion = conexion;
+            let mut datos = vec![0u8; 16384];
+            let mut total = 0;
+            conexion.set_read_timeout(Some(std::time::Duration::from_millis(500))).unwrap();
+            while let Ok(n) = conexion.read(&mut datos[total..]) {
+                if n == 0 { break; }
+                total += n;
+                let texto = String::from_utf8_lossy(&datos[..total]).to_string();
+                if let Some(fin) = texto.find("\r\n\r\n") {
+                    let largo: usize = texto.lines().find_map(|l| l.strip_prefix("Content-Length: ").or_else(|| l.strip_prefix("content-length: "))).and_then(|v| v.trim().parse().ok()).unwrap_or(0);
+                    if total >= fin + 4 + largo { break; }
+                }
+            }
+            let peticion = String::from_utf8_lossy(&datos[..total]).to_string();
+            copia.lock().unwrap().push(peticion.clone());
+            let cuerpo = responder(&peticion);
+            let _ = conexion.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", cuerpo.len(), cuerpo).as_bytes());
+        }
+    });
+    (puerto, recibidas)
+}
+
+fn esperar_puerto(puerto: u16) {
+    let limite = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while std::time::Instant::now() < limite {
+        if std::net::TcpStream::connect(("127.0.0.1", puerto)).is_ok() {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    panic!("el servidor no aceptó conexiones en el puerto {}", puerto);
+}
+
+fn peticion_http(puerto: u16, texto: &str) -> String {
+    use std::io::{Read, Write};
+    let mut conexion = std::net::TcpStream::connect(("127.0.0.1", puerto)).expect("no se pudo conectar");
+    conexion.set_read_timeout(Some(std::time::Duration::from_secs(10))).unwrap();
+    conexion.write_all(texto.as_bytes()).unwrap();
+    let mut respuesta = String::new();
+    let _ = conexion.read_to_string(&mut respuesta);
+    respuesta
+}
+
+struct ServidorDeimon(std::process::Child);
+
+impl Drop for ServidorDeimon {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
 }
 
 #[test]
@@ -85,6 +154,35 @@ fn texto_y_tiempo_funcionan() {
         String::from_utf8_lossy(&o.stdout),
         "x+y\nabab\nverdadero\nfalso\n1971-01-01 00:00:00\n2000-02-29 00:00:00\n"
     );
+}
+
+#[test]
+fn formato_de_numeros_y_textos_como_php() {
+    let fuente = "usar modulo \"texto\"\n\
+escribir(formatear_numero(1234.5678, 2, \".\", \",\") + \"|\" + formatear_numero(-1234.567, 2, \",\", \".\") + \"\\n\")\n\
+escribir(formatear_numero(1234, 0, \".\", \",\") + \"|\" + formatear_numero(-0.4, 2, \".\", \",\") + \"\\n\")\n\
+escribir(rellenar_texto(\"hola\", 8, \" \", \"derecha\") + \"|\" + rellenar_texto(\"hola\", 8, \"-\", \"izquierda\") + \"|\" + rellenar_texto(\"hola\", 9, \"ab\", \"ambos\") + \"\\n\")\n\
+escribir(primera_mayuscula(\"hola\") + \"\\n\")\n\
+escribir(texto_completo([1, {\"x\": 1, \"y\": [verdadero, falso, nada, 4.5, \"hola\"]}, 2]))\n";
+    let o = ejecutar("formato_php", fuente);
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    let salida = String::from_utf8_lossy(&o.stdout).to_string();
+    if hay_php() {
+        let c = carpeta("formato_php_real");
+        let php = escribir(
+            &c,
+            "formato.php",
+            "<?php\necho number_format(1234.5678, 2, \".\", \",\") . \"|\" . number_format(-1234.567, 2, \",\", \".\") . \"\\n\";\necho number_format(1234, 0, \".\", \",\") . \"|\" . number_format(-0.4, 2, \".\", \",\") . \"\\n\";\necho str_pad(\"hola\", 8, \" \", STR_PAD_RIGHT) . \"|\" . str_pad(\"hola\", 8, \"-\", STR_PAD_LEFT) . \"|\" . str_pad(\"hola\", 9, \"ab\", STR_PAD_BOTH) . \"\\n\";\necho ucfirst(\"hola\") . \"\\n\";\nprint_r([1, [\"x\" => 1, \"y\" => [true, false, null, 4.5, \"hola\"]], 2]);\n",
+        );
+        let p = Command::new("php").arg(&php).output().unwrap();
+        assert_eq!(salida, String::from_utf8_lossy(&p.stdout).to_string(), "PHP y Deimon deben escribir lo mismo");
+    }
+    let acentos = ejecutar(
+        "formato_acentos",
+        "usar modulo \"texto\"\nmostrar(rellenar_texto(\"ñandú\", 8, \".\", \"ambos\"))\nmostrar(primera_mayuscula(\"ñandú\"))\n",
+    );
+    assert_eq!(acentos.status.code(), Some(0), "{}", todo(&acentos));
+    assert_eq!(String::from_utf8_lossy(&acentos.stdout), ".ñandú..\nÑandú\n");
 }
 
 #[test]
@@ -331,4 +429,507 @@ fn sql_usa_parametros_y_no_se_deja_inyectar() {
     let texto = todo(&o);
     assert!(texto.starts_with("1\n[[x'); DROP TABLE p; --, 2.5]]\n"), "{}", texto);
     assert!(texto.contains("la orden tiene 1 '?' pero se pasaron 0 parámetros"), "{}", texto);
+}
+
+#[test]
+fn google_entra_con_la_cuenta_y_devuelve_nada_si_no_cuadra() {
+    let (puerto, recibidas) = servidor_imitacion(|peticion| {
+        if peticion.starts_with("POST") {
+            if peticion.contains("code=malo") {
+                r#"{"error": "invalid_grant"}"#.to_string()
+            } else {
+                r#"{"access_token": "ya29.token", "token_type": "Bearer"}"#.to_string()
+            }
+        } else {
+            r#"{"sub": "123", "email": "ana@example.com", "email_verified": true, "name": "Ana", "picture": "https://fotos.example/ana.png"}"#.to_string()
+        }
+    });
+    let c = carpeta("google");
+    escribir(
+        &c,
+        "programa.dmn",
+        &format!(
+            "usar modulo \"google\"\nusar modulo \"texto\"\nruta \"/entrar\" {{\n    devolver redirigir_fuera(direccion_google(\"cliente\", \"http://127.0.0.1:{puerto}/volver\"))\n}}\nruta \"/volver\" {{\n    sea u = usuario_google(\"cliente\", \"secreto\", \"http://127.0.0.1:{puerto}/volver\")\n    si u == nada {{\n        devolver \"NADA\"\n    }}\n    devolver u[\"email\"] + \"|\" + u[\"nombre\"] + \"|\" + u[\"id\"]\n}}\nmostrar(\"malo=\" + visitar(\"/volver?state=falso&code=bueno\"))\nsea d1 = visitar(\"/entrar\")\nsea e1 = partir(partir(d1, \"state=\")[1], \"&\")[0]\nmostrar(\"sin-token=\" + visitar(\"/volver?state=\" + e1 + \"&code=malo\"))\nsea d2 = visitar(\"/entrar\")\nsea e2 = partir(partir(d2, \"state=\")[1], \"&\")[0]\nmostrar(visitar(\"/volver?state=\" + e2 + \"&code=bueno\"))\n",
+            puerto = puerto
+        ),
+    );
+    let o = Command::new(env!("CARGO_BIN_EXE_deimon"))
+        .args(["ejecutar", "programa.dmn"])
+        .current_dir(&c)
+        .env("TMPDIR", &c)
+        .env("DEIMON_GOOGLE_URL", format!("http://127.0.0.1:{}", puerto))
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "malo=NADA\nsin-token=NADA\nana@example.com|Ana|123\n",
+        "{}",
+        todo(&o)
+    );
+    let peticiones = recibidas.lock().unwrap().clone();
+    assert!(
+        peticiones.iter().any(|p| p.starts_with("POST") && p.contains("grant_type=authorization_code")),
+        "{:?}",
+        peticiones
+    );
+    assert!(
+        peticiones.iter().any(|p| p.starts_with("GET") && p.contains("Authorization: Bearer ya29.token")),
+        "{:?}",
+        peticiones
+    );
+}
+
+#[test]
+fn mercadopago_crea_el_pago_y_consulta_si_se_aprobo() {
+    let (puerto, recibidas) = servidor_imitacion(|peticion| {
+        if peticion.starts_with("POST") {
+            r#"{"id": "pref_1", "sandbox_init_point": "https://pago.mercadopago/pref_1", "init_point": "https://pago.mercadopago/real"}"#.to_string()
+        } else {
+            r#"{"status": "approved", "status_detail": "accredited", "external_reference": "pedido-15", "transaction_amount": 29.9, "currency_id": "PEN"}"#.to_string()
+        }
+    });
+    let c = carpeta("mercadopago");
+    escribir(
+        &c,
+        "programa.dmn",
+        "usar modulo \"mercadopago\"\nmostrar(crear_pago_mercadopago(\"TEST-123\", \"Pedido 15\", 29.9, \"PEN\", \"https://mitienda.com/pago\", \"pedido-15\"))\nsea p = consultar_pago_mercadopago(\"TEST-123\", \"12345\")\nmostrar(p[\"estado\"])\nmostrar(p[\"referencia\"])\nmostrar(p[\"importe\"])\nmostrar(p[\"moneda\"])\n",
+    );
+    let o = Command::new(env!("CARGO_BIN_EXE_deimon"))
+        .args(["ejecutar", "programa.dmn"])
+        .current_dir(&c)
+        .env("TMPDIR", &c)
+        .env("DEIMON_MERCADOPAGO_URL", format!("http://127.0.0.1:{}", puerto))
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "https://pago.mercadopago/pref_1\napproved\npedido-15\n29.9\nPEN\n",
+        "{}",
+        todo(&o)
+    );
+    let peticiones = recibidas.lock().unwrap().clone();
+    let creacion = peticiones
+        .iter()
+        .find(|p| p.starts_with("POST") && p.contains("/checkout/preferences"))
+        .expect("no se pidió crear el pago");
+    assert!(creacion.contains("Authorization: Bearer TEST-123"), "{}", creacion);
+    assert!(creacion.contains("\"unit_price\":29.9"), "{}", creacion);
+    assert!(creacion.contains("\"currency_id\":\"PEN\""), "{}", creacion);
+    assert!(creacion.contains("\"external_reference\":\"pedido-15\""), "{}", creacion);
+    let consulta = peticiones
+        .iter()
+        .find(|p| p.starts_with("GET") && p.contains("/v1/payments/12345"))
+        .expect("no se consultó el pago");
+    assert!(consulta.contains("Authorization: Bearer TEST-123"), "{}", consulta);
+}
+
+#[test]
+fn paypal_crea_el_pedido_y_lo_cobra() {
+    let (puerto, recibidas) = servidor_imitacion(|peticion| {
+        if peticion.contains("/v1/oauth2/token") {
+            r#"{"access_token": "A21.token", "token_type": "Bearer"}"#.to_string()
+        } else if peticion.contains("/capture") {
+            r#"{"id": "ORDER1", "status": "COMPLETED"}"#.to_string()
+        } else {
+            r#"{"id": "ORDER1", "status": "CREATED", "links": [{"rel": "approve", "href": "https://www.paypal.com/checkoutnow?token=ORDER1"}]}"#.to_string()
+        }
+    });
+    let c = carpeta("paypal");
+    escribir(
+        &c,
+        "programa.dmn",
+        "usar modulo \"paypal\"\nmostrar(crear_pago_paypal(\"cliente\", \"secret\", 29.9, \"USD\", \"https://mitienda.com/paypal\", \"https://mitienda.com/carrito\"))\nmostrar(cobrar_pago_paypal(\"cliente\", \"secret\", \"ORDER1\"))\n",
+    );
+    let o = Command::new(env!("CARGO_BIN_EXE_deimon"))
+        .args(["ejecutar", "programa.dmn"])
+        .current_dir(&c)
+        .env("TMPDIR", &c)
+        .env("DEIMON_PAYPAL_URL", format!("http://127.0.0.1:{}", puerto))
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "https://www.paypal.com/checkoutnow?token=ORDER1\nverdadero\n",
+        "{}",
+        todo(&o)
+    );
+    let peticiones = recibidas.lock().unwrap().clone();
+    let token = peticiones
+        .iter()
+        .find(|p| p.contains("/v1/oauth2/token"))
+        .expect("no se pidió el token");
+    assert!(token.contains("Authorization: Basic Y2xpZW50ZTpzZWNyZXQ="), "{}", token);
+    let pedido = peticiones
+        .iter()
+        .find(|p| p.contains("/v2/checkout/orders") && !p.contains("/capture"))
+        .expect("no se creó el pedido");
+    assert!(pedido.contains("Authorization: Bearer A21.token"), "{}", pedido);
+    assert!(pedido.contains("\"currency_code\":\"USD\""), "{}", pedido);
+    assert!(pedido.contains("\"value\":\"29.90\""), "{}", pedido);
+    assert!(pedido.contains("\"return_url\":\"https://mitienda.com/paypal\""), "{}", pedido);
+}
+
+#[test]
+fn whatsapp_envia_mensajes_y_comprueba_la_firma_del_aviso() {
+    let (puerto, recibidas) = servidor_imitacion(|_| {
+        r#"{"messaging_product": "whatsapp", "messages": [{"id": "wamid.ABC"}]}"#.to_string()
+    });
+    let c = carpeta("whatsapp");
+    escribir(
+        &c,
+        "envios.dmn",
+        "usar modulo \"whatsapp\"\nmostrar(enviar_whatsapp(\"token\", \"123\", \"51987654321\", \"Tu pedido salió\"))\nmostrar(enviar_plantilla_whatsapp(\"token\", \"123\", \"51987654321\", \"hello_world\", \"es\"))\nruta \"/aviso\" {\n    sea r = verificar_whatsapp(\"mi-clave\")\n    si r == nada {\n        devolver \"NO\"\n    }\n    devolver r\n}\nmostrar(visitar(\"/aviso?hub.mode=subscribe&hub.verify_token=mi-clave&hub.challenge=reto_123\"))\nmostrar(visitar(\"/aviso?hub.mode=subscribe&hub.verify_token=otra&hub.challenge=reto_123\"))\n",
+    );
+    let o = Command::new(env!("CARGO_BIN_EXE_deimon"))
+        .args(["ejecutar", "envios.dmn"])
+        .current_dir(&c)
+        .env("TMPDIR", &c)
+        .env("DEIMON_WHATSAPP_URL", format!("http://127.0.0.1:{}", puerto))
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "wamid.ABC\nwamid.ABC\nreto_123\nNO\n",
+        "{}",
+        todo(&o)
+    );
+    let peticiones = recibidas.lock().unwrap().clone();
+    assert_eq!(peticiones.len(), 2, "{:?}", peticiones);
+    assert!(peticiones.iter().all(|p| p.contains("Authorization: Bearer token")), "{:?}", peticiones);
+    assert!(peticiones[0].contains("\"type\":\"text\""), "{}", peticiones[0]);
+    assert!(peticiones[0].contains("\"body\":\"Tu pedido salió\""), "{}", peticiones[0]);
+    assert!(peticiones[1].contains("\"type\":\"template\""), "{}", peticiones[1]);
+    assert!(peticiones[1].contains("\"name\":\"hello_world\""), "{}", peticiones[1]);
+    assert!(peticiones[1].contains("\"code\":\"es\""), "{}", peticiones[1]);
+
+    // El aviso (webhook) de Meta: la firma HMAC-SHA256 del cuerpo con el secreto de la app.
+    escribir(
+        &c,
+        "aviso.dmn",
+        "usar modulo \"whatsapp\"\nruta \"/aviso\" {\n    sea lista = mensajes_whatsapp(\"secreto_app\")\n    devolver lista[0][\"de\"] + \"|\" + lista[0][\"nombre\"] + \"|\" + lista[0][\"texto\"] + \"|\" + lista[0][\"id\"]\n}\nservir(8000)\n",
+    );
+    let libre = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let puerto_web = libre.local_addr().unwrap().port();
+    drop(libre);
+    let proceso = Command::new(env!("CARGO_BIN_EXE_deimon"))
+        .args(["ejecutar", "aviso.dmn"])
+        .current_dir(&c)
+        .env("TMPDIR", &c)
+        .env("DEIMON_PUERTO", puerto_web.to_string())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let _servidor = ServidorDeimon(proceso);
+    esperar_puerto(puerto_web);
+    let cuerpo = r#"{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"contacts":[{"profile":{"name":"Ana"}}],"messages":[{"from":"51987654321","id":"wamid.IN","type":"text","text":{"body":"Hola"}}]}}]}]}"#;
+    let firma = "1f7eeaa0dc27f6e6646c70ef886f172c4ab8a0619818070dbdfd9c27a86b96c9";
+    let falsa = format!(
+        "POST /aviso HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nX-Hub-Signature-256: sha256={}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        "0".repeat(64),
+        cuerpo.len(),
+        cuerpo
+    );
+    let mala = peticion_http(puerto_web, &falsa);
+    assert!(mala.starts_with("HTTP/1.1 500"), "{}", mala);
+    let buena = format!(
+        "POST /aviso HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nX-Hub-Signature-256: sha256={}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        firma,
+        cuerpo.len(),
+        cuerpo
+    );
+    let respuesta = peticion_http(puerto_web, &buena);
+    assert!(respuesta.starts_with("HTTP/1.1 200"), "{}", respuesta);
+    assert!(respuesta.contains("51987654321|Ana|Hola|wamid.IN"), "{}", respuesta);
+}
+
+#[test]
+fn fechas_completas_bisiestos_y_formato_en_espanol() {
+    let fuente = "usar modulo \"tiempo\"\n\
+mostrar(es_bisiesto(2024))\n\
+mostrar(es_bisiesto(1900))\n\
+mostrar(es_bisiesto(2000))\n\
+mostrar(dias_del_mes(2024, 2))\n\
+mostrar(dias_del_mes(2026, 2))\n\
+mostrar(crear_fecha(2024, 2, 29, 12, 0, 0))\n\
+mostrar(crear_fecha(1969, 7, 20, 20, 17, 0))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 1, 5, 13, 5, 9), \"Y-m-d H:i:s\", \"UTC\"))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 1, 5, 13, 5, 9), \"l j \\\\d\\\\e F \\\\d\\\\e Y, D, M, N w z t L y A a g h U\", \"UTC\"))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 1, 5, 0, 5, 9), \"G:i:s A a g h\", \"UTC\"))\n\
+mostrar(leer_fecha(\"2026-03-29\"))\n\
+mostrar(leer_fecha(\"2026-03-29 01:30\"))\n\
+mostrar(leer_fecha(\"2026-03-29T01:30:00Z\") == crear_fecha(2026, 3, 29, 1, 30, 0))\n\
+mostrar(leer_fecha(\"2026-03-29T01:30:00+01:00\") == crear_fecha(2026, 3, 29, 0, 30, 0))\n\
+mostrar(leer_fecha(\"29/03/2026\") == crear_fecha(2026, 3, 29, 0, 0, 0))\n\
+mostrar(leer_fecha(\"2026-02-31\") == nada)\n";
+    let o = ejecutar("fechas_basicas", fuente);
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "verdadero\nfalso\nverdadero\n29\n28\n1709208000\n-14182980\n\
+2026-01-05 13:05:09\n\
+lunes 5 de enero de 2026, Mon, ene, 1 1 4 31 0 26 PM pm 1 01 1767618309\n\
+0:05:09 AM am 12 12\n\
+1774742400\n\
+1774747800\nverdadero\nverdadero\nverdadero\nverdadero\n"
+    );
+}
+
+#[test]
+fn fechas_zonas_horarias_y_cambio_de_hora() {
+    let fuente = "usar modulo \"tiempo\"\n\
+mostrar(formatear_fecha(crear_fecha(2026, 3, 29, 0, 30, 0), \"Y-m-d H:i:s\", \"Europe/Madrid\"))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 3, 29, 1, 30, 0), \"Y-m-d H:i:s\", \"Europe/Madrid\"))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 3, 28, 12, 0, 0), \"Y-m-d H:i:s\", \"Europe/Madrid\"))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 3, 29, 12, 0, 0), \"Y-m-d H:i:s\", \"America/Lima\"))\n\
+mostrar(formatear_fecha(crear_fecha(2026, 7, 29, 12, 0, 0), \"Y-m-d H:i:s\", \"America/Lima\"))\n\
+mostrar(formatear_fecha(1774746000, \"Y-m-d H:i:s\", \"Europe/Madrid\"))\n\
+mostrar(formatear_fecha(1774746000, \"Y-m-d H:i:s\", \"America/Lima\"))\n\
+mostrar(formatear_fecha(crear_fecha(1969, 7, 20, 20, 17, 0), \"Y-m-d H:i:s l\", \"UTC\"))\n\
+mostrar(dia_de_la_semana(crear_fecha(2026, 3, 29, 0, 30, 0), \"Europe/Madrid\"))\n\
+mostrar(dia_de_la_semana(0, \"UTC\"))\n\
+mostrar(formatear_fecha(0, \"Y-m-d H:i:s\", \"-05:00\"))\n\
+mostrar(formatear_fecha(0, \"Y-m-d H:i:s\", \"+01:00\"))\n";
+    let o = ejecutar("fechas_zonas", fuente);
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "2026-03-29 01:30:00\n\
+2026-03-29 03:30:00\n\
+2026-03-28 13:00:00\n\
+2026-03-29 07:00:00\n\
+2026-07-29 07:00:00\n\
+2026-03-29 03:00:00\n\
+2026-03-28 20:00:00\n\
+1969-07-20 20:17:00 domingo\n\
+7\n\
+4\n\
+1969-12-31 19:00:00\n\
+1970-01-01 01:00:00\n"
+    );
+}
+
+#[test]
+fn sumar_y_diferencia_de_fechas_como_php() {
+    let fuente = "usar modulo \"tiempo\"\n\
+mostrar(formatear_fecha(sumar_tiempo(crear_fecha(2026, 1, 31, 12, 0, 0), 1, \"meses\"), \"Y-m-d H:i:s\", \"UTC\"))\n\
+mostrar(formatear_fecha(sumar_tiempo(crear_fecha(2024, 1, 31, 12, 0, 0), 1, \"meses\"), \"Y-m-d H:i:s\", \"UTC\"))\n\
+mostrar(formatear_fecha(sumar_tiempo(crear_fecha(2024, 2, 29, 0, 0, 0), 1, \"años\"), \"Y-m-d H:i:s\", \"UTC\"))\n\
+mostrar(formatear_fecha(sumar_tiempo(crear_fecha(2026, 12, 31, 23, 0, 0), 1, \"dias\"), \"Y-m-d H:i:s\", \"UTC\"))\n\
+mostrar(diferencia_fechas(crear_fecha(2026, 3, 1, 0, 0, 0), crear_fecha(2026, 1, 31, 0, 0, 0), \"dias\"))\n\
+mostrar(diferencia_fechas(crear_fecha(2026, 3, 1, 0, 0, 0), crear_fecha(2026, 1, 31, 0, 0, 0), \"meses\"))\n\
+mostrar(diferencia_fechas(crear_fecha(2026, 1, 31, 0, 0, 0), crear_fecha(2026, 3, 1, 0, 0, 0), \"meses\"))\n\
+mostrar(diferencia_fechas(crear_fecha(2026, 3, 3, 0, 0, 0), crear_fecha(2026, 1, 31, 0, 0, 0), \"meses\"))\n\
+mostrar(diferencia_fechas(crear_fecha(2026, 3, 1, 0, 0, 0), crear_fecha(2026, 1, 31, 0, 0, 0), \"horas\"))\n\
+mostrar(diferencia_fechas(crear_fecha(2026, 3, 1, 0, 0, 0), crear_fecha(2026, 1, 31, 0, 0, 0), \"semanas\"))\n";
+    let o = ejecutar("fechas_sumar", fuente);
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(
+        String::from_utf8_lossy(&o.stdout),
+        "2026-03-03 12:00:00\n\
+2024-03-02 12:00:00\n\
+2025-03-01 00:00:00\n\
+2027-01-01 23:00:00\n\
+29\n0\n-1\n1\n696\n4\n"
+    );
+}
+
+#[test]
+fn una_fecha_que_no_existe_da_un_error_claro() {
+    let o = ejecutar(
+        "fecha_inexistente",
+        "usar modulo \"tiempo\"\nmostrar(crear_fecha(2026, 2, 31, 0, 0, 0))\n",
+    );
+    assert_eq!(o.status.code(), Some(1));
+    assert!(
+        todo(&o).contains("el 31 de febrero de 2026 no existe (febrero tiene 28 días)"),
+        "{}",
+        todo(&o)
+    );
+    let o = ejecutar(
+        "fecha_29_febrero",
+        "usar modulo \"tiempo\"\nmostrar(crear_fecha(2023, 2, 29, 0, 0, 0))\n",
+    );
+    assert_eq!(o.status.code(), Some(1));
+    assert!(
+        todo(&o).contains("el 29 de febrero de 2023 no existe (febrero tiene 28 días)"),
+        "{}",
+        todo(&o)
+    );
+}
+
+#[test]
+fn una_zona_horaria_que_falta_da_un_error_claro() {
+    let o = ejecutar(
+        "zona_falta",
+        "usar modulo \"tiempo\"\nmostrar(formatear_fecha(0, \"Y\", \"America/NoExiste\"))\n",
+    );
+    assert_eq!(o.status.code(), Some(1));
+    assert!(
+        todo(&o).contains("no se encontró la zona horaria 'America/NoExiste'"),
+        "{}",
+        todo(&o)
+    );
+}
+
+/// Ejecuta una expresión del módulo `patrones` por línea y compara lo que muestra cada una.
+fn patrones_casos(nombre: &str, casos: &[(&str, &str)]) {
+    let mut fuente = String::from("usar modulo \"patrones\"\n");
+    for (expresion, _) in casos {
+        fuente.push_str(&format!("mostrar({})\n", expresion));
+    }
+    let o = ejecutar(nombre, &fuente);
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    let salida = String::from_utf8_lossy(&o.stdout).to_string();
+    let lineas: Vec<&str> = salida.lines().collect();
+    assert_eq!(lineas.len(), casos.len(), "{}", salida);
+    for (linea, (expresion, esperado)) in lineas.iter().zip(casos) {
+        assert_eq!(linea, esperado, "{}", expresion);
+    }
+}
+
+#[test]
+fn patrones_basicos_y_clases() {
+    patrones_casos(
+        "patrones_basicos",
+        &[
+            (r#"coincide_patron("hola mundo", "mundo")"#, "verdadero"),
+            (r#"coincide_patron("hola mundo", "^mundo")"#, "falso"),
+            (r#"coincide_patron("hola mundo", "mundo$")"#, "verdadero"),
+            (r#"coincide_patron("abc", "a.c")"#, "verdadero"),
+            (r#"coincide_patron("a.c", "a\\.c")"#, "verdadero"),
+            (r#"coincide_patron("abc", "a\\.c")"#, "falso"),
+            (r#"buscar_patron("pedido 42 y 7", "\\d+")"#, "[42]"),
+            (r#"buscar_patron("sin numeros", "\\d+")"#, "nada"),
+            (r#"buscar_patron("abc123", "[a-c]+")"#, "[abc]"),
+            (r#"buscar_patron("abc123", "[^a-c]+")"#, "[123]"),
+            (r#"buscar_patron("a-b_c", "[\\w-]+")"#, "[a-b_c]"),
+            (r#"buscar_patron("x  y", "\\s+")"#, "[  ]"),
+            (r#"buscar_patron("ab 12", "\\D+")"#, "[ab ]"),
+            (r#"buscar_patron("ab 12", "\\S+")"#, "[ab]"),
+            (r#"buscar_patron("ab 12", "\\W")"#, "[ ]"),
+            (r#"buscar_patron("un gato y gatos", "\\bgato\\b")"#, "[gato]"),
+            (r#"buscar_todos_patron("un gato y gatos", "\\bgato\\b")"#, "[[gato]]"),
+            (r#"buscar_patron("a/b", "a\\/b")"#, "[a/b]"),
+            (r#"buscar_patron("a\\b", "a\\\\b")"#, "[a\\b]"),
+        ],
+    );
+}
+
+#[test]
+fn patrones_acentos_y_mayusculas() {
+    patrones_casos(
+        "patrones_acentos",
+        &[
+            (r#"buscar_patron("Canción de España", "[a-zñáéíóú]+$")"#, "[spaña]"),
+            (r#"buscar_patron("mañana", "ma.ana")"#, "[mañana]"),
+            (r#"buscar_patron("áéí ñu", "\\w+")"#, "[áéí]"),
+            (r#"buscar_patron("ÑANDÚ", "(?i)ñandú")"#, "[ÑANDÚ]"),
+            (r#"buscar_patron("Hola", "(?i)^HOLA$")"#, "[Hola]"),
+            (r#"buscar_patron("Hola", "^HOLA$")"#, "nada"),
+            (r#"buscar_patron("ABC", "(?i)[a-c]+")"#, "[ABC]"),
+            (r#"reemplazar_patron("Año nuevo", "(?i)AÑO", "día")"#, "día nuevo"),
+        ],
+    );
+}
+
+#[test]
+fn patrones_grupos_alternativas_y_cuantificadores() {
+    patrones_casos(
+        "patrones_grupos",
+        &[
+            (r#"buscar_patron("ana@x.es", "(\\w+)@(\\w+)")"#, "[ana@x, ana, x]"),
+            (r#"buscar_patron("2024-05-17", "(\\d{4})-(\\d{2})-(\\d{2})")"#, "[2024-05-17, 2024, 05, 17]"),
+            (r#"buscar_patron("gato", "(?:ga|pe)to")"#, "[gato]"),
+            (r#"buscar_patron("perro", "(gato|perro)")"#, "[perro, perro]"),
+            (r#"buscar_patron("ac", "a(b)?c")"#, "[ac, ]"),
+            (r#"buscar_patron("aaa", "a{2}")"#, "[aa]"),
+            (r#"buscar_patron("aaaa", "a{2,}")"#, "[aaaa]"),
+            (r#"buscar_patron("aaaa", "a{1,3}")"#, "[aaa]"),
+            (r#"buscar_patron("aaaa", "a{1,3}?")"#, "[a]"),
+            (r#"buscar_patron("<b>x</b><b>y</b>", "<b>(.*)</b>")"#, "[<b>x</b><b>y</b>, x</b><b>y]"),
+            (r#"buscar_patron("<b>x</b><b>y</b>", "<b>(.*?)</b>")"#, "[<b>x</b>, x]"),
+            (r#"buscar_patron("aaa", "a+?")"#, "[a]"),
+            (r#"buscar_patron("abc", "ab??c")"#, "[abc]"),
+            (r#"buscar_patron("abab", "(ab)+")"#, "[abab, ab]"),
+            (r#"buscar_patron("a{b", "a{b")"#, "[a{b]"),
+            (r#"buscar_patron("foobar", "foo|foobar")"#, "[foo]"),
+            (r#"buscar_patron("", "^$")"#, "[]"),
+            (r#"buscar_todos_patron("a1 b22 c333", "([a-z])(\\d+)")"#, "[[a1, a, 1], [b22, b, 22], [c333, c, 333]]"),
+            (r#"buscar_columnas_patron("a1 b22", "([a-z])(\\d+)")"#, "[[a1, b22], [a, b], [1, 22]]"),
+            (r#"buscar_columnas_patron("zzz", "(\\d)")"#, "[[], []]"),
+        ],
+    );
+}
+
+#[test]
+fn patrones_reemplazar_y_partir() {
+    patrones_casos(
+        "patrones_reemplazar",
+        &[
+            (r#"reemplazar_patron("2024-05-17", "(\\d+)-(\\d+)-(\\d+)", "$3/$2/$1")"#, "17/05/2024"),
+            (r#"reemplazar_patron("a b  c", "\\s+", "_")"#, "a_b_c"),
+            (r#"reemplazar_patron("hola", "o", "$0$0")"#, "hoola"),
+            (r#"reemplazar_patron("hola", "(o)", "${1}0")"#, "ho0la"),
+            (r#"reemplazar_patron("hola", "(o)", "$5x")"#, "hxla"),
+            (r#"reemplazar_patron("precio 5", "\\d", "$")"#, "precio $"),
+            (r#"reemplazar_patron("abc", "x*", "-")"#, "-a-b-c-"),
+            (r#"partir_patron("a, b;c", "[,;]\\s*")"#, "[a, b, c]"),
+            (r#"partir_patron("abc", "")"#, "[a, b, c]"),
+            (r#"partir_patron("a1b22c", "\\d+")"#, "[a, b, c]"),
+            (r#"partir_patron("sin", ",")"#, "[sin]"),
+            (r#"partir_patron(",a,", ",")"#, "[, a, ]"),
+        ],
+    );
+}
+
+#[test]
+fn patrones_con_texto_largo_no_revienta() {
+    let o = ejecutar(
+        "patrones_largo",
+        "usar modulo \"patrones\"\nusar modulo \"texto\"\nsea t = repetir(\"ab \", 10000)\nmostrar(medir(buscar_todos_patron(t, \"\\\\w+\")))\nmostrar(medir(buscar_patron(t, \"(?:ab )*x|^(?:ab )+\")[0]))\n",
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", todo(&o));
+    assert_eq!(String::from_utf8_lossy(&o.stdout), "10000\n30000\n");
+}
+
+#[test]
+fn patrones_para_con_un_patron_que_tardaria_una_eternidad() {
+    let o = ejecutar(
+        "patrones_limite",
+        "usar modulo \"patrones\"\nmostrar(coincide_patron(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac\", \"(a+)+b\"))\n",
+    );
+    assert_eq!(o.status.code(), Some(1), "{}", todo(&o));
+    assert!(todo(&o).contains("demasiado complicado"), "{}", todo(&o));
+}
+
+#[test]
+fn patrones_mal_escritos_dan_un_error_claro_con_la_posicion() {
+    for (patron, esperado) in [
+        ("(abc", "en la posición 1: falta cerrar este paréntesis con )"),
+        ("abc)", "en la posición 4: este paréntesis ) no tiene su pareja ("),
+        ("[abc", "en la posición 1: falta cerrar esta clase con ]"),
+        ("a**", "en la posición 3: no se puede repetir dos veces"),
+        ("*a", "en la posición 1: no hay nada que repetir"),
+        ("a{3,2}", "en la posición 2: en {n,m}"),
+        ("[z-a]", "en la posición 2: el rango está al revés"),
+        ("ab\\\\", "en la posición 3: el patrón no puede acabar en"),
+        ("(a)\\\\1", "las referencias a grupos"),
+        ("a(?=b)", "en la posición 2: mirar adelante o atrás no está soportado"),
+        ("\\\\q", "el escape \\q no existe"),
+        ("(?i)ab(", "en la posición 7: falta cerrar este paréntesis"),
+    ] {
+        let o = ejecutar(
+            "patrones_error",
+            &format!("usar modulo \"patrones\"\nmostrar(coincide_patron(\"abc\", \"{}\"))\n", patron),
+        );
+        assert_eq!(o.status.code(), Some(1), "{}: {}", patron, todo(&o));
+        assert!(todo(&o).contains("patrón mal escrito"), "{}: {}", patron, todo(&o));
+        assert!(todo(&o).contains(esperado), "{}: {}", patron, todo(&o));
+    }
 }

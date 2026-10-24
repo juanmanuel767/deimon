@@ -1,0 +1,11 @@
+# Traducido de PHP con 'deimon desde-php'.
+usar modulo "texto"
+
+sea precio = nada
+sea precios = {"pan": 1.5, "leche": 0.99, "queso": 12.345}
+para producto en listar_claves(precios) {
+    precio = precios[producto]
+    escribir(a_texto(rellenar_texto(primera_mayuscula(producto), 10, ".", "derecha")) + formatear_numero(precio, 2, ",", ".") + " €\n")
+}
+escribir(a_texto(rellenar_texto("Total", 10, " ", "izquierda")) + formatear_numero(14.835, 2, ",", ".") + " €\n")
+escribir(texto_completo({"frutas": ["pera", "uva"], "cantidad": [3, 5]}))

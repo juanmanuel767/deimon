@@ -1,0 +1,85 @@
+# Planificador de procesos por turnos (round robin) con memoria por bloques.
+# El sistema es una lista con claves: procesos, memoria (un pid por bloque, 0 = libre) y reloj.
+
+funcion crear_planificador(bloques) {
+    sea memoria = []
+    para i en rango(1, bloques) {
+        memoria = agregar(memoria, 0)
+    }
+    devolver {"procesos": [], "memoria": memoria, "siguiente_pid": 1, "reloj": 0}
+}
+
+funcion bloques_libres(sistema) {
+    sea libres = 0
+    para celda en sistema["memoria"] {
+        si celda == 0 {
+            libres = libres + 1
+        }
+    }
+    devolver libres
+}
+
+funcion lanzar(sistema, nombre, trabajo, bloques) {
+    sea pid = sistema["siguiente_pid"]
+    si bloques_libres(sistema) < bloques {
+        provocar_error("no hay memoria para " + nombre)
+    }
+    sea memoria = sistema["memoria"]
+    sea puestos = 0
+    sea i = 0
+    mientras puestos < bloques {
+        si memoria[i] == 0 {
+            memoria[i] = pid
+            puestos = puestos + 1
+        }
+        i = i + 1
+    }
+    sistema["memoria"] = memoria
+    sistema["procesos"] = agregar(sistema["procesos"], {"pid": pid, "nombre": nombre, "falta": trabajo})
+    sistema["siguiente_pid"] = pid + 1
+    devolver sistema
+}
+
+funcion liberar(sistema, pid) {
+    sea memoria = sistema["memoria"]
+    para i en rango(0, medir(memoria) - 1) {
+        si memoria[i] == pid {
+            memoria[i] = 0
+        }
+    }
+    sistema["memoria"] = memoria
+    devolver sistema
+}
+
+# Da a cada proceso como mucho `turno` unidades de tiempo por vuelta hasta que todos terminan.
+# Devuelve el sistema y una lista de textos con lo que pasó.
+funcion planificar(sistema, turno) {
+    sea diario = []
+    mientras medir(sistema["procesos"]) > 0 {
+        sea vivos = []
+        para p en sistema["procesos"] {
+            sea paso = elegir(p["falta"] < turno, p["falta"], turno)
+            p["falta"] = p["falta"] - paso
+            sistema["reloj"] = sistema["reloj"] + paso
+            si p["falta"] == 0 {
+                diario = agregar(diario, "t=" + sistema["reloj"] + " termina " + p["nombre"] + " (pid " + p["pid"] + ")")
+                sistema = liberar(sistema, p["pid"])
+            } sino {
+                vivos = agregar(vivos, p)
+            }
+        }
+        sistema["procesos"] = vivos
+    }
+    devolver {"sistema": sistema, "diario": diario}
+}
+
+prueba "el planificador reparte por turnos y libera la memoria" {
+    sea s = crear_planificador(8)
+    s = lanzar(s, "editor", 5, 3)
+    s = lanzar(s, "navegador", 9, 4)
+    s = lanzar(s, "reloj", 2, 1)
+    comprobar_igual(bloques_libres(s), 0)
+    sea r = planificar(s, 3)
+    comprobar_igual(r["diario"], ["t=8 termina reloj (pid 3)", "t=10 termina editor (pid 1)", "t=16 termina navegador (pid 2)"])
+    comprobar_igual(bloques_libres(r["sistema"]), 8)
+}

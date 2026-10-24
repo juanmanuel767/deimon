@@ -10,7 +10,7 @@ use crate::ajenas;
 use crate::antiguas;
 use crate::ast::{Extension, FuncionExtension, Programa, Sentencia};
 use crate::error::ErrorTraduccion;
-use crate::{biblioteca, generador, integradas, lexer, parser, plantillas};
+use crate::{biblioteca, fuentes, generador, integradas, lexer, parser, plantillas};
 
 /// Resuelve los `usar` de `programa` y devuelve el programa combinado.
 pub fn resolver(
@@ -98,7 +98,7 @@ struct Resolutor {
 
 impl Resolutor {
     fn nuevo(archivo: Option<&Path>) -> Self {
-        let canonico = archivo.and_then(|ruta| fs::canonicalize(ruta).ok());
+        let canonico = archivo.and_then(|ruta| fuentes::canonica(ruta).ok());
         let base = canonico
             .as_ref()
             .and_then(|ruta| ruta.parent())
@@ -155,7 +155,7 @@ impl Resolutor {
         } else {
             desde.dir.join(ruta)
         };
-        let canonico = match fs::canonicalize(&candidato) {
+        let canonico = match fuentes::canonica(&candidato) {
             Ok(canonico) => canonico,
             Err(error) => {
                 let mensaje = if error.kind() == std::io::ErrorKind::NotFound {
@@ -199,7 +199,7 @@ impl Resolutor {
         }
         self.cargados.insert(canonico.clone());
 
-        let fuente = match fs::read_to_string(&canonico) {
+        let fuente = match fuentes::leer_texto(&canonico) {
             Ok(fuente) => fuente,
             Err(error) => {
                 let mensaje = format!("no se pudo leer el archivo '{}': {}", mostrar, error);
@@ -363,17 +363,12 @@ impl Resolutor {
         desde: &Contexto,
     ) -> Vec<Sentencia> {
         let local = desde.dir.join("modulos").join(nombre);
-        let personal = env::var_os("HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("~"))
-            .join(".deimon")
-            .join("modulos")
-            .join(nombre);
+        let personal = carpeta_personal().join(nombre);
         let estandar = biblioteca::carpeta().map(|carpeta| carpeta.join(nombre));
         let carpeta = [Some(local.clone()), Some(personal.clone()), estandar]
             .into_iter()
             .flatten()
-            .find(|carpeta| carpeta.is_dir());
+            .find(|carpeta| fuentes::es_carpeta(carpeta));
         let carpeta = match carpeta {
             Some(carpeta) => carpeta,
             None => {
@@ -410,7 +405,7 @@ impl Resolutor {
             }
         };
 
-        let canonico = fs::canonicalize(&carpeta).unwrap_or_else(|_| carpeta.clone());
+        let canonico = fuentes::canonica(&carpeta).unwrap_or_else(|_| carpeta.clone());
         if !self.extensiones_vistas.insert(canonico) {
             return Vec::new();
         }
@@ -430,11 +425,11 @@ impl Resolutor {
 
         let ruta_funciones = carpeta.join("funciones.txt");
         let ruta_codigo = carpeta.join("codigo.rs");
-        let (funciones, codigo, valida) = match (ruta_funciones.is_file(), ruta_codigo.is_file()) {
+        let (funciones, codigo, valida) = match (fuentes::es_archivo(&ruta_funciones), fuentes::es_archivo(&ruta_codigo)) {
             (false, false) => (Vec::new(), String::new(), true),
             (true, true) => {
-                let leidos = fs::read_to_string(&ruta_funciones)
-                    .and_then(|texto| fs::read_to_string(&ruta_codigo).map(|codigo| (texto, codigo)));
+                let leidos = fuentes::leer_texto(&ruta_funciones)
+                    .and_then(|texto| fuentes::leer_texto(&ruta_codigo).map(|codigo| (texto, codigo)));
                 match leidos {
                     Ok((texto, codigo)) => {
                         let (funciones, mut errores, valida) =
@@ -492,10 +487,10 @@ impl Resolutor {
         }
 
         // Las funciones escritas en Deimon del módulo se cargan como con `usar "archivo.dmn"`.
-        let mut archivos_ln: Vec<PathBuf> = fs::read_dir(&carpeta)
-            .map(|entradas| {
-                entradas
-                    .filter_map(|entrada| entrada.ok().map(|entrada| entrada.path()))
+        let mut archivos_ln: Vec<PathBuf> = fuentes::listar(&carpeta)
+            .map(|rutas| {
+                rutas
+                    .into_iter()
                     .filter(|ruta| ruta.extension().map(|e| e == "dmn").unwrap_or(false))
                     .collect()
             })
@@ -592,7 +587,7 @@ pub const CAPACIDADES: &[&str] = &["red", "archivos", "hilos"];
 /// Lee `modulo.txt` y devuelve la descripción y las capacidades que requiere el módulo.
 fn leer_ficha(carpeta: &Path, nombre: &str) -> Result<(String, Vec<String>), String> {
     let ruta = carpeta.join("modulo.txt");
-    let texto = fs::read_to_string(&ruta).map_err(|error| {
+    let texto = fuentes::leer_texto(&ruta).map_err(|error| {
         format!(
             "el módulo '{}' no tiene un modulo.txt que se pueda leer ('{}'): {}",
             nombre,
@@ -815,6 +810,57 @@ fn unir_mostrar(padre: &str, ruta: &str) -> String {
         }
     }
     partes.join("/")
+}
+
+/// Carpeta personal de módulos: `$DEIMON_CASA/.deimon/modulos` (por defecto `$HOME`).
+pub fn carpeta_personal() -> PathBuf {
+    // En un programa empaquetado, los módulos personales que usó viajan dentro del paquete.
+    if crate::fuentes::en_paquete() {
+        return PathBuf::from(crate::fuentes::RAIZ_PERSONAL);
+    }
+    env::var_os("DEIMON_CASA")
+        .filter(|casa| !casa.is_empty())
+        .or_else(|| env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("~"))
+        .join(".deimon")
+        .join("modulos")
+}
+
+/// Comprueba que `carpeta` es un módulo válido (modulo.txt y, si lo tiene, funciones.txt con
+/// codigo.rs) y devuelve su nombre, que es el que dice modulo.txt.
+pub fn validar_carpeta(carpeta: &Path) -> Result<String, String> {
+    let texto = fuentes::leer_texto(&carpeta.join("modulo.txt"))
+        .map_err(|_| "la carpeta no tiene un modulo.txt que se pueda leer".to_string())?;
+    let nombre = texto
+        .lines()
+        .filter_map(|linea| linea.trim().strip_prefix("nombre:"))
+        .map(|valor| valor.trim().to_string())
+        .next()
+        .ok_or_else(|| "modulo.txt no tiene la línea 'nombre: ...'".to_string())?;
+    if nombre.is_empty() || !nombre.chars().all(|c| matches!(c, 'a'..='z' | '0'..='9' | '_')) {
+        return Err(format!(
+            "el nombre '{}' no vale: usa solo letras minúsculas sin tilde, números y _",
+            nombre
+        ));
+    }
+    leer_ficha(carpeta, &nombre)?;
+    let funciones = carpeta.join("funciones.txt");
+    let codigo = carpeta.join("codigo.rs");
+    match (fuentes::es_archivo(&funciones), fuentes::es_archivo(&codigo)) {
+        (false, false) => {}
+        (true, true) => {
+            let texto = fuentes::leer_texto(&funciones)
+                .map_err(|error| format!("no se pudo leer funciones.txt: {}", error))?;
+            let (_, errores, valida) = leer_funciones(&texto, &nombre, 1, 1);
+            if !valida {
+                let detalle: Vec<String> = errores.iter().map(|e| e.mensaje.clone()).collect();
+                return Err(format!("funciones.txt no es válido: {}", detalle.join("; ")));
+            }
+        }
+        _ => return Err("el módulo necesita funciones.txt y codigo.rs juntos, o ninguno".to_string()),
+    }
+    Ok(nombre)
 }
 
 /// Descripción de un módulo para `deimon modulos`.

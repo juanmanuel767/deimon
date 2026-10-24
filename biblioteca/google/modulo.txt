@@ -1,0 +1,3 @@
+nombre: google
+descripcion: entrar con la cuenta de Google (OAuth 2.0 / OpenID Connect) para no tener que crear contraseñas
+requiere: red

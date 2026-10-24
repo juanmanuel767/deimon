@@ -1,0 +1,3 @@
+nombre: paypal
+descripcion: cobrar con PayPal (Orders v2): crear el pago, que la persona lo apruebe y cobrarlo
+requiere: red

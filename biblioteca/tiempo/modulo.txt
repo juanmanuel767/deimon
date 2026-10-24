@@ -1,3 +1,3 @@
 nombre: tiempo
-descripcion: la hora actual, esperas y fechas en texto (hora universal, UTC)
+descripcion: la hora actual, esperas, fechas completas, zonas horarias y formatos (hora universal, UTC)
 requiere:

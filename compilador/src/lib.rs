@@ -3,12 +3,15 @@ pub mod antiguas;
 pub mod arreglos;
 pub mod ast;
 pub mod biblioteca;
+pub mod desde_cobol;
 pub mod desde_php;
 pub mod error;
 pub mod formato;
+pub mod fuentes;
 pub mod generador;
 pub mod guia;
 pub mod informacion;
+pub mod interprete;
 pub mod integradas;
 pub mod json;
 pub mod lexer;
@@ -16,6 +19,7 @@ pub mod modulos;
 pub mod numerico;
 pub mod parser;
 pub mod plantillas;
+pub mod tipos;
 pub mod perfil;
 
 use std::collections::HashMap;
@@ -79,6 +83,20 @@ pub fn traducir_archivo_varios_con_perfil(
     )
 }
 
+/// Traduce para el destino `pc-sin-sistema`: el programa arranca solo en un PC, sin Linux.
+pub fn traducir_archivo_sin_sistema(
+    fuente: &str,
+    archivo: &Path,
+    perfil: perfil::Perfil,
+) -> Result<String, Vec<ErrorTraduccion>> {
+    traducir_con_modo_perfil(
+        fuente,
+        generador::Modo::SinSistema,
+        Some(archivo),
+        perfil.nombre(),
+    )
+}
+
 /// Como `traducir_pruebas`, pero devuelve todos los errores encontrados.
 pub fn traducir_pruebas_varios(fuente: &str) -> Result<String, Vec<ErrorTraduccion>> {
     traducir_con_modo(fuente, generador::Modo::Pruebas, None)
@@ -116,6 +134,26 @@ pub fn extensiones_usadas_archivo(
             Err(errores)
         }
     }
+}
+
+/// Prepara un programa para el intérprete: mismo análisis que `traducir` (lexer, parser y
+/// módulos) y compilación a código intermedio. `Err` lleva el motivo por el que no se puede
+/// interpretar (por ejemplo, rutas web) y entonces hay que usar el modo Rust. Los errores del
+/// programa los detecta antes `traducir_archivo_varios`.
+pub fn compilar_para_interprete(
+    fuente: &str,
+    archivo: &Path,
+) -> Result<interprete::Codigo, String> {
+    let tokens = lexer::tokenizar(fuente).map_err(|error| error.mensaje)?;
+    let (tokens, errores) = ajenas::corregir(tokens);
+    let (tokens, de_antiguas) = antiguas::corregir(tokens);
+    if !errores.is_empty() || !de_antiguas.is_empty() {
+        return Err("el programa tiene avisos".to_string());
+    }
+    let programa = parser::analizar(tokens).map_err(|error| error.mensaje)?;
+    let programa = modulos::resolver(programa, Some(archivo))
+        .map_err(|_| "no se pudieron cargar los módulos".to_string())?;
+    interprete::compilar(&programa)
 }
 
 /// Nombres de las extensiones incluidas en el Rust generado (las marca el generador).
@@ -177,6 +215,8 @@ fn traducir_con_modo_perfil(
             return Err(ordenar(errores, fuente, &HashMap::new()));
         }
     };
+    // Operaciones que fallarían seguro (E025), antes de ejecutar nada.
+    errores.append(&mut tipos::revisar(&programa));
     match generador::generar_con_modo_perfil(&programa, modo, perfil) {
         Ok(rust) if errores.is_empty() => Ok(rust),
         Ok(_) => Err(ordenar(errores, fuente, &fuentes)),

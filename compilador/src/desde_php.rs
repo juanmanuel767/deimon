@@ -330,6 +330,8 @@ enum Instr {
     SinTraducir(usize, String),
     Romper,
     Continuar,
+    /// try { } catch (Exception $e) { }: cuerpo, nombre de la variable del error y cuerpo del fallo.
+    Intentar(Vec<Instr>, String, Vec<Instr>),
 }
 
 struct Analizador {
@@ -660,9 +662,38 @@ impl Analizador {
                 None => Err("break o continue fuera de un bucle".to_string()),
             };
         }
+        if self.es_nombre("try") {
+            let pendientes = self.pendientes.len();
+            let resultado = self.intentar_try();
+            if resultado.is_err() {
+                self.pendientes.truncate(pendientes);
+            }
+            return resultado;
+        }
+        if self.es_nombre("throw") {
+            self.avanzar();
+            let nuevo = matches!(self.actual(), Pieza::Nombre(n) if n.eq_ignore_ascii_case("new"));
+            if !nuevo {
+                return Err("throw de algo que no es 'new Exception(mensaje)'".to_string());
+            }
+            self.avanzar();
+            let tipo_valido = matches!(self.actual(), Pieza::Nombre(n) if n.eq_ignore_ascii_case("Exception"));
+            if !tipo_valido {
+                return Err("throw de un tipo de excepción que no es Exception".to_string());
+            }
+            self.avanzar();
+            self.esperar("(")?;
+            let mensaje = if self.es_signo(")") { Expr::Texto(Vec::new()) } else { self.expresion()? };
+            if self.es_signo(",") {
+                return Err("throw new Exception con más de un argumento".to_string());
+            }
+            self.esperar(")")?;
+            self.fin_instruccion()?;
+            let linea = self.linea();
+            return Ok(Instr::Expresion(Expr::Llamada("__provocar_error".to_string(), vec![mensaje], linea)));
+        }
         for (palabra, motivo) in [
             ("class", "clases (Deimon no tiene clases)"),
-            ("try", "try/catch (Deimon no tiene excepciones)"),
             ("include", "include (usa 'usar' con el archivo traducido)"),
             ("require", "require (usa 'usar' con el archivo traducido)"),
             ("include_once", "include_once (usa 'usar' con el archivo traducido)"),
@@ -811,6 +842,38 @@ impl Analizador {
         };
         previas.push(instruccion);
         Ok(if previas.len() == 1 { previas.pop().expect("una") } else { Instr::Varias(previas) })
+    }
+
+    /// try { } catch (Exception $e) { } -> intentar { } si falla e { }.
+    fn intentar_try(&mut self) -> Result<Instr, String> {
+        self.avanzar();
+        if !self.es_signo("{") {
+            return Err("try sin llaves".to_string());
+        }
+        let cuerpo = self.bloque();
+        if !self.es_nombre("catch") {
+            return Err("try sin catch (finally no se traduce)".to_string());
+        }
+        self.avanzar();
+        self.esperar("(")?;
+        let tipo_valido = matches!(self.actual(), Pieza::Nombre(n) if n.eq_ignore_ascii_case("Exception") || n.eq_ignore_ascii_case("Throwable"));
+        if !tipo_valido {
+            return Err("catch de un tipo que no es Exception ni Throwable".to_string());
+        }
+        self.avanzar();
+        let variable = match self.avanzar() {
+            Pieza::Variable(v) => v,
+            _ => return Err("catch con varios tipos o sin variable".to_string()),
+        };
+        self.esperar(")")?;
+        if !self.es_signo("{") {
+            return Err("catch sin llaves".to_string());
+        }
+        let fallo = self.bloque();
+        if self.es_nombre("catch") || self.es_nombre("finally") {
+            return Err("varios catch o finally".to_string());
+        }
+        Ok(Instr::Intentar(cuerpo, variable, fallo))
     }
 
     fn fin_instruccion(&mut self) -> Result<(), String> {
@@ -970,6 +1033,16 @@ impl Analizador {
                 let indice = self.expresion()?;
                 self.esperar("]")?;
                 base = Expr::Indice(Box::new(base), Box::new(indice));
+            } else if self.es_signo("->")
+                && matches!(self.piezas.get(self.pos + 1).map(|p| &p.pieza), Some(Pieza::Nombre(n)) if n.eq_ignore_ascii_case("getMessage"))
+                && matches!(self.piezas.get(self.pos + 2).map(|p| &p.pieza), Some(Pieza::Signo(s)) if s == "(")
+                && matches!(self.piezas.get(self.pos + 3).map(|p| &p.pieza), Some(Pieza::Signo(s)) if s == ")")
+            {
+                self.avanzar();
+                self.avanzar();
+                self.avanzar();
+                self.avanzar();
+                base = Expr::Indice(Box::new(base), Box::new(Expr::Texto(vec![Trozo::Literal("mensaje".to_string())])));
             } else if self.es_signo("->") || self.es_signo("::") {
                 return Err("objetos y clases (-> o ::)".to_string());
             } else if self.es_signo("++") || self.es_signo("--") {
@@ -1157,6 +1230,9 @@ const EQUIVALENCIAS: &[(&str, &str, Option<&str>, &[usize])] = &[
     ("explode", "partir", Some("texto"), &[1, 0]),
     ("implode", "unir", Some("texto"), &[1, 0]),
     ("str_repeat", "repetir", Some("texto"), &[0, 1]),
+    ("ucfirst", "primera_mayuscula", Some("texto"), &[0]),
+    ("print_r", "texto_completo", Some("texto"), &[0]),
+    ("var_dump", "texto_completo", Some("texto"), &[0]),
     ("in_array", "incluye", None, &[1, 0]),
     ("array_reverse", "invertir", None, &[0]),
     ("strrev", "invertir", None, &[0]),
@@ -1193,6 +1269,8 @@ struct Escritor {
     desde_campo: HashSet<String>,
     /// Paso de cada bucle abierto: un `for` de PHP hace su paso antes de `continue`.
     pasos: Vec<Vec<Instr>>,
+    /// Zona horaria de `date_default_timezone_set` (o "UTC" si el PHP no la cambia).
+    zona: String,
 }
 
 const PRECEDENCIA_O: u8 = 1;
@@ -1203,6 +1281,108 @@ const PRECEDENCIA_SUMA: u8 = 5;
 const PRECEDENCIA_PRODUCTO: u8 = 6;
 const PRECEDENCIA_UNARIA: u8 = 7;
 const PRECEDENCIA_ATOMO: u8 = 9;
+
+
+/// Zona horaria que fija `date_default_timezone_set('...')` en el PHP (o "UTC").
+fn zona_de_php(php: &str) -> String {
+    let minusculas = php.to_ascii_lowercase();
+    let buscado = "date_default_timezone_set";
+    let mut desde = 0;
+    while let Some(posicion) = minusculas[desde..].find(buscado) {
+        let mut i = desde + posicion + buscado.len();
+        while i < php.len() && php.as_bytes()[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if php.as_bytes().get(i) != Some(&b'(') {
+            desde = i;
+            continue;
+        }
+        i += 1;
+        while i < php.len() && php.as_bytes()[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        let comilla = match php.as_bytes().get(i) {
+            Some(b'\'') => '\'',
+            Some(b'"') => '"',
+            _ => {
+                desde = i;
+                continue;
+            }
+        };
+        i += 1;
+        let inicio = i;
+        while i < php.len() && php.as_bytes()[i] != comilla as u8 {
+            i += 1;
+        }
+        if i > php.len() {
+            break;
+        }
+        let valor = php[inicio..i].trim();
+        if !valor.is_empty() {
+            return valor.to_string();
+        }
+        desde = i + 1;
+    }
+    "UTC".to_string()
+}
+
+fn texto_literal_php(expresion: &Expr) -> Option<String> {
+    match expresion {
+        Expr::Texto(trozos) if trozos.len() == 1 => match &trozos[0] {
+            Trozo::Literal(texto) => Some(texto.clone()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Dice si el texto parece una de las fechas absolutas que acepta `leer_fecha`.
+fn parece_fecha_absoluta_php(texto: &str) -> bool {
+    let texto = texto.trim();
+    let bytes = texto.as_bytes();
+    if bytes.len() >= 10
+        && bytes[..4].iter().all(u8::is_ascii_digit)
+        && bytes[4] == b'-'
+    {
+        return true;
+    }
+    let partes: Vec<&str> = texto.split('/').collect();
+    partes.len() == 3
+        && partes
+            .iter()
+            .all(|parte| !parte.is_empty() && parte.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// Lee "+N day(s)", "-N week(s)", "+N month(s)" o "+N year(s)" de `strtotime`.
+fn relativo_php(texto: &str) -> Option<(i64, &'static str)> {
+    let texto = texto.trim().to_ascii_lowercase();
+    if texto == "now" {
+        return Some((0, "segundos"));
+    }
+    let (signo, resto) = if let Some(resto) = texto.strip_prefix('+') {
+        (1, resto)
+    } else if let Some(resto) = texto.strip_prefix('-') {
+        (-1, resto)
+    } else {
+        (1, texto.as_str())
+    };
+    let partes: Vec<&str> = resto.split_whitespace().collect();
+    if partes.len() != 2 {
+        return None;
+    }
+    let cantidad: i64 = partes[0].parse().ok()?;
+    let unidad = match partes[1].trim_end_matches('s') {
+        "second" => "segundos",
+        "minute" => "minutos",
+        "hour" => "horas",
+        "day" => "dias",
+        "week" => "semanas",
+        "month" => "meses",
+        "year" => "años",
+        _ => return None,
+    };
+    Some((signo * cantidad, unidad))
+}
 
 fn nombre_libre(nombre: &str) -> String {
     let limpio: String = nombre.chars().map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' }).collect();
@@ -1354,6 +1534,116 @@ impl Escritor {
             return (format!("{}({})", deimon, partes.join(", ")), PRECEDENCIA_ATOMO);
         }
         match (minuscula.as_str(), argumentos.len()) {
+            ("__provocar_error", 1) => {
+                let mensaje = self.expr(&argumentos[0]).0;
+                return (format!("provocar_error({})", mensaje), PRECEDENCIA_ATOMO);
+            }
+            ("time", 0) => {
+                self.modulos.insert("tiempo");
+                self.modulos.insert("matematicas");
+                return ("suelo(ahora())".to_string(), PRECEDENCIA_ATOMO);
+            }
+            ("date", 1) | ("date", 2) => {
+                self.modulos.insert("tiempo");
+                let formato = self.expr(&argumentos[0]).0;
+                let segundos = if argumentos.len() == 2 {
+                    self.expr(&argumentos[1]).0
+                } else {
+                    "ahora()".to_string()
+                };
+                let zona = texto_deimon(&self.zona);
+                return (
+                    format!("formatear_fecha({}, {}, {})", segundos, formato, zona),
+                    PRECEDENCIA_ATOMO,
+                );
+            }
+            ("mktime", 6) => {
+                self.modulos.insert("tiempo");
+                let hora = self.expr(&argumentos[0]).0;
+                let minuto = self.expr(&argumentos[1]).0;
+                let segundo = self.expr(&argumentos[2]).0;
+                let mes = self.expr(&argumentos[3]).0;
+                let dia = self.expr(&argumentos[4]).0;
+                let anio = self.expr(&argumentos[5]).0;
+                return (
+                    format!(
+                        "crear_fecha({}, {}, {}, {}, {}, {})",
+                        anio, mes, dia, hora, minuto, segundo
+                    ),
+                    PRECEDENCIA_ATOMO,
+                );
+            }
+            ("checkdate", 3) => {
+                self.modulos.insert("tiempo");
+                let mes = self.expr(&argumentos[0]).0;
+                let dia = self.expr(&argumentos[1]).0;
+                let anio = self.expr(&argumentos[2]).0;
+                return (
+                    format!(
+                        "({} >= 1 y {} <= 12 y {} >= 1 y {} <= dias_del_mes({}, {}))",
+                        mes, mes, dia, dia, anio, mes
+                    ),
+                    PRECEDENCIA_ATOMO,
+                );
+            }
+            ("cal_days_in_month", 3) => {
+                self.modulos.insert("tiempo");
+                let mes = self.expr(&argumentos[1]).0;
+                let anio = self.expr(&argumentos[2]).0;
+                return (
+                    format!("dias_del_mes({}, {})", anio, mes),
+                    PRECEDENCIA_ATOMO,
+                );
+            }
+            ("strtotime", 1) | ("strtotime", 2) => {
+                self.modulos.insert("tiempo");
+                let base = if argumentos.len() == 2 {
+                    self.expr(&argumentos[1]).0
+                } else {
+                    "ahora()".to_string()
+                };
+                return match texto_literal_php(&argumentos[0]) {
+                    Some(texto) => match relativo_php(&texto) {
+                        Some((cantidad, unidad)) => (
+                            format!("sumar_tiempo({}, {}, \"{}\")", base, cantidad, unidad),
+                            PRECEDENCIA_ATOMO,
+                        ),
+                        None if parece_fecha_absoluta_php(&texto) => (
+                            format!("leer_fecha({})", texto_deimon(&texto)),
+                            PRECEDENCIA_ATOMO,
+                        ),
+                        None => {
+                            self.pendientes.push((
+                                linea,
+                                format!(
+                                    "strtotime('{}') no está soportado; usa una fecha AAAA-MM-DD, AAAA-MM-DD HH:MM[:SS], AAAA-MM-DDTHH:MM:SS[Z o ±HH:MM] o \"+N day(s)/week(s)/month(s)/year(s)\"",
+                                    texto
+                                ),
+                            ));
+                            ("nada".to_string(), PRECEDENCIA_ATOMO)
+                        }
+                    },
+                    None => {
+                        self.avisos.push((
+                            linea,
+                            "strtotime con un texto que no es fijo: solo se traducen fechas absolutas (los \"+N días\" necesitan un texto literal)".to_string(),
+                        ));
+                        let texto = self.expr(&argumentos[0]).0;
+                        (format!("leer_fecha({})", texto), PRECEDENCIA_ATOMO)
+                    }
+                };
+            }
+            ("date_default_timezone_set", 1) => {
+                if let Some(zona) = texto_literal_php(&argumentos[0]) {
+                    self.zona = zona;
+                } else {
+                    self.avisos.push((
+                        linea,
+                        "date_default_timezone_set con un valor que no es fijo: se usa la zona detectada al traducir".to_string(),
+                    ));
+                }
+                return ("nada".to_string(), PRECEDENCIA_ATOMO);
+            }
             ("__sesion", 1) | ("__sesion_borrar", 1) => {
                 let clave = self.expr(&argumentos[0]).0;
                 let funcion = if minuscula == "__sesion" { "leer_de_sesion" } else { "borrar_de_sesion" };
@@ -1477,6 +1767,46 @@ impl Escritor {
                 let partes: Vec<String> = argumentos.iter().map(|a| self.expr(a).0).collect();
                 return (format!("elegir({})", partes.join(", ")), PRECEDENCIA_ATOMO);
             }
+            ("number_format", n) if (1..=4).contains(&n) => {
+                self.modulos.insert("texto");
+                let numero = self.expr(&argumentos[0]).0;
+                let decimales = if n >= 2 { self.expr(&argumentos[1]).0 } else { "0".to_string() };
+                let separador_decimal = if n >= 3 { self.expr(&argumentos[2]).0 } else { "\".\"".to_string() };
+                let separador_miles = if n >= 4 { self.expr(&argumentos[3]).0 } else { "\",\"".to_string() };
+                return (
+                    format!(
+                        "formatear_numero({}, {}, {}, {})",
+                        numero, decimales, separador_decimal, separador_miles
+                    ),
+                    PRECEDENCIA_ATOMO,
+                );
+            }
+            ("str_pad", n) if (2..=4).contains(&n) => {
+                self.modulos.insert("texto");
+                let texto = self.expr(&argumentos[0]).0;
+                let largo = self.expr(&argumentos[1]).0;
+                let relleno = if n >= 3 { self.expr(&argumentos[2]).0 } else { "\" \"".to_string() };
+                let lado = if n >= 4 {
+                    match &argumentos[3] {
+                        Expr::SinTraducir(constante) => match constante.to_uppercase().as_str() {
+                            "STR_PAD_LEFT" => "\"izquierda\"".to_string(),
+                            "STR_PAD_BOTH" => "\"ambos\"".to_string(),
+                            "STR_PAD_RIGHT" => "\"derecha\"".to_string(),
+                            _ => {
+                                self.pendientes.push((linea, format!("la constante '{}' de str_pad no tiene equivalente (se usa \"derecha\")", constante)));
+                                "\"derecha\"".to_string()
+                            }
+                        },
+                        otro => self.expr(otro).0,
+                    }
+                } else {
+                    "\"derecha\"".to_string()
+                };
+                return (
+                    format!("rellenar_texto({}, {}, {}, {})", texto, largo, relleno, lado),
+                    PRECEDENCIA_ATOMO,
+                );
+            }
             ("sprintf", n) | ("printf", n) if n >= 1 => {
                 self.modulos.insert("texto");
                 let plantilla = self.expr(&argumentos[0]).0;
@@ -1486,6 +1816,9 @@ impl Escritor {
                     return (format!("escribir({})", codigo), PRECEDENCIA_ATOMO);
                 }
                 return (codigo, PRECEDENCIA_ATOMO);
+            }
+            ("preg_match", 2) | ("preg_match", 3) | ("preg_match_all", 2) | ("preg_match_all", 3) | ("preg_replace", 3) | ("preg_split", 2) => {
+                return self.patrones(&minuscula, argumentos, linea);
             }
             ("is_null", 1) => {
                 let interior = self.expr(&argumentos[0]);
@@ -1617,6 +1950,17 @@ impl Escritor {
                 self.nivel -= 1;
                 self.linea("}");
             }
+            Instr::Intentar(cuerpo, variable, fallo) => {
+                self.linea("intentar {");
+                self.nivel += 1;
+                self.instrucciones(cuerpo);
+                self.nivel -= 1;
+                self.linea(&format!("}} si falla {} {{", nombre_libre(variable)));
+                self.nivel += 1;
+                self.instrucciones(fallo);
+                self.nivel -= 1;
+                self.linea("}");
+            }
             Instr::Funcion(..) => {} // las funciones se escriben aparte, al nivel principal
             Instr::Romper => self.linea("romper"),
             Instr::Continuar => {
@@ -1629,6 +1973,14 @@ impl Escritor {
                 self.linea(&format!("devolver {}", valor));
             }
             Instr::Expresion(Expr::Nulo) => {}
+            Instr::Expresion(Expr::Llamada(nombre, _, _))
+                if nombre.eq_ignore_ascii_case("date_default_timezone_set") => {}
+            Instr::Expresion(expresion @ Expr::Llamada(nombre, argumentos, _))
+                if matches!(nombre.to_lowercase().as_str(), "print_r" | "var_dump") && argumentos.len() == 1 =>
+            {
+                let codigo = self.expr(expresion).0;
+                self.linea(&format!("escribir({})", codigo));
+            }
             Instr::Expresion(expresion) => {
                 let codigo = self.expr(expresion).0;
                 self.linea(&codigo);
@@ -1665,7 +2017,15 @@ impl Escritor {
         let mut arriba = Vec::new();
         for instruccion in cuerpo {
             match instruccion {
-                Instr::Asignar(v, _) | Instr::Agregar(v, _) if !vistas.contains(v) => {
+                Instr::Asignar(v, valor) | Instr::Agregar(v, valor) if !vistas.contains(v) => {
+                    let mut de_preg = Vec::new();
+                    recoger_preg(valor, &mut de_preg);
+                    for p in de_preg {
+                        if !vistas.contains(&p) {
+                            vistas.push(p.clone());
+                            en_linea.insert(p);
+                        }
+                    }
                     vistas.push(v.clone());
                     en_linea.insert(v.clone());
                 }
@@ -1711,30 +2071,172 @@ fn es_metodo(e: &Expr) -> bool {
     matches!(e, Expr::Llamada(n, _, _) if n == "__metodo")
 }
 
+impl Escritor {
+    /// preg_match, preg_match_all, preg_replace y preg_split -> módulo `patrones`.
+    fn patrones(&mut self, funcion: &str, argumentos: &[Expr], linea: usize) -> (String, u8) {
+        let patron = match patron_de_php(&argumentos[0]) {
+            Ok(p) => texto_deimon(&p),
+            Err(motivo) => {
+                self.pendientes.push((linea, format!("{}: {}", funcion, motivo)));
+                return ("nada".to_string(), PRECEDENCIA_ATOMO);
+            }
+        };
+        self.modulos.insert("patrones");
+        match funcion {
+            "preg_replace" => {
+                let nuevo = self.expr(&argumentos[1]).0;
+                let texto = self.expr(&argumentos[2]).0;
+                (format!("reemplazar_patron({}, {}, {})", texto, patron, nuevo), PRECEDENCIA_ATOMO)
+            }
+            "preg_split" => {
+                let texto = self.expr(&argumentos[1]).0;
+                (format!("partir_patron({}, {})", texto, patron), PRECEDENCIA_ATOMO)
+            }
+            _ => {
+                let todos = funcion == "preg_match_all";
+                let texto = self.expr(&argumentos[1]).0;
+                match argumentos.get(2) {
+                    None if todos => (format!("medir(buscar_todos_patron({}, {}))", texto, patron), PRECEDENCIA_ATOMO),
+                    None => (format!("coincide_patron({}, {})", texto, patron), PRECEDENCIA_ATOMO),
+                    Some(Expr::Variable(v)) => {
+                        // El grupo se guarda en la variable justo antes de la instrucción que lo usa.
+                        let nombre = nombre_libre(v);
+                        let sea = if self.nivel == self.nivel_ambito && self.por_declarar.remove(v) { "sea " } else { "" };
+                        let buscar = if todos { "buscar_columnas_patron" } else { "buscar_patron" };
+                        self.linea(&format!("{}{} = {}({}, {})", sea, nombre, buscar, texto, patron));
+                        if todos {
+                            (format!("medir({}[0])", nombre), PRECEDENCIA_ATOMO)
+                        } else {
+                            (format!("{} != nada", nombre), PRECEDENCIA_COMPARACION)
+                        }
+                    }
+                    Some(_) => {
+                        self.pendientes.push((linea, format!("{}: el tercer argumento debe ser una variable", funcion)));
+                        ("nada".to_string(), PRECEDENCIA_ATOMO)
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn es_texto(e: &Expr) -> bool {
     matches!(e, Expr::Texto(_))
         || matches!(e, Expr::Binaria(op, _, _) if op == ".")
         || matches!(e, Expr::Llamada(n, _, _) if ["strval", "strtoupper", "strtolower", "trim", "str_replace", "implode", "str_repeat", "mb_strtoupper", "mb_strtolower"].contains(&n.to_lowercase().as_str()))
 }
 
+/// Variables que preg_match / preg_match_all rellenan (tercer argumento) dentro de una expresión.
+fn recoger_preg(e: &Expr, vistas: &mut Vec<String>) {
+    match e {
+        Expr::Llamada(n, argumentos, _) => {
+            if matches!(n.to_lowercase().as_str(), "preg_match" | "preg_match_all") {
+                if let Some(Expr::Variable(v)) = argumentos.get(2) {
+                    if !vistas.contains(v) {
+                        vistas.push(v.clone());
+                    }
+                }
+            }
+            for a in argumentos {
+                recoger_preg(a, vistas);
+            }
+        }
+        Expr::No(i) | Expr::Menos(i) => recoger_preg(i, vistas),
+        Expr::Binaria(_, i, d) => {
+            recoger_preg(i, vistas);
+            recoger_preg(d, vistas);
+        }
+        _ => {}
+    }
+}
+
+/// Quita los delimitadores del patrón de PHP (/.../, #...#, ~...~) y pasa el modificador i a (?i).
+/// Devuelve el motivo si el patrón usa algo que el módulo `patrones` no sabe hacer.
+fn patron_de_php(e: &Expr) -> Result<String, String> {
+    let literal = match e {
+        Expr::Texto(trozos) => match trozos.as_slice() {
+            [Trozo::Literal(l)] => l.clone(),
+            _ => return Err("el patrón no es un texto fijo (se traduce a mano)".to_string()),
+        },
+        _ => return Err("el patrón no es un texto fijo (se traduce a mano)".to_string()),
+    };
+    let delimitador = match literal.chars().next() {
+        Some(d @ ('/' | '#' | '~')) => d,
+        _ => return Err("el patrón no empieza por un delimitador /, # o ~".to_string()),
+    };
+    let fin = match literal.rfind(delimitador) {
+        Some(f) if f > 0 => f,
+        _ => return Err("al patrón le falta el delimitador del final".to_string()),
+    };
+    let cuerpo = &literal[1..fin];
+    let mut ignorar = false;
+    for m in literal[fin + 1..].chars() {
+        match m {
+            'i' => ignorar = true,
+            'u' => {}
+            otro => return Err(format!("el modificador '{}' del patrón no está soportado", otro)),
+        }
+    }
+    let letras: Vec<char> = cuerpo.chars().collect();
+    let mut i = 0;
+    while i < letras.len() {
+        match letras[i] {
+            '\\' => {
+                match letras.get(i + 1) {
+                    Some(c) if c.is_ascii_digit() => return Err("las referencias a grupos (\\1) no están soportadas".to_string()),
+                    Some(c) if c.is_ascii_alphabetic() && !"dDwWsSbBntr".contains(*c) => {
+                        return Err(format!("el escape \\{} del patrón no está soportado", c));
+                    }
+                    _ => {}
+                }
+                i += 2;
+                continue;
+            }
+            '(' if letras.get(i + 1) == Some(&'?') && letras.get(i + 2) != Some(&':') => {
+                return Err("los grupos especiales (?...), como mirar adelante o atrás, no están soportados".to_string());
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    Ok(if ignorar { format!("(?i){}", cuerpo) } else { cuerpo.to_string() })
+}
+
 fn recoger_asignadas(lista: &[Instr], vistas: &mut Vec<String>) {
     for instruccion in lista {
         match instruccion {
             Instr::AsignarIndice(v, _, _) if v == "_SESSION" => {}
-            Instr::Asignar(v, _) | Instr::AsignarIndice(v, _, _) | Instr::Agregar(v, _) => {
+            Instr::Asignar(v, valor) | Instr::AsignarIndice(v, _, valor) | Instr::Agregar(v, valor) => {
+                recoger_preg(valor, vistas);
                 if !vistas.contains(v) {
                     vistas.push(v.clone());
                 }
             }
+            Instr::Expresion(e) => recoger_preg(e, vistas),
             Instr::Si(ramas, otro) => {
-                for (_, cuerpo) in ramas {
+                for (condicion, cuerpo) in ramas {
+                    recoger_preg(condicion, vistas);
                     recoger_asignadas(cuerpo, vistas);
                 }
                 if let Some(cuerpo) = otro {
                     recoger_asignadas(cuerpo, vistas);
                 }
             }
-            Instr::Mientras(_, cuerpo) | Instr::Varias(cuerpo) => recoger_asignadas(cuerpo, vistas),
+            Instr::Mientras(condicion, cuerpo) => {
+                recoger_preg(condicion, vistas);
+                recoger_asignadas(cuerpo, vistas);
+            }
+            Instr::Varias(cuerpo) => recoger_asignadas(cuerpo, vistas),
+            Instr::Intentar(cuerpo, variable, fallo) => {
+                recoger_asignadas(cuerpo, vistas);
+                let mut interiores = Vec::new();
+                recoger_asignadas(fallo, &mut interiores);
+                for v in interiores {
+                    if v != *variable && !vistas.contains(&v) {
+                        vistas.push(v);
+                    }
+                }
+            }
             Instr::Para(inicio, _, paso, cuerpo) => {
                 recoger_asignadas(inicio, vistas);
                 recoger_asignadas(cuerpo, vistas);
@@ -1791,6 +2293,7 @@ impl Escritor {
             web,
             desde_campo: HashSet::new(),
             pasos: Vec::new(),
+            zona: "UTC".to_string(),
         }
     }
 
@@ -1840,6 +2343,7 @@ impl Escritor {
 pub fn traducir(php: &str) -> Result<Traduccion, String> {
     let (programa, pendientes) = analizar(php, false)?;
     let mut escritor = Escritor::nuevo(nombres_de_funciones(&programa), pendientes, false);
+    escritor.zona = zona_de_php(php);
     escritor.funciones_de(&programa);
     let principal: Vec<Instr> = programa.into_iter().filter(|i| !matches!(i, Instr::Funcion(..))).collect();
     escritor.declarar_variables(&principal, &[]);
@@ -1869,6 +2373,11 @@ pub fn traducir_web(paginas: &[(String, String)], puerto: u16) -> Result<Traducc
         }
     }
     let mut escritor = Escritor::nuevo(funciones, pendientes, true);
+    escritor.zona = paginas
+        .iter()
+        .map(|(_, php)| zona_de_php(php))
+        .find(|zona| zona != "UTC")
+        .unwrap_or_else(|| "UTC".to_string());
     for (_, programa) in &programas {
         escritor.funciones_de(programa);
     }

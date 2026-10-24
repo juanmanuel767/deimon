@@ -148,3 +148,15 @@ fn todas_las_palabras_reservadas_aparecen_en_la_gramatica() {
         );
     }
 }
+
+#[test]
+fn formatear_dos_veces_da_lo_mismo_con_intentar() {
+    let fuente = "intentar{\nmostrar(1/0)\n}si falla   e{\n  intentar {\n provocar_error( \"x\" )\n} si falla f {\nmostrar(f[\"mensaje\"])\n}\n}\n";
+    let una = deimon::formato::formatear(fuente).unwrap();
+    let dos = deimon::formato::formatear(&una).unwrap();
+    assert_eq!(una, dos);
+    assert!(una.contains("intentar {\n    mostrar(1 / 0)\n} si falla e {\n"), "{}", una);
+    assert!(una.contains("provocar_error(\"x\")"), "{}", una);
+    // El código formateado sigue siendo el mismo programa.
+    assert!(deimon::traducir(&una).is_ok(), "{}", una);
+}

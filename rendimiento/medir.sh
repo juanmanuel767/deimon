@@ -59,3 +59,4 @@ medir fib
 medir bucle
 medir lista
 medir texto
+medir para
