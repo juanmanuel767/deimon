@@ -129,6 +129,10 @@ pub enum Op {
     Comprobar { igual: bool, linea: usize },
     /// Llama a la función `n` con sus argumentos apilados; `linea` es la de la llamada.
     Llamar { funcion: usize, linea: usize },
+    /// Pone en la pila el valor de una función del programa (`doble` sin paréntesis).
+    FuncionValor(usize),
+    /// Llama a la función guardada en el valor de la cima, con los argumentos de debajo.
+    LlamarValor { argumentos: usize, linea: usize },
     /// Llama a una función de la biblioteca estándar (`indice` en `EXTERNAS`) con sus
     /// `argumentos` apilados; `linea` es la de la llamada.
     Externa { indice: usize, argumentos: usize, linea: usize },

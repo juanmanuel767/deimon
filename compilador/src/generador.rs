@@ -647,7 +647,46 @@ impl Generador {
         Ok(())
     }
 
+    /// Funciones del programa en el orden de su número (el de `valor_funcion`).
+    fn funciones_numeradas(&self) -> Vec<(String, usize)> {
+        let mut nombres: Vec<(String, usize)> = self
+            .funciones
+            .iter()
+            .map(|(nombre, parametros)| (nombre.clone(), parametros.len()))
+            .collect();
+        nombres.sort();
+        nombres
+    }
+
+    /// `doble` escrito sin paréntesis: el valor de esa función del programa.
+    fn valor_de_funcion(&self, nombre: &str) -> Option<String> {
+        let numeradas = self.funciones_numeradas();
+        let numero = numeradas.iter().position(|(otra, _)| otra == nombre)?;
+        Some(format!("valor_funcion({:?}, {}, {})", nombre, numeradas[numero].1, numero))
+    }
+
+    /// Tabla que usa `llamar_funcion` para ejecutar una función guardada en un valor.
+    fn generar_tabla_funciones(&mut self) {
+        self.escribir_linea_vacia();
+        self.escribir("fn despachar_tabla(numero: usize, argumentos: Vec<Valor>) -> Valor {");
+        self.nivel += 1;
+        self.escribir("let mut argumentos = argumentos.into_iter();");
+        self.escribir("let mut siguiente = move || argumentos.next().unwrap_or(Valor::Nada);");
+        self.escribir("match numero {");
+        self.nivel += 1;
+        for (numero, (nombre, parametros)) in self.funciones_numeradas().into_iter().enumerate() {
+            let argumentos = vec!["siguiente()"; parametros].join(", ");
+            self.escribir(&format!("{} => {}({}),", numero, nombre_funcion(&nombre), argumentos));
+        }
+        self.escribir("_ => Valor::Nada,");
+        self.nivel -= 1;
+        self.escribir("}");
+        self.nivel -= 1;
+        self.escribir("}");
+    }
+
     fn generar_principal(&mut self, sentencias: &[Sentencia]) -> Result<(), ErrorTraduccion> {
+        self.generar_tabla_funciones();
         self.escribir_linea_vacia();
         if self.modo == Modo::Pruebas {
             // Variante para `deimon probar`: el programa normal se traduce (para validarlo) pero
@@ -664,6 +703,7 @@ impl Generador {
             self.escribir_linea_vacia();
             self.escribir("fn main() {");
             self.nivel += 1;
+            self.escribir("fijar_despachador(despachar_tabla);");
             self.escribir("con_pila_grande(correr_pruebas);");
             self.nivel -= 1;
             self.escribir("}");
@@ -678,6 +718,7 @@ impl Generador {
             self.escribir("#[no_mangle]");
             self.escribir("pub extern \"C\" fn principal_nucleo() -> ! {");
             self.nivel += 1;
+            self.escribir("fijar_despachador(despachar_tabla);");
             self.escribir("arrancar_nucleo(programa_principal)");
             self.nivel -= 1;
             self.escribir("}");
@@ -685,6 +726,7 @@ impl Generador {
         }
         self.escribir("fn main() {");
         self.nivel += 1;
+        self.escribir("fijar_despachador(despachar_tabla);");
         self.escribir("con_pila_grande(programa_principal);");
         self.nivel -= 1;
         self.escribir("}");
@@ -1192,6 +1234,9 @@ impl Generador {
                 columna,
             } => {
                 if !self.variable_visible(nombre) {
+                    if let Some(valor) = self.valor_de_funcion(nombre) {
+                        return Ok(valor);
+                    }
                     self.registrar_variable_inexistente(nombre, *linea, *columna);
                 }
                 Ok(format!("{}.clone()", nombre_variable(nombre)))
@@ -1202,6 +1247,23 @@ impl Generador {
                 linea,
                 columna,
             } => {
+                // `f(x)` con `f` una variable que guarda una función (y que no tapa a otra).
+                if self.variable_visible(nombre)
+                    && integradas::buscar(nombre).is_none()
+                    && !self.extensiones.contains_key(nombre)
+                    && !self.funciones.contains_key(nombre)
+                {
+                    let mut partes = Vec::new();
+                    for argumento in argumentos {
+                        partes.push(self.generar_expresion(argumento)?);
+                    }
+                    return Ok(format!(
+                        "{{ en_linea({}); llamar_funcion(&{}, vec![{}]) }}",
+                        linea,
+                        nombre_variable(nombre),
+                        partes.join(", ")
+                    ));
+                }
                 let (parametros, es_extension): (Vec<String>, bool) =
                     match integradas::buscar(nombre) {
                         Some(integrada) => (
@@ -1394,6 +1456,9 @@ impl Generador {
                 columna,
             } => {
                 if !self.variable_visible(nombre) {
+                    if let Some(valor) = self.valor_de_funcion(nombre) {
+                        return Ok(format!("&({})", valor));
+                    }
                     self.registrar_variable_inexistente(nombre, *linea, *columna);
                 }
                 Ok(format!("&{}", nombre_variable(nombre)))

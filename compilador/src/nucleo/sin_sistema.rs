@@ -874,6 +874,21 @@ fn proteger_html(texto: &Valor) -> Valor {
     Valor::Texto(Rc::new(salida))
 }
 
+// --- Funciones como valores: el programa traducido fija su tabla al arrancar ---------------
+
+static DESPACHADOR: Global<Option<fn(usize, Vec<Valor>) -> Valor>> = Global::new(None);
+
+fn fijar_despachador(despachador: fn(usize, Vec<Valor>) -> Valor) {
+    *DESPACHADOR.tomar() = Some(despachador);
+}
+
+fn despachar_funcion(numero: usize, argumentos: Vec<Valor>) -> Valor {
+    match *DESPACHADOR.tomar() {
+        Some(despachador) => despachador(numero, argumentos),
+        None => fallo("error interno: no hay tabla de funciones".to_string()),
+    }
+}
+
 // --- Funciones de la máquina (en Linux hacen lo mismo en la terminal) ----------------------
 
 fn numero_de(valor: &Valor, funcion: &str) -> f64 {

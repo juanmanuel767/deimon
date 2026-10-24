@@ -498,6 +498,32 @@ impl<'a> Maquina<'a> {
                 }
                 self.pc = destino.inicio;
             }
+            Op::FuncionValor(funcion) => {
+                let destino = &self.funciones[funcion];
+                self.pila.push(valor_funcion(&destino.nombre, destino.parametros, funcion));
+            }
+            Op::LlamarValor { argumentos, linea } => {
+                let valor = self.pila.pop().unwrap();
+                let numero = match &valor {
+                    Valor::Funcion(funcion) if funcion.parametros == argumentos => funcion.numero,
+                    // No es una función o no encajan los argumentos: el mismo error que el modo Rust.
+                    _ => {
+                        let resto = self.pila.split_off(self.pila.len() - argumentos);
+                        llamar_funcion(&valor, resto);
+                        return false;
+                    }
+                };
+                if self.marcos.len() - self.marcos_iniciales >= LIMITE_LLAMADAS {
+                    demasiadas_llamadas();
+                }
+                let destino = &self.funciones[numero];
+                self.marcos.push(Marco { retorno: self.pc, base: self.base, linea });
+                self.base = self.pila.len() - destino.parametros;
+                for _ in destino.parametros..destino.ranuras {
+                    self.pila.push(Valor::Nada);
+                }
+                self.pc = destino.inicio;
+            }
             Op::Externa { indice, argumentos, linea } => {
                 let args = self.pila.split_off(self.pila.len() - argumentos);
                 let resultado = llamar_externa(indice, linea, args);
@@ -587,10 +613,28 @@ fn rutas_del_programa(codigo: &std::sync::Arc<Codigo>) -> Vec<Ruta> {
 /// textos) y devuelve su resultado.
 fn ejecutar_aparte(codigo: &std::sync::Arc<Codigo>, funcion: usize, parametros: Vec<String>) -> Valor {
     let destino = &codigo.funciones[funcion];
+    let valores = (0..destino.parametros)
+        .map(|posicion| Valor::Texto(Rc::new(parametros.get(posicion).cloned().unwrap_or_default())))
+        .collect();
+    ejecutar_con_valores(codigo, funcion, valores)
+}
+
+/// Fija en este hilo cómo ejecutar una función guardada en un valor cuando la llama una
+/// integrada (filtrar, transformar, ordenar_por): en una máquina aparte, contando la llamada.
+fn preparar_despachador(codigo: &std::sync::Arc<Codigo>) {
+    let codigo = std::sync::Arc::clone(codigo);
+    fijar_despachador_local(Rc::new(move |funcion: usize, argumentos: Vec<Valor>| {
+        let _llamada = entrar_llamada();
+        ejecutar_con_valores(&codigo, funcion, argumentos)
+    }));
+}
+
+/// Ejecuta aparte una función del programa con esos argumentos y devuelve su resultado.
+fn ejecutar_con_valores(codigo: &std::sync::Arc<Codigo>, funcion: usize, argumentos: Vec<Valor>) -> Valor {
+    preparar_despachador(codigo);
+    let destino = &codigo.funciones[funcion];
     let mut pila: Vec<Valor> = Vec::with_capacity(256);
-    for posicion in 0..destino.parametros {
-        pila.push(Valor::Texto(Rc::new(parametros.get(posicion).cloned().unwrap_or_default())));
-    }
+    pila.extend(argumentos);
     for _ in destino.parametros..destino.ranuras {
         pila.push(Valor::Nada);
     }
@@ -615,6 +659,35 @@ fn ejecutar_aparte(codigo: &std::sync::Arc<Codigo>, funcion: usize, parametros: 
 /// `deimon probar`: corre las pruebas del programa con el mismo `ejecutar_pruebas` del núcleo
 /// que el modo Rust (datos vacíos y sin sesión en cada una, mismo formato de resultado).
 pub fn ejecutar_pruebas_codigo(codigo: &std::sync::Arc<Codigo>) {
+    en_pila_grande(codigo, pruebas_aqui);
+}
+
+/// Como `con_pila_grande` del modo Rust: el trabajo va en un hilo con la pila grande y
+/// vigilada (así las llamadas una dentro de otra dan el mismo error claro en los dos motores,
+/// también las que pasan por filtrar, transformar u ordenar_por).
+fn en_pila_grande(codigo: &std::sync::Arc<Codigo>, trabajo: fn(&std::sync::Arc<Codigo>)) {
+    let compartido = std::sync::Arc::clone(codigo);
+    let hilo = std::thread::Builder::new()
+        .name("main".to_string())
+        .stack_size(PILA_PROGRAMA)
+        .spawn(move || {
+            marcar_pila(PILA_PROGRAMA);
+            trabajo(&compartido)
+        });
+    match hilo {
+        Ok(hilo) => {
+            if hilo.join().is_err() {
+                std::process::exit(101);
+            }
+        }
+        Err(_) => {
+            marcar_pila(8 * 1024 * 1024);
+            trabajo(codigo)
+        }
+    }
+}
+
+fn pruebas_aqui(codigo: &std::sync::Arc<Codigo>) {
     let pruebas: Vec<(String, _)> = codigo
         .pruebas
         .iter()
@@ -627,6 +700,11 @@ pub fn ejecutar_pruebas_codigo(codigo: &std::sync::Arc<Codigo>) {
 }
 
 pub fn ejecutar_codigo(codigo: &std::sync::Arc<Codigo>) {
+    en_pila_grande(codigo, programa_aqui);
+}
+
+fn programa_aqui(codigo: &std::sync::Arc<Codigo>) {
+    preparar_despachador(codigo);
     let mut pila: Vec<Valor> = Vec::with_capacity(4096);
     for _ in 0..codigo.funciones[0].ranuras {
         pila.push(Valor::Nada);

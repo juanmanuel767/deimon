@@ -89,10 +89,24 @@ pub const INTEGRADAS: &[Integrada] = &[
         ejemplo: "mostrar(ordenar([3, 1, 2]))   # [1, 2, 3]",
     },
     Integrada {
+        nombre: "filtrar",
+        parametros: &["lista", "funcion"],
+        categoria: "listas y textos",
+        descripcion: "devuelve los elementos para los que la función (su nombre, sin paréntesis) devuelve verdadero, en su orden; en el ejemplo, funcion es_par(n) { devolver n % 2 == 0 }",
+        ejemplo: "mostrar(filtrar([1, 2, 3, 4], es_par))   # [2, 4]",
+    },
+    Integrada {
+        nombre: "transformar",
+        parametros: &["lista", "funcion"],
+        categoria: "listas y textos",
+        descripcion: "devuelve una lista nueva con la función (su nombre, sin paréntesis) aplicada a cada elemento; en el ejemplo, funcion doble(n) { devolver n * 2 }",
+        ejemplo: "mostrar(transformar([1, 2, 3], doble))   # [2, 4, 6]",
+    },
+    Integrada {
         nombre: "ordenar_por",
         parametros: &["lista", "campos"],
         categoria: "listas y textos",
-        descripcion: "ordena una lista de listas con claves por uno o varios campos; \"-campo\" va de mayor a menor; los empates quedan en su orden",
+        descripcion: "ordena una lista de listas con claves por uno o varios campos (\"-campo\" va de mayor a menor), o cualquier lista por lo que devuelva una función de un parámetro (un número, un texto o una lista de ellos para desempatar); los empates quedan en su orden",
         ejemplo: "mostrar(ordenar_por([{\"n\": \"Ana\", \"e\": 30}, {\"n\": \"Bea\", \"e\": 41}], [\"-e\", \"n\"]))   # [{n: Bea, e: 41}, {n: Ana, e: 30}]",
     },
     Integrada {

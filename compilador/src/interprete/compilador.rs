@@ -618,8 +618,16 @@ impl Compilador {
                 self.emitir(Op::Mapa(pares.len()));
             }
             Expresion::Variable { nombre, .. } => {
-                let ranura = self.buscar(nombre)?;
-                self.emitir(Op::Cargar(ranura));
+                match (self.buscar(nombre), self.indices.get(nombre).copied()) {
+                    (Ok(ranura), _) => {
+                        self.emitir(Op::Cargar(ranura));
+                    }
+                    // `doble` sin paréntesis: el valor de esa función del programa.
+                    (Err(_), Some((funcion, _))) => {
+                        self.emitir(Op::FuncionValor(funcion));
+                    }
+                    (Err(error), None) => return Err(error),
+                }
             }
             Expresion::Indice {
                 coleccion, indice, ..
@@ -684,6 +692,25 @@ impl Compilador {
                 linea,
                 ..
             } => {
+                // `f(x)` con `f` una variable que guarda una función (y que no tapa a otra).
+                if let Ok(ranura) = self.buscar(nombre) {
+                    if super::motor::integrada_del_nucleo(nombre).is_none()
+                        && !self.externas.contains_key(nombre)
+                        && !self.indices.contains_key(nombre)
+                        && !matches!(nombre.as_str(), "elegir" | "visitar" | "enviar" | "servir" | "comprobar" | "comprobar_igual")
+                    {
+                        self.emitir(Op::EnLinea(*linea));
+                        for argumento in argumentos {
+                            self.expresion(argumento)?;
+                        }
+                        self.emitir(Op::Cargar(ranura));
+                        self.emitir(Op::LlamarValor {
+                            argumentos: argumentos.len(),
+                            linea: *linea,
+                        });
+                        return Ok(());
+                    }
+                }
                 if nombre == "elegir" && argumentos.len() == 3 {
                     self.emitir(Op::EnLinea(*linea));
                     self.expresion(&argumentos[0])?;
@@ -855,7 +882,11 @@ impl Compilador {
     /// Variable ya declarada o valor fijo (número, texto, lógico, nada), sin emitir nada.
     fn operando_simple(&mut self, expresion: &Expresion) -> Resultado<Option<Simple>> {
         Ok(match expresion {
-            Expresion::Variable { nombre, .. } => Some(Simple::Variable(self.buscar(nombre)?)),
+            Expresion::Variable { nombre, .. } => match self.buscar(nombre) {
+                Ok(ranura) => Some(Simple::Variable(ranura)),
+                Err(_) if self.indices.contains_key(nombre) => None,
+                Err(error) => return Err(error),
+            },
             Expresion::Numero(n) => Some(Simple::Constante(self.nueva_constante(Constante::Numero(*n)))),
             Expresion::Texto(t) => {
                 Some(Simple::Constante(self.nueva_constante(Constante::Texto(t.clone()))))

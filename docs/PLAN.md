@@ -8,7 +8,7 @@ termina, se marca con HECHO y la fecha.
 
 ## 1. Lenguaje
 1. HECHO (24-oct-2026, `ordenar_por(lista, ["-edad", "nombre"])`, tests/plan_lenguaje.rs) Ordenar con reglas propias (por edad y luego por nombre).
-2. Funciones como valores (pasar una función a otra) para filtrar, transformar y ordenar.
+2. HECHO (24-oct-2026, `sea f = doble`, `f(x)`, `filtrar`, `transformar`, `ordenar_por(lista, f)`; los tres motores) Funciones como valores (pasar una función a otra) para filtrar, transformar y ordenar.
 3. Tipos propios con nombre (como «Persona» con nombre y edad) que avisen si falta un campo.
 4. Números enteros exactos y grandes.
 5. Textos de varias líneas y textos con variables dentro: `"Hola {nombre}"`.

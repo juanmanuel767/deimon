@@ -110,6 +110,7 @@ pub const REGLAS: &[&str] = &[
     "Solo comillas dobles para los textos. No hay +=, ++, ni punto (a.b): usa x = x + 1.",
     "Cada función tiene su propio ámbito: no ve las variables creadas fuera de ella.",
     "Las funciones se pueden llamar antes de definirlas y pueden ser recursivas.",
+    "Una función es también un valor: su nombre sin paréntesis (sea f = doble) se guarda en variables, listas o listas con claves y se pasa a otras funciones; f(x) llama a la función que haya en la variable f. Solo se llama así a un nombre: para una de una lista, primero sea op = operaciones[\"suma\"] y después op(2, 3). Se usa con filtrar, transformar y ordenar_por. Las funciones no se pueden guardar con guardar().",
     "'sea' no se puede repetir con el mismo nombre en el mismo ámbito; para cambiar el valor se escribe x = ...",
     "Los parámetros de una ruta (:nombre) son textos ya escapados como HTML; usa a_numero() para hacer cuentas.",
     "Colecciones: nombre de 1 a 64 caracteres con letras sin acentos, dígitos, '_' o '-'; las claves son textos.",

@@ -14,6 +14,17 @@ enum Valor {
     Nada,
     Lista(Rc<Vec<Valor>>),
     Mapa(Rc<MapaValores>),
+    /// Una función del programa usada como valor: `sea f = doble` y después `f(4)`.
+    Funcion(Rc<FuncionValor>),
+}
+
+/// Función del programa guardada en un valor. `numero` es su posición en la tabla del motor
+/// que la ejecuta (el programa traducido o el intérprete); `parametros`, cuántos recibe.
+#[derive(Debug, Clone, PartialEq)]
+struct FuncionValor {
+    nombre: String,
+    parametros: usize,
+    numero: usize,
 }
 
 /// Lista con claves (como los arrays con nombre de PHP). Recuerda el orden en que se
@@ -52,6 +63,7 @@ impl Valor {
             Valor::Nada => "nada",
             Valor::Lista(_) => "lista",
             Valor::Mapa(_) => "lista con claves",
+            Valor::Funcion(_) => "función",
         }
     }
 
@@ -142,7 +154,78 @@ fn texto_de(valor: &Valor) -> String {
             let textos: Vec<String> = mapa.pares().map(|(c, v)| format!("{}: {}", c, texto_de(v))).collect();
             format!("{{{}}}", textos.join(", "))
         }
+        Valor::Funcion(funcion) => format!("función {}", funcion.nombre),
     }
+}
+
+/// Crea el valor de una función del programa (lo usa el código traducido y el intérprete).
+fn valor_funcion(nombre: &str, parametros: usize, numero: usize) -> Valor {
+    Valor::Funcion(Rc::new(FuncionValor { nombre: nombre.to_string(), parametros, numero }))
+}
+
+/// `f(a, b)` cuando `f` es una variable: comprueba que sea una función con esos parámetros y la
+/// llama a través del motor que la ejecuta (`despachar_funcion`).
+fn llamar_funcion(funcion: &Valor, argumentos: Vec<Valor>) -> Valor {
+    let funcion = match funcion {
+        Valor::Funcion(funcion) => funcion,
+        otro => fallo(format!("se intenta llamar a {} como si fuera una función", otro.tipo())),
+    };
+    if funcion.parametros != argumentos.len() {
+        fallo(format!(
+            "la función '{}' espera {} {} y se han pasado {}",
+            funcion.nombre,
+            funcion.parametros,
+            if funcion.parametros == 1 { "argumento" } else { "argumentos" },
+            argumentos.len()
+        ));
+    }
+    despachar_funcion(funcion.numero, argumentos)
+}
+
+/// La función que se pasa a filtrar(), transformar() u ordenar_por() tiene que recibir un valor.
+fn funcion_de_un_parametro<'a>(valor: &'a Valor, quien: &str) -> &'a Valor {
+    match valor {
+        Valor::Funcion(funcion) if funcion.parametros == 1 => valor,
+        Valor::Funcion(funcion) => fallo(format!(
+            "{}() necesita una función de 1 parámetro, y '{}' tiene {}",
+            quien, funcion.nombre, funcion.parametros
+        )),
+        otro => fallo(format!(
+            "{}() espera una función como segundo argumento (su nombre, sin paréntesis), no {}",
+            quien,
+            otro.tipo()
+        )),
+    }
+}
+
+fn elementos_para<'a>(lista: &'a Valor, quien: &str) -> &'a [Valor] {
+    match lista {
+        Valor::Lista(elementos) => elementos,
+        otro => fallo(format!("{}() espera una lista como primer argumento, no {}", quien, otro.tipo())),
+    }
+}
+
+/// `filtrar(lista, f)`: los elementos para los que f devuelve verdadero, en su orden.
+fn filtrar(lista: &Valor, funcion: &Valor) -> Valor {
+    let funcion = funcion_de_un_parametro(funcion, "filtrar");
+    let mut elegidos = Vec::new();
+    for elemento in elementos_para(lista, "filtrar") {
+        match llamar_funcion(funcion, vec![elemento.clone()]) {
+            Valor::Logico(true) => elegidos.push(elemento.clone()),
+            Valor::Logico(false) => {}
+            otro => fallo(format!("filtrar(): la función tiene que devolver verdadero o falso, no {}", otro.tipo())),
+        }
+    }
+    Valor::Lista(Rc::new(elegidos))
+}
+
+/// `transformar(lista, f)`: una lista nueva con f aplicada a cada elemento.
+fn transformar(lista: &Valor, funcion: &Valor) -> Valor {
+    let funcion = funcion_de_un_parametro(funcion, "transformar");
+    let elementos = elementos_para(lista, "transformar");
+    Valor::Lista(Rc::new(
+        elementos.iter().map(|elemento| llamar_funcion(funcion, vec![elemento.clone()])).collect(),
+    ))
 }
 
 /// Clave de una lista con claves: un texto, o un número entero (que se guarda como texto).
@@ -554,6 +637,35 @@ fn escribir(valor: &Valor) -> Valor {
     Valor::Nada
 }
 
+// --- Funciones como valores. El programa traducido fija una tabla (una función normal) al
+// empezar; el intérprete fija en cada hilo cómo ejecutar una función suya.
+
+static DESPACHADOR_TRADUCIDO: std::sync::OnceLock<fn(usize, Vec<Valor>) -> Valor> = std::sync::OnceLock::new();
+
+thread_local! {
+    static DESPACHADOR_LOCAL: std::cell::RefCell<Option<Rc<dyn Fn(usize, Vec<Valor>) -> Valor>>> = const { std::cell::RefCell::new(None) };
+}
+
+fn fijar_despachador(despachador: fn(usize, Vec<Valor>) -> Valor) {
+    let _ = DESPACHADOR_TRADUCIDO.set(despachador);
+}
+
+#[allow(dead_code)]
+fn fijar_despachador_local(despachador: Rc<dyn Fn(usize, Vec<Valor>) -> Valor>) {
+    DESPACHADOR_LOCAL.with(|local| *local.borrow_mut() = Some(despachador));
+}
+
+fn despachar_funcion(numero: usize, argumentos: Vec<Valor>) -> Valor {
+    let local = DESPACHADOR_LOCAL.with(|local| local.borrow().clone());
+    if let Some(despachador) = local {
+        return despachador(numero, argumentos);
+    }
+    match DESPACHADOR_TRADUCIDO.get() {
+        Some(despachador) => despachador(numero, argumentos),
+        None => fallo("error interno: no hay tabla de funciones".to_string()),
+    }
+}
+
 // --- Funciones de la máquina. En un PC sin sistema (destino pc-sin-sistema) usan la pantalla
 // y el teclado de verdad (nucleo/sin_sistema.rs); aquí hacen lo mismo en la terminal.
 
@@ -838,6 +950,7 @@ fn igual(a: &Valor, b: &Valor) -> Valor {
         (Valor::Nada, _) | (_, Valor::Nada) => Valor::Logico(false),
         (Valor::Lista(x), Valor::Lista(y)) => Valor::Logico(x == y),
         (Valor::Mapa(x), Valor::Mapa(y)) => Valor::Logico(x == y),
+        (Valor::Funcion(x), Valor::Funcion(y)) => Valor::Logico(x.nombre == y.nombre),
         _ => fallo(format!(
             "no se pueden comparar {} y {}",
             a.tipo(),
@@ -1087,6 +1200,9 @@ fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
         Valor::Lista(elementos) => elementos,
         otro => fallo(format!("ordenar_por() espera una lista como primer argumento, no {}", otro.tipo())),
     };
+    if let Valor::Funcion(_) = claves {
+        return ordenar_con_funcion(elementos, claves);
+    }
     let criterios: Vec<Valor> = match claves {
         Valor::Texto(_) => vec![claves.clone()],
         Valor::Lista(criterios) if !criterios.is_empty() => criterios.to_vec(),
@@ -1159,6 +1275,49 @@ fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
         }
         std::cmp::Ordering::Equal
     });
+    Valor::Lista(Rc::new(filas.into_iter().map(|(_, elemento)| elemento).collect()))
+}
+
+/// `ordenar_por(lista, f)`: ordena por lo que devuelve f para cada elemento (un número, un
+/// texto o una lista de ellos para desempatar). Los empates quedan en su orden.
+fn ordenar_con_funcion(elementos: &[Valor], funcion: &Valor) -> Valor {
+    let funcion = funcion_de_un_parametro(funcion, "ordenar_por");
+    let mut filas: Vec<(Vec<Valor>, Valor)> = Vec::new();
+    for elemento in elementos {
+        let clave = match llamar_funcion(funcion, vec![elemento.clone()]) {
+            Valor::Lista(partes) => partes.to_vec(),
+            otra => vec![otra],
+        };
+        for parte in &clave {
+            if !matches!(parte, Valor::Numero(_) | Valor::Texto(_)) {
+                fallo(format!(
+                    "ordenar_por(): la función tiene que devolver un número, un texto o una lista de ellos, no {}",
+                    parte.tipo()
+                ));
+            }
+        }
+        filas.push((clave, elemento.clone()));
+    }
+    let mut error = None;
+    filas.sort_by(|(a, _), (b, _)| {
+        for (x, y) in a.iter().zip(b.iter()) {
+            let orden = match (x, y) {
+                (Valor::Numero(x), Valor::Numero(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+                (Valor::Texto(x), Valor::Texto(y)) => x.cmp(y),
+                _ => {
+                    error.get_or_insert("ordenar_por(): la función devuelve números para unos elementos y textos para otros");
+                    std::cmp::Ordering::Equal
+                }
+            };
+            if orden != std::cmp::Ordering::Equal {
+                return orden;
+            }
+        }
+        a.len().cmp(&b.len())
+    });
+    if let Some(mensaje) = error {
+        fallo(mensaje.to_string());
+    }
     Valor::Lista(Rc::new(filas.into_iter().map(|(_, elemento)| elemento).collect()))
 }
 
@@ -1291,6 +1450,10 @@ impl Dato {
             Valor::Nada => Dato::Nada,
             Valor::Lista(elementos) => Dato::Lista(elementos.iter().map(Dato::desde).collect()),
             Valor::Mapa(mapa) => Dato::Mapa(mapa.pares().map(|(c, v)| (c.clone(), Dato::desde(v))).collect()),
+            Valor::Funcion(funcion) => fallo(format!(
+                "no se puede guardar la función '{}': guarda los datos y vuelve a elegir la función al leerlos",
+                funcion.nombre
+            )),
         }
     }
 
@@ -2042,6 +2205,7 @@ fn es_cierto_en_plantilla(valor: &Valor) -> bool {
         Valor::Texto(t) => !t.is_empty(),
         Valor::Lista(l) => !l.is_empty(),
         Valor::Mapa(m) => !m.claves.is_empty(),
+        Valor::Funcion(_) => true,
     }
 }
 

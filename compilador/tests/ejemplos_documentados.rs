@@ -134,6 +134,8 @@ const MUESTRAS: &[(&str, &str)] = &[
 /// Código que hace falta antes de un ejemplo que usa algo que define el propio programa.
 const PRELUDIOS: &[(&str, &str)] = &[
     ("suma(", "funcion suma(a, b) {\n    devolver a + b\n}\n"),
+    ("es_par)", "funcion es_par(n) {\n    devolver n % 2 == 0\n}\n"),
+    ("doble)", "funcion doble(n) {\n    devolver n * 2\n}\n"),
     (
         "visitar(\"/saludo/Ana\")",
         "ruta \"/saludo/:nombre\" {\n    devolver \"<h1>Hola, \" + nombre + \"</h1>\"\n}\n",

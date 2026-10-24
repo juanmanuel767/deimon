@@ -26,7 +26,7 @@ mod motor {
     pub fn leer_json(texto: &str) -> Result<super::Json, String> {
         fn convertir(valor: &Valor) -> super::Json {
             match valor {
-                Valor::Nada => super::Json::Nulo,
+                Valor::Nada | Valor::Funcion(_) => super::Json::Nulo,
                 Valor::Logico(b) => super::Json::Logico(*b),
                 Valor::Numero(n) => super::Json::Numero(*n),
                 Valor::Texto(t) => super::Json::Texto(t.to_string()),
