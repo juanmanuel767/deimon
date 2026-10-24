@@ -74,6 +74,31 @@ pub const ARCHIVOS: &[(&str, &str)] = &[
 ];
 
 /// Nombres de los módulos de la biblioteca estándar, en orden alfabético.
+/// Módulo de la biblioteca estándar que trae una función (en Rust o escrita en Deimon), para
+/// decir «añade usar modulo» cuando se llama sin cargarlo.
+pub fn modulo_de_funcion(funcion: &str) -> Option<&'static str> {
+    ARCHIVOS.iter().find_map(|(ruta, contenido)| {
+        let (modulo, archivo) = ruta.split_once('/')?;
+        let la_tiene = if archivo == "funciones.txt" {
+            contenido
+                .lines()
+                .any(|linea| !linea.trim_start().starts_with('#') && linea.split('|').next().map(str::trim) == Some(funcion))
+        } else if archivo.ends_with(".dmn") {
+            contenido.lines().any(|linea| {
+                linea
+                    .trim_start()
+                    .strip_prefix("funcion ")
+                    .and_then(|resto| resto.split('(').next())
+                    .map(str::trim)
+                    == Some(funcion)
+            })
+        } else {
+            false
+        };
+        la_tiene.then_some(modulo)
+    })
+}
+
 pub fn nombres() -> Vec<&'static str> {
     let mut nombres: Vec<&str> = ARCHIVOS
         .iter()

@@ -57,6 +57,7 @@ pub const TIPOS: &[(&str, &str)] = &[
 ];
 
 pub const ORDENES: &[(&str, &str)] = &[
+    ("deimon nuevo <programa|web|app|sistema> nombre", "crea la carpeta de un proyecto ya ordenado: principal.dmn, piezas/ con funciones y pruebas, README.md, arrancar.sh y .gitignore; es la forma de empezar cualquier proyecto"),
     ("deimon traducir archivo.dmn", "escribe el Rust generado"),
     ("deimon ejecutar archivo.dmn [--perfil NOMBRE]", "traduce, compila y ejecuta; los errores salen por stderr con código 1"),
     ("deimon comprobar archivo.dmn [--json] [--arreglar]", "solo revisa: lista todos los errores (código 1) o dice que no hay (código 0); --arreglar aplica los arreglos automáticos seguros"),

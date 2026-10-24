@@ -6,6 +6,7 @@ mod empaquetar;
 mod entorno;
 mod jugar;
 mod mcp;
+mod nuevo;
 mod listar_modulos;
 mod traducir_cobol;
 mod traducir_php;
@@ -68,7 +69,7 @@ fn main() {
         }
         return;
     }
-    let subordenes: [(&str, fn(&[String]) -> Result<(), (String, i32)>); 16] = [
+    let subordenes: [(&str, fn(&[String]) -> Result<(), (String, i32)>); 17] = [
         ("entorno", entorno::entorno),
         ("probar", probar::probar),
         ("comprobar", comprobar::comprobar),
@@ -82,6 +83,7 @@ fn main() {
         ("publicar", publicar::publicar),
         ("compilar", destinos::compilar),
         ("arrancar", destinos::arrancar),
+        ("nuevo", nuevo::nuevo),
         ("jugar", jugar::jugar),
         ("empaquetar", empaquetar::empaquetar),
         ("mcp", mcp::mcp),
@@ -112,11 +114,11 @@ fn main() {
             }
             if let Some(otra) = otra {
                 eprintln!(
-                    "Error: la orden '{}' no existe. Usa 'traducir', 'ejecutar', 'comprobar', 'formatear', 'probar', 'compilar', 'arrancar', 'destinos', 'modulos', 'modulo', 'desde-php', 'desde-cobol', 'publicar', 'jugar', 'empaquetar', 'mcp', 'entorno', 'guia' o 'app'.",
+                    "Error: la orden '{}' no existe. Usa 'nuevo', 'traducir', 'ejecutar', 'comprobar', 'formatear', 'probar', 'compilar', 'arrancar', 'destinos', 'modulos', 'modulo', 'desde-php', 'desde-cobol', 'publicar', 'jugar', 'empaquetar', 'mcp', 'entorno', 'guia' o 'app'.",
                     otra
                 );
             }
-            eprintln!("Uso: deimon <traducir|ejecutar> archivo.dmn [--perfil NOMBRE] | deimon app archivo.dmn [--nombre N] [--paquete P] [--perfil NOMBRE] | deimon compilar archivo.dmn [--destino NOMBRE] [--salida RUTA] [--perfil NOMBRE] | deimon arrancar archivo.dmn [--sin-ventana] [--memoria MB] | deimon probar archivo.dmn [--json] | deimon comprobar archivo.dmn [--json] [--arreglar] | deimon formatear archivo.dmn [--comprobar] | deimon desde-cobol archivo.cob [--salida x.dmn] [--comprobar] | deimon destinos [--json] | deimon modulos [archivo.dmn] [--json] | deimon modulo <instalar|actualizar|quitar> <origen|nombre> [--aqui] | deimon entorno [archivo.dmn] [--json] | deimon guia [archivo.dmn] [--json] | deimon jugar [--puerto N] [--sin-abrir] | deimon empaquetar archivo.dmn [--salida RUTA] [--perfil NOMBRE] | deimon mcp");
+            eprintln!("Uso: deimon nuevo <programa|web|app|sistema> nombre | deimon <traducir|ejecutar> archivo.dmn [--perfil NOMBRE] | deimon app archivo.dmn [--nombre N] [--paquete P] [--perfil NOMBRE] | deimon compilar archivo.dmn [--destino NOMBRE] [--salida RUTA] [--perfil NOMBRE] | deimon arrancar archivo.dmn [--sin-ventana] [--memoria MB] | deimon probar archivo.dmn [--json] | deimon comprobar archivo.dmn [--json] [--arreglar] | deimon formatear archivo.dmn [--comprobar] | deimon desde-cobol archivo.cob [--salida x.dmn] [--comprobar] | deimon destinos [--json] | deimon modulos [archivo.dmn] [--json] | deimon modulo <instalar|actualizar|quitar> <origen|nombre> [--aqui] | deimon entorno [archivo.dmn] [--json] | deimon guia [archivo.dmn] [--json] | deimon jugar [--puerto N] [--sin-abrir] | deimon empaquetar archivo.dmn [--salida RUTA] [--perfil NOMBRE] | deimon mcp");
             process::exit(2);
         }
     };

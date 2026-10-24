@@ -1577,6 +1577,14 @@ impl Generador {
         let mut error = ErrorTraduccion::nuevo(linea, format!("la función '{}' no existe", nombre))
             .con_codigo("E006")
             .en_columna(columna);
+        if let Some(modulo) = crate::biblioteca::modulo_de_funcion(nombre) {
+            error = error.con_sugerencia(format!(
+                "'{}' es del módulo '{}': añade usar modulo \"{}\" al principio de este archivo",
+                nombre, modulo, modulo
+            ));
+            self.registrar(error);
+            return;
+        }
         match nombre_parecido(nombre, &candidatas) {
             Some(parecido) => {
                 error = error

@@ -38,7 +38,14 @@ Si falta Rust, el instalador lo instala desde su web oficial (rustup.rs).
 
 ## Cómo empezar
 
-Desde esta carpeta:
+Un proyecto nuevo, ya ordenado y con pruebas:
+
+```bash
+deimon nuevo web mi-tienda      # también: programa, app o sistema
+cd mi-tienda && ./arrancar.sh probar
+```
+
+Para probar Deimon por dentro, desde esta carpeta:
 
 ```bash
 ./arrancar.sh preparar        # compila el traductor

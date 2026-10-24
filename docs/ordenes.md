@@ -6,6 +6,8 @@
 
 | Orden | Qué hace |
 |---|---|
+| `deimon nuevo <programa\|web\|app\|sistema> nombre` | crea un proyecto ya ordenado: `principal.dmn`, `piezas/` con funciones y pruebas, `README.md`, `arrancar.sh` y `.gitignore` |
+| `deimon arrancar archivo.dmn [--sin-ventana]` | enciende el programa como sistema operativo de un PC en QEMU ([detalles](nucleo.md)) |
 | `deimon traducir archivo.dmn` | escribe el Rust generado, sin ejecutarlo |
 | `deimon ejecutar archivo.dmn [--perfil NOMBRE]` | ejecuta al instante con el intérprete propio; si el programa usa algo que aún no sabe hacer, lo traduce, compila y ejecuta como siempre |
 | `deimon comprobar archivo.dmn [--json] [--arreglar]` | busca errores sin ejecutar |
