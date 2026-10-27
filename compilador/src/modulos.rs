@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::ajenas;
 use crate::antiguas;
-use crate::ast::{Expresion, Extension, FuncionExtension, Programa, Sentencia};
+use crate::ast::{Expresion, Extension, FuncionExtension, ParteTexto, Programa, Sentencia};
 use crate::error::ErrorTraduccion;
 use crate::{biblioteca, fuentes, generador, integradas, lexer, parser, plantillas};
 
@@ -156,6 +156,11 @@ fn llamadas_de(expresion: &Expresion, salida: &mut Vec<(String, usize, usize)>) 
         Expresion::Mapa(pares) => pares.iter().for_each(|(clave, valor)| {
             llamadas_de(clave, salida);
             llamadas_de(valor, salida);
+        }),
+        Expresion::TextoConValores { partes, .. } => partes.iter().for_each(|parte| {
+            if let ParteTexto::Valor(valor) = parte {
+                llamadas_de(valor, salida);
+            }
         }),
         Expresion::Unaria { valor, .. } => llamadas_de(valor, salida),
         Expresion::Binaria { izquierda, derecha, .. } => {

@@ -1206,6 +1206,9 @@ impl Generador {
             Expresion::Texto(texto) => {
                 Ok(format!("Valor::Texto(Rc::new({:?}.to_string()))", texto))
             }
+            Expresion::TextoConValores { partes, linea } => {
+                self.generar_expresion(&Expresion::bajar_texto_con_valores(partes, *linea))
+            }
             Expresion::Logico(valor) => Ok(format!("Valor::Logico({})", valor)),
             Expresion::Nada => Ok("Valor::Nada".to_string()),
             Expresion::Lista(elementos) => {
@@ -1499,7 +1502,7 @@ impl Generador {
 
     fn tipo_de_expresion(&self, expresion: &Expresion) -> TipoConocido {
         match expresion {
-            Expresion::Texto(_) => TipoConocido::Texto,
+            Expresion::Texto(_) | Expresion::TextoConValores { .. } => TipoConocido::Texto,
             Expresion::Lista(_) => TipoConocido::Lista,
             Expresion::Variable { nombre, .. } => self.tipo_de(nombre),
             Expresion::Llamada { nombre, .. } if nombre == "a_texto" => TipoConocido::Texto,

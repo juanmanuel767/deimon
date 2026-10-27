@@ -186,9 +186,13 @@ argumentos      = expresion, { ",", expresion } ;
 
 - Un número es decimal: `30`, `2.5`, `-7`. El menos forma parte de la
   expresión, no del número.
-- Un texto va entre comillas dobles y no puede ocupar varias líneas. Los
-  escapes válidos son `\n` (salto de línea), `\t` (tabulador), `\"` (comillas)
-  y `\\` (barra invertida).
+- Un texto va entre comillas dobles y en una sola línea. Los escapes válidos
+  son `\n` (salto de línea), `\t` (tabulador), `\"` (comillas) y `\\` (barra
+  invertida). Con `f` pegada a la comilla (`f"Hola {nombre}"`) las llaves
+  llevan dentro cualquier expresión (`{{` y `}}` escriben una llave). Un texto
+  entre `"""` y `"""` puede ocupar varias líneas (también `f"""..."""`): se
+  quita el salto de línea tras la apertura, la última línea si solo tiene
+  espacios y la sangría común.
 - Una lista se escribe entre corchetes y puede mezclar valores:
   `[1, "a", verdadero]`.
 - `lista[i]` lee un elemento; se empieza a contar desde `0`. También se puede

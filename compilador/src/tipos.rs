@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use crate::ast::{Expresion, OperadorBinario, OperadorUnario, Programa, Sentencia};
+use crate::ast::{Expresion, OperadorBinario, OperadorUnario, ParteTexto, Programa, Sentencia};
 use crate::error::ErrorTraduccion;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -314,6 +314,14 @@ impl Revisor {
         match expresion {
             Expresion::Numero(_) | Expresion::EnteroGrande(_) => Tipo::Numero,
             Expresion::Texto(_) => Tipo::Texto,
+            Expresion::TextoConValores { partes, .. } => {
+                for parte in partes {
+                    if let ParteTexto::Valor(valor) = parte {
+                        self.expresion(valor, ambito);
+                    }
+                }
+                Tipo::Texto
+            }
             Expresion::Logico(_) => Tipo::Logico,
             Expresion::Nada => Tipo::Nada,
             Expresion::Lista(elementos) => {

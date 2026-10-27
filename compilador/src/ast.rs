@@ -21,12 +21,61 @@ pub enum OperadorUnario {
     No,
 }
 
+/// Trozo de un texto con valores: letras fijas o una expresión entre `{ }`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParteTexto {
+    Literal(String),
+    Valor(Expresion),
+}
+
+impl Expresion {
+    /// Baja un texto con valores a la suma equivalente: `"Hola " + a_texto(nombre) + "!"`.
+    pub fn bajar_texto_con_valores(partes: &[ParteTexto], linea: usize) -> Expresion {
+        let mut suma: Option<Expresion> = None;
+        for parte in partes {
+            let siguiente = match parte {
+                ParteTexto::Literal(texto) => Expresion::Texto(texto.clone()),
+                ParteTexto::Valor(valor) => Expresion::Llamada {
+                    nombre: "a_texto".to_string(),
+                    argumentos: vec![valor.clone()],
+                    linea,
+                    columna: 0,
+                },
+            };
+            suma = Some(match suma {
+                None => match parte {
+                    ParteTexto::Literal(_) => siguiente,
+                    // Empieza por "" para que la suma sea siempre de texto.
+                    ParteTexto::Valor(_) => Expresion::Binaria {
+                        izquierda: Box::new(Expresion::Texto(String::new())),
+                        operador: OperadorBinario::Suma,
+                        derecha: Box::new(siguiente),
+                        linea,
+                    },
+                },
+                Some(anterior) => Expresion::Binaria {
+                    izquierda: Box::new(anterior),
+                    operador: OperadorBinario::Suma,
+                    derecha: Box::new(siguiente),
+                    linea,
+                },
+            });
+        }
+        suma.unwrap_or_else(|| Expresion::Texto(String::new()))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expresion {
     Numero(f64),
     /// Entero escrito con cifras que pasa de 2^53 (texto, para conservarlo exacto).
     EnteroGrande(String),
     Texto(String),
+    /// Texto `f"Hola {nombre}"`: se convierte en la unión de sus partes (cada valor, como `a_texto`).
+    TextoConValores {
+        partes: Vec<ParteTexto>,
+        linea: usize,
+    },
     Logico(bool),
     Nada,
     Lista(Vec<Expresion>),

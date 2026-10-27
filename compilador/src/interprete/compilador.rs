@@ -600,6 +600,9 @@ impl Compilador {
                 let op = self.constante(Constante::Texto(t.clone()));
                 self.emitir(op);
             }
+            Expresion::TextoConValores { partes, linea } => {
+                return self.expresion(&Expresion::bajar_texto_con_valores(partes, *linea));
+            }
             Expresion::Logico(b) => {
                 let op = self.constante(Constante::Logico(*b));
                 self.emitir(op);

@@ -49,7 +49,7 @@ pub const OPERADORES: &[(&str, &str)] = &[
 
 pub const TIPOS: &[(&str, &str)] = &[
     ("número", "decimal (f64): 30, 2.5, -7; 5 se muestra como 5"),
-    ("texto", r#"entre comillas dobles, con escapes \n \t \" \\; en una sola línea"#),
+    ("texto", r#"entre comillas dobles, con escapes \n \t \" \\, en una sola línea; f"Hola {nombre}, {edad + 1}" mete valores (una llave literal se escribe {{ o }}); """ ... """ ocupa varias líneas (f""" ... """ con valores) y quita la sangría común"#),
     ("lógico", "verdadero o falso; las condiciones deben ser lógicas (no hay verdad por defecto)"),
     ("nada", "el valor nada; leer() de una clave inexistente lo devuelve"),
     ("lista", "[1, \"a\", verdadero]; puede mezclar tipos; l[0] es el primero y l[i] = v cambia uno"),

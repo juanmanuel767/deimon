@@ -28,6 +28,8 @@ pub const CODIGOS: &[(&str, &str)] = &[
     ("E024", "plantilla HTML que no existe o está mal escrita"),
     ("E025", "operación con tipos que no encajan (fallaría seguro al ejecutarse)"),
     ("E026", "función, ruta o módulo que no existe en el destino pc-sin-sistema (sin disco, red ni navegador)"),
+    ("E027", "tipo propio: falta un campo, sobra uno o el valor no es del tipo pedido"),
+    ("E028", "llave sin cerrar, vacía o suelta dentro de un texto con valores f\"...{x}...\""),
     ("E999", "otro error"),
 ];
 

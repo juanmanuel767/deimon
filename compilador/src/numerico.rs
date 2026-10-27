@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Expresion, OperadorBinario, OperadorUnario, Sentencia};
+use crate::ast::{Expresion, OperadorBinario, OperadorUnario, ParteTexto, Sentencia};
 
 /// Nombres (y número de parámetros) de las funciones que tienen versión numérica.
 pub fn funciones_numericas(sentencias: &[Sentencia]) -> HashMap<String, usize> {
@@ -369,6 +369,13 @@ fn anotar_libre(nombre: &str, locales: &[HashSet<String>], libres: &mut Vec<Stri
 fn variables_de_expresion(e: &Expresion, locales: &[HashSet<String>], libres: &mut Vec<String>) {
     match e {
         Expresion::Variable { nombre, .. } => anotar_libre(nombre, locales, libres),
+        Expresion::TextoConValores { partes, .. } => {
+            for parte in partes {
+                if let ParteTexto::Valor(valor) = parte {
+                    variables_de_expresion(valor, locales, libres);
+                }
+            }
+        }
         Expresion::Unaria { valor, .. } => variables_de_expresion(valor, locales, libres),
         Expresion::Binaria { izquierda, derecha, .. } => {
             variables_de_expresion(izquierda, locales, libres);

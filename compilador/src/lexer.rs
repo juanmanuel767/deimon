@@ -6,6 +6,12 @@ pub enum Tipo {
     /// Entero escrito con cifras que pasa de 2^53: se guarda como texto para no perder cifras.
     EnteroGrande(String),
     Texto(String),
+    /// Texto `f"..{x}.."` o de varias líneas `"""..."""`. `crudo` es el texto tal cual se
+    /// escribió (lo usa el formateador); `partes` es su contenido ya separado.
+    TextoEspecial {
+        crudo: String,
+        partes: Vec<ParteTexto>,
+    },
     /// Comentario completo, desde '#' hasta el final de la línea. Solo lo produce
     /// `tokenizar_con_comentarios` (lo usa el formateador); el parser no lo ve.
     Comentario(String),
@@ -58,6 +64,14 @@ pub enum Tipo {
     DosPuntos,
     NuevaLinea,
     Fin,
+}
+
+/// Trozo de un texto especial: letras fijas o una expresión entre `{ }` ya convertida en tokens
+/// (terminan en `Fin`, con líneas y columnas del programa original).
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParteTexto {
+    Literal(String),
+    Valor(Vec<Token>),
 }
 
 /// `columna` y `fin` se cuentan en caracteres desde 1; `fin` no se incluye.
@@ -150,6 +164,27 @@ fn tokenizar_interno(
                 } else {
                     None
                 }
+            }
+            '"' | 'f' if (c == 'f' && siguiente == Some('"'))
+                || (c == '"' && siguiente == Some('"') && tercero == Some('"')) =>
+            {
+                let con_valores = c == 'f';
+                let desde = if con_valores { i + 1 } else { i };
+                let leido = leer_texto_especial(&caracteres, desde, con_valores, columna, linea, inicio_linea)?;
+                let crudo: String = caracteres[inicio..leido.fin].iter().collect();
+                tokens.push(Token {
+                    tipo: Tipo::TextoEspecial {
+                        crudo,
+                        partes: leido.partes,
+                    },
+                    linea,
+                    columna,
+                    fin: leido.fin - leido.inicio_linea + 1,
+                });
+                i = leido.fin;
+                linea = leido.linea;
+                inicio_linea = leido.inicio_linea;
+                None
             }
             '"' => {
                 let linea_texto = linea;
@@ -422,6 +457,347 @@ fn tokenizar_interno(
         columna: caracteres.len() - inicio_linea + 1,
         fin: caracteres.len() - inicio_linea + 1,
     });
+    Ok(tokens)
+}
+
+struct TextoLeido {
+    partes: Vec<ParteTexto>,
+    /// Posición justo después de la comilla de cierre.
+    fin: usize,
+    linea: usize,
+    inicio_linea: usize,
+}
+
+enum Cierre {
+    Cierre(usize),
+    SinCerrar,
+    LlaveSinCerrar(usize),
+}
+
+/// Busca el `}` que cierra la expresión que empieza en `desde` (justo después de la `{`),
+/// equilibrando ( [ { y saltando los textos internos con sus escapes.
+fn fin_de_expresion(caracteres: &[char], desde: usize, permite_saltos: bool) -> Option<usize> {
+    let mut i = desde;
+    let mut profundidad = 0usize;
+    while i < caracteres.len() {
+        match caracteres[i] {
+            '\n' if !permite_saltos => return None,
+            '(' | '[' | '{' => profundidad += 1,
+            ')' | ']' => profundidad = profundidad.saturating_sub(1),
+            '}' => {
+                if profundidad == 0 {
+                    return Some(i);
+                }
+                profundidad -= 1;
+            }
+            '"' => {
+                if caracteres.get(i + 1) == Some(&'"') && caracteres.get(i + 2) == Some(&'"') {
+                    i += 3;
+                    while i < caracteres.len() {
+                        if caracteres[i] == '\\' {
+                            i += 1;
+                        } else if caracteres[i] == '"'
+                            && caracteres.get(i + 1) == Some(&'"')
+                            && caracteres.get(i + 2) == Some(&'"')
+                        {
+                            i += 2;
+                            break;
+                        }
+                        i += 1;
+                    }
+                } else {
+                    i += 1;
+                    loop {
+                        match caracteres.get(i) {
+                            None | Some('\n') => return None,
+                            Some('\\') => i += 1,
+                            Some('"') => break,
+                            _ => {}
+                        }
+                        i += 1;
+                    }
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Busca el final de un texto especial que empieza en la comilla `desde`.
+/// Devuelve la posición de la comilla de cierre (la primera de las tres si es de varias líneas).
+fn buscar_cierre(caracteres: &[char], desde: usize, con_valores: bool, triple: bool) -> Cierre {
+    let mut i = desde + if triple { 3 } else { 1 };
+    while i < caracteres.len() {
+        match caracteres[i] {
+            '"' if !triple => return Cierre::Cierre(i),
+            '"' if caracteres.get(i + 1) == Some(&'"') && caracteres.get(i + 2) == Some(&'"') => {
+                return Cierre::Cierre(i)
+            }
+            '\n' if !triple => return Cierre::SinCerrar,
+            '\\' => i += 1,
+            '{' if con_valores => {
+                if caracteres.get(i + 1) == Some(&'{') {
+                    i += 1;
+                } else {
+                    match fin_de_expresion(caracteres, i + 1, triple) {
+                        Some(fin) => i = fin,
+                        None => return Cierre::LlaveSinCerrar(i),
+                    }
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    Cierre::SinCerrar
+}
+
+/// Lee un texto `f"..."`, `"""..."""` o `f"""..."""`. `desde` es la posición de la primera
+/// comilla; `columna`, `linea` e `inicio_linea` son los del principio del texto (con la `f`).
+fn leer_texto_especial(
+    caracteres: &[char],
+    desde: usize,
+    con_valores: bool,
+    columna: usize,
+    linea: usize,
+    inicio_linea: usize,
+) -> Result<TextoLeido, ErrorTraduccion> {
+    let triple = caracteres.get(desde + 1) == Some(&'"') && caracteres.get(desde + 2) == Some(&'"');
+    // Línea y columna (desde 1) de una posición cualquiera del texto.
+    let situar = |posicion: usize| {
+        let mut l = linea;
+        let mut ini = inicio_linea;
+        for (k, c) in caracteres[..posicion].iter().enumerate().skip(desde) {
+            if *c == '\n' {
+                l += 1;
+                ini = k + 1;
+            }
+        }
+        (l, ini)
+    };
+    let error_llave = |posicion: usize, mensaje: &str, sugerencia: &str| {
+        let (l, ini) = situar(posicion);
+        let c = posicion - ini + 1;
+        ErrorTraduccion::nuevo(l, mensaje)
+            .con_codigo("E028")
+            .en_columna(c)
+            .con_sugerencia(sugerencia)
+    };
+    let cierre = match buscar_cierre(caracteres, desde, con_valores, triple) {
+        Cierre::Cierre(cierre) => cierre,
+        Cierre::SinCerrar => {
+            return Err(if triple {
+                ErrorTraduccion::nuevo(linea, "el texto de varias líneas no está cerrado")
+                    .con_codigo("E001")
+                    .en_columna(columna)
+                    .con_sugerencia(format!(
+                        "El texto que empieza en la columna {} de la línea {} necesita tres comillas dobles (\"\"\") de cierre",
+                        columna, linea
+                    ))
+            } else {
+                ErrorTraduccion::nuevo(linea, "el texto no está cerrado")
+                    .con_codigo("E001")
+                    .en_columna(columna)
+                    .con_sugerencia(format!(
+                        "El texto que empieza en la columna {} de la línea {} necesita unas comillas dobles (\") de cierre en la misma línea",
+                        columna, linea
+                    ))
+            });
+        }
+        Cierre::LlaveSinCerrar(posicion) => {
+            return Err(error_llave(
+                posicion,
+                "la llave '{' del texto no está cerrada",
+                "Cierra la llave con '}'. Si querías escribir una llave normal, ponla doble: {{",
+            ));
+        }
+    };
+    let mut inicio = desde + if triple { 3 } else { 1 };
+    let mut fin_cuerpo = cierre;
+    let mut indentacion = 0;
+    if triple {
+        // Un salto de línea justo después de las comillas de apertura no cuenta.
+        let salto = if caracteres.get(inicio) == Some(&'\n') {
+            Some(1)
+        } else if caracteres.get(inicio) == Some(&'\r') && caracteres.get(inicio + 1) == Some(&'\n') {
+            Some(2)
+        } else {
+            None
+        };
+        let con_salto_inicial = salto.is_some();
+        if let Some(largo) = salto {
+            inicio += largo;
+        }
+        // Una última línea solo con espacios (y su salto de línea) tampoco cuenta.
+        let cuerpo = &caracteres[inicio..fin_cuerpo];
+        let ultimo_salto = cuerpo.iter().rposition(|c| *c == '\n');
+        let resto = match ultimo_salto {
+            Some(posicion) => Some(posicion + 1),
+            None if con_salto_inicial => Some(0),
+            None => None,
+        };
+        if let Some(posicion) = resto {
+            if cuerpo[posicion..].iter().all(|c| *c == ' ' || *c == '\t') {
+                fin_cuerpo = match ultimo_salto {
+                    Some(salto) if salto > 0 && cuerpo[salto - 1] == '\r' => inicio + salto - 1,
+                    Some(salto) => inicio + salto,
+                    None => inicio,
+                };
+            }
+        }
+        // Sangría común mínima de las líneas que no están vacías.
+        let cuerpo: String = caracteres[inicio..fin_cuerpo].iter().collect();
+        indentacion = cuerpo
+            .split('\n')
+            .filter(|l| !l.trim().is_empty())
+            .map(|l| l.chars().take_while(|c| *c == ' ' || *c == '\t').count())
+            .min()
+            .unwrap_or(0);
+    }
+
+    let (mut l, mut ini) = situar(inicio);
+    let mut j = inicio;
+    let mut partes = Vec::new();
+    let mut literal = String::new();
+    while j < fin_cuerpo {
+        if triple && (j == inicio || caracteres[j - 1] == '\n') {
+            let mut quitados = 0;
+            while quitados < indentacion
+                && j < fin_cuerpo
+                && (caracteres[j] == ' ' || caracteres[j] == '\t')
+            {
+                j += 1;
+                quitados += 1;
+            }
+            if j >= fin_cuerpo {
+                break;
+            }
+        }
+        match caracteres[j] {
+            '\\' => {
+                j += 1;
+                match caracteres.get(j) {
+                    Some('n') => literal.push('\n'),
+                    Some('t') => literal.push('\t'),
+                    Some('"') => literal.push('"'),
+                    Some('\\') => literal.push('\\'),
+                    otro => {
+                        let posicion = j.min(caracteres.len());
+                        let (el, eini) = situar(posicion);
+                        let ec = posicion - eini + 1;
+                        return Err(ErrorTraduccion::nuevo(
+                            el,
+                            format!(
+                                "el escape '\\{}' no existe",
+                                otro.map(|c| c.to_string()).unwrap_or_default()
+                            ),
+                        )
+                        .con_codigo("E002")
+                        .en_columna(ec.saturating_sub(1))
+                        .con_sugerencia("Los escapes válidos son \\n, \\t, \\\" y \\\\"));
+                    }
+                }
+                j += 1;
+            }
+            '{' if con_valores => {
+                if caracteres.get(j + 1) == Some(&'{') {
+                    literal.push('{');
+                    j += 2;
+                    continue;
+                }
+                let fin = fin_de_expresion(caracteres, j + 1, triple).unwrap_or(fin_cuerpo);
+                let fuente: String = caracteres[j + 1..fin].iter().collect();
+                if fuente.trim().is_empty() {
+                    return Err(error_llave(
+                        j,
+                        "hay unas llaves vacías ({}) dentro del texto",
+                        "Escribe dentro de las llaves lo que quieres mostrar, por ejemplo {nombre}. Si querías llaves normales, ponlas dobles: {{ }}",
+                    ));
+                }
+                if !literal.is_empty() {
+                    partes.push(ParteTexto::Literal(std::mem::take(&mut literal)));
+                }
+                let (linea_valor, ini_valor) = situar(j + 1);
+                let columna_valor = j + 1 - ini_valor + 1;
+                partes.push(ParteTexto::Valor(tokens_de_valor(&fuente, linea_valor, columna_valor)?));
+                for (k, c) in caracteres[j + 1..fin].iter().enumerate() {
+                    if *c == '\n' {
+                        l += 1;
+                        ini = j + 1 + k + 1;
+                    }
+                }
+                j = fin + 1;
+            }
+            '}' if con_valores => {
+                if caracteres.get(j + 1) == Some(&'}') {
+                    literal.push('}');
+                    j += 2;
+                } else {
+                    return Err(error_llave(
+                        j,
+                        "hay una '}' suelta dentro del texto",
+                        "Si querías escribir una llave normal, ponla doble: }}. Si no, bórrala",
+                    ));
+                }
+            }
+            otro => {
+                if otro == '\n' {
+                    l += 1;
+                    ini = j + 1;
+                }
+                literal.push(otro);
+                j += 1;
+            }
+        }
+    }
+    // Las líneas del texto que quedaron sin recorrer (última línea quitada y cierre).
+    let (l_fin, ini_fin) = {
+        let (mut le, mut ie) = (l, ini);
+        for (k, c) in caracteres[j.min(cierre)..cierre].iter().enumerate() {
+            if *c == '\n' {
+                le += 1;
+                ie = j.min(cierre) + k + 1;
+            }
+        }
+        (le, ie)
+    };
+    if !literal.is_empty() || partes.is_empty() {
+        partes.push(ParteTexto::Literal(literal));
+    }
+    Ok(TextoLeido {
+        partes,
+        fin: cierre + if triple { 3 } else { 1 },
+        linea: l_fin,
+        inicio_linea: ini_fin,
+    })
+}
+
+/// Convierte en tokens el trozo de programa que va entre `{ }`, dejando sus líneas y
+/// columnas como en el programa original. Los saltos de línea se descartan.
+fn tokens_de_valor(
+    fuente: &str,
+    linea: usize,
+    columna: usize,
+) -> Result<Vec<Token>, ErrorTraduccion> {
+    let ajustar_columna = |l: usize, c: usize| if l == 1 && c > 0 { c + columna - 1 } else { c };
+    let mut tokens = tokenizar_interno(fuente, false).map_err(|mut error| {
+        if let Some(arreglo) = error.arreglo.as_mut() {
+            arreglo.columna_inicio = ajustar_columna(arreglo.linea, arreglo.columna_inicio);
+            arreglo.columna_fin = ajustar_columna(arreglo.linea, arreglo.columna_fin);
+            arreglo.linea += linea - 1;
+        }
+        error.columna = ajustar_columna(error.linea, error.columna);
+        error.linea += linea - 1;
+        error
+    })?;
+    tokens.retain(|t| t.tipo != Tipo::NuevaLinea);
+    for token in tokens.iter_mut() {
+        token.columna = ajustar_columna(token.linea, token.columna);
+        token.fin = ajustar_columna(token.linea, token.fin);
+        token.linea += linea - 1;
+    }
     Ok(tokens)
 }
 

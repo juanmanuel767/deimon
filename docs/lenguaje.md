@@ -41,8 +41,28 @@ mientras i < 3 {
   Al mostrarlos, `5` sale como `5` y `2.5` como `2.5`.
 - Textos: entre comillas dobles, por ejemplo `"hola"`. Se pueden usar los
   escapes `\n` (salto de línea), `\"` (comillas) y `\\` (barra invertida).
+- Textos con valores: con una `f` pegada a la comilla, lo que va entre llaves
+  es una expresión y se escribe como `a_texto(valor)`. Una llave normal se
+  escribe doble (`{{` y `}}`). Los textos sin `f` no cambian: `"{x}"` es literal.
+- Textos de varias líneas: entre `"""` y `"""` (también `f"""..."""`). Se quita
+  el salto de línea tras la apertura, la última línea si solo tiene espacios y
+  la sangría común de las líneas. Dentro se pueden usar comillas sueltas `"`.
 - Lógicos: `verdadero` y `falso`.
 - Nada: `nada`.
+
+Ejemplos de los dos tipos de texto:
+
+```deimon
+sea nombre = "Ana"
+mostrar(f"Hola {nombre}, tienes {20 + 1} años")   # escribe Hola Ana, tienes 21 años
+sea carta = f"""
+    Hola {nombre}
+      con sangría
+    """
+mostrar(carta)
+```
+
+La carta anterior muestra dos líneas: `Hola Ana` y `  con sangría`.
 
 ### Operadores
 

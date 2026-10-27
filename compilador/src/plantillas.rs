@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use crate::ast::{Expresion, Sentencia};
+use crate::ast::{Expresion, ParteTexto, Sentencia};
 use crate::error::ErrorTraduccion;
 
 #[path = "plantilla_lectura.rs"]
@@ -97,6 +97,13 @@ fn en_expresion(expresion: &mut Expresion, carpeta: &Path, errores: &mut Vec<Err
             for (clave, valor) in pares {
                 en_expresion(clave, carpeta, errores);
                 en_expresion(valor, carpeta, errores);
+            }
+        }
+        Expresion::TextoConValores { partes, .. } => {
+            for parte in partes {
+                if let ParteTexto::Valor(valor) = parte {
+                    en_expresion(valor, carpeta, errores);
+                }
             }
         }
         Expresion::Unaria { valor, .. } => en_expresion(valor, carpeta, errores),

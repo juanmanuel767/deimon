@@ -316,3 +316,98 @@ mostrar(0.5 * 3)
     let esperado = "265252859812191058636308480000000\n2535301200456458802993406410752\n4\n9007199254740993\n9007199254740992\n1267650600228229401496703205376\nverdadero\n[3, 9007199254740993, 2535301200456458802993406410752]\n3.5\n1.5\n";
     igual_en_los_dos_motores("enteros_grandes_exactos", programa, esperado);
 }
+
+#[test]
+fn texto_con_valores_basico_y_con_expresiones() {
+    igual_en_los_dos_motores(
+        "texto_valores",
+        r#"sea nombre = "Ana"
+sea edad = 30
+sea p = {"nombre": "Luis"}
+funcion suma(a, b) {
+    devolver a + b
+}
+mostrar(f"Hola {nombre}, tienes {edad + 1} años")
+mostrar(f"{p["nombre"]} suma {suma(2, 3)} y mide {medir([1, 2])}")
+mostrar(f"lista {[1, nombre]} mapa { {"x": 1} } x {2.5} {verdadero} {falso} {nada}")
+mostrar(f"grande {9007199254740993 + 0} y {123456789012345678901234567890}")
+mostrar(f"{{llaves}} y }}{{ \"q\" \\ \t|")
+mostrar(f"{nombre}{nombre}")
+mostrar(f"sin valores")
+sea f = 3
+mostrar(f)
+mostrar("body{color:red}")
+mostrar("{nombre}")
+"#,
+        "Hola Ana, tienes 31 años\nLuis suma 5 y mide 2\nlista [1, Ana] mapa {x: 1} x 2.5 verdadero falso nada\ngrande 9007199254740993 y 123456789012345678901234567890\n{llaves} y }{ \"q\" \\ \t|\nAnaAna\nsin valores\n3\nbody{color:red}\n{nombre}\n",
+    );
+}
+
+#[test]
+fn f_sigue_siendo_un_nombre_normal() {
+    igual_en_los_dos_motores(
+        "texto_f_nombre",
+        "funcion doble(x) {\n    devolver x * 2\n}\nsea f = doble\nmostrar(f(4))\nmostrar(f(4) + 1)\n",
+        "8\n9\n",
+    );
+}
+
+#[test]
+fn texto_de_varias_lineas_recorta_la_sangria() {
+    igual_en_los_dos_motores(
+        "texto_lineas",
+        "sea t = \"\"\"\n    Hola\n      Ana\n    \"\"\"\nmostrar(t)\nmostrar(medir(t))\nsea u = \"\"\"a \"b\" \\n c\"\"\"\nmostrar(u)\nsea n = 5\nsea v = f\"\"\"\n    Total: {n}\n      {\"x\" + \"y\"} {{ok}}\n    \"\"\"\nmostrar(v)\nmostrar(1 + 1)\n",
+        "Hola\n  Ana\n10\na \"b\" \n c\nTotal: 5\n  xy {ok}\n2\n",
+    );
+}
+
+#[test]
+fn las_lineas_siguen_bien_despues_de_un_texto_de_varias_lineas() {
+    let programa = "sea t = \"\"\"\n  uno\n  dos\n  \"\"\"\nmostrar(sin_declarar)\n";
+    let error = error_de_ejecutar("texto_lineas_error", programa);
+    assert!(error.contains("línea 5"), "{}", error);
+}
+
+#[test]
+fn variable_inexistente_dentro_de_llaves_se_avisa_antes_de_ejecutar() {
+    let texto = revisar(
+        "texto_variable_falta",
+        "sea nombre = \"Ana\"\nmostrar(\"antes\")\nmostrar(f\"Hola {nombre} {edda}\")\n",
+    );
+    assert!(texto.contains("edda"), "{}", texto);
+    assert!(texto.contains("línea 3"), "{}", texto);
+}
+
+#[test]
+fn funcion_inexistente_dentro_de_llaves_sugiere_la_parecida() {
+    let texto = revisar("texto_funcion_falta", "mostrar(f\"{mediir([1])}\")\n");
+    assert!(texto.contains("medir"), "{}", texto);
+}
+
+#[test]
+fn llave_sin_cerrar_vacia_o_suelta_son_errores_claros() {
+    let sin_cerrar = revisar("texto_llave_abierta", "sea a = 1\nmostrar(f\"hola {a\")\n");
+    assert!(sin_cerrar.contains("no está cerrada"), "{}", sin_cerrar);
+    assert!(sin_cerrar.contains("línea 2") && sin_cerrar.contains("E028"), "{}", sin_cerrar);
+    let vacia = revisar("texto_llave_vacia", "mostrar(f\"hola {}\")\n");
+    assert!(vacia.contains("vacías") && vacia.contains("E028"), "{}", vacia);
+    let suelta = revisar("texto_llave_suelta", "mostrar(f\"hola }\")\n");
+    assert!(suelta.contains("suelta") && suelta.contains("E028"), "{}", suelta);
+}
+
+#[test]
+fn tres_comillas_sin_cerrar_dice_la_linea_donde_se_abrio() {
+    let texto = revisar("texto_triple_abierto", "mostrar(1)\nsea t = \"\"\"\nhola\nmundo\n");
+    assert!(texto.contains("línea 2"), "{}", texto);
+    assert!(texto.contains("varias líneas no está cerrado"), "{}", texto);
+}
+
+#[test]
+fn formatear_conserva_los_textos_con_valores_y_de_varias_lineas() {
+    let fuente = "sea n = 1\nsea a = f\"x {n+1} {n}\"\nsea b = \"\"\"\n    hola\n      {n}\n    \"\"\"\nsea c = f\"\"\"\n    v: {n}\n    \"\"\"\nmostrar(a)\n";
+    let una = deimon::formato::formatear(fuente).unwrap();
+    assert!(una.contains("f\"x {n+1} {n}\""), "{}", una);
+    assert!(una.contains("\"\"\"\n    hola\n      {n}\n    \"\"\""), "{}", una);
+    assert!(una.contains("f\"\"\"\n    v: {n}\n    \"\"\""), "{}", una);
+    assert_eq!(deimon::formato::formatear(&una).unwrap(), una);
+}

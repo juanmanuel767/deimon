@@ -118,6 +118,10 @@ fn buscar_en_expresion(expresion: &Expresion) -> Option<Option<u16>> {
             argumentos.iter().find_map(buscar_en_expresion)
         }
         Expresion::Lista(elementos) => elementos.iter().find_map(buscar_en_expresion),
+        Expresion::TextoConValores { partes, .. } => partes.iter().find_map(|parte| match parte {
+            ParteTexto::Valor(valor) => buscar_en_expresion(valor),
+            ParteTexto::Literal(_) => None,
+        }),
         Expresion::Unaria { valor, .. } => buscar_en_expresion(valor),
         Expresion::Binaria {
             izquierda, derecha, ..

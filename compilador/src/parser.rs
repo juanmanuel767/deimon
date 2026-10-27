@@ -1,6 +1,6 @@
 use crate::ast::*;
 use crate::error::ErrorTraduccion;
-use crate::lexer::{Tipo, Token};
+use crate::lexer::{self, Tipo, Token};
 
 pub fn analizar(tokens: Vec<Token>) -> Result<Programa, ErrorTraduccion> {
     let mut analizador = Analizador { tokens, pos: 0 };
@@ -928,6 +928,38 @@ impl Analizador {
             Tipo::Numero(numero) => Ok(Expresion::Numero(numero)),
             Tipo::EnteroGrande(cifras) => Ok(Expresion::EnteroGrande(cifras)),
             Tipo::Texto(texto) => Ok(Expresion::Texto(texto)),
+            Tipo::TextoEspecial { partes, .. } => {
+                if let [lexer::ParteTexto::Literal(texto)] = partes.as_slice() {
+                    return Ok(Expresion::Texto(texto.clone()));
+                }
+                let mut convertidas = Vec::new();
+                for parte in partes {
+                    convertidas.push(match parte {
+                        lexer::ParteTexto::Literal(texto) => ParteTexto::Literal(texto),
+                        lexer::ParteTexto::Valor(tokens) => {
+                            let mut interior = Analizador { tokens, pos: 0 };
+                            let valor = interior.expresion()?;
+                            if !matches!(interior.tipo(), Tipo::Fin) {
+                                return Err(interior.error(
+                                    "E003",
+                                    format!(
+                                        "dentro de las llaves del texto sobra {}",
+                                        describir(interior.tipo())
+                                    ),
+                                )
+                                .con_sugerencia(
+                                    "Dentro de { } va una sola expresión, por ejemplo {nombre} o {edad + 1}",
+                                ));
+                            }
+                            ParteTexto::Valor(valor)
+                        }
+                    });
+                }
+                Ok(Expresion::TextoConValores {
+                    partes: convertidas,
+                    linea: token.linea,
+                })
+            }
             Tipo::Verdadero => Ok(Expresion::Logico(true)),
             Tipo::Falso => Ok(Expresion::Logico(false)),
             Tipo::Nada => Ok(Expresion::Nada),
@@ -1117,6 +1149,7 @@ fn describir(tipo: &Tipo) -> String {
         Tipo::Numero(n) => format!("el número {}", n),
         Tipo::EnteroGrande(cifras) => format!("el número {}", cifras),
         Tipo::Texto(t) => format!("el texto \"{}\"", t),
+        Tipo::TextoEspecial { crudo, .. } => format!("el texto {}", crudo),
         Tipo::Comentario(t) => format!("el comentario '{}'", t),
         Tipo::Ident(nombre) => format!("el identificador '{}'", nombre),
         Tipo::Ajeno(texto) => format!("'{}' (de otro lenguaje)", texto),

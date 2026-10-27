@@ -33,6 +33,7 @@ fn es_palabra(tipo: &Tipo) -> bool {
             | Tipo::Numero(_)
             | Tipo::EnteroGrande(_)
             | Tipo::Texto(_)
+            | Tipo::TextoEspecial { .. }
             | Tipo::Verdadero
             | Tipo::Falso
             | Tipo::Nada
@@ -79,6 +80,7 @@ fn texto_token(tipo: &Tipo) -> String {
         Tipo::Numero(n) => format!("{}", n),
         Tipo::EnteroGrande(cifras) => cifras.clone(),
         Tipo::Texto(texto) => escapar_texto(texto),
+        Tipo::TextoEspecial { crudo, .. } => crudo.clone(),
         Tipo::Ident(nombre) => nombre.clone(),
         Tipo::Comentario(texto) => texto.clone(),
         Tipo::Sea => "sea".to_string(),
@@ -494,6 +496,7 @@ impl Formateador {
                                 | Tipo::Numero(_)
                                 | Tipo::EnteroGrande(_)
                                 | Tipo::Texto(_)
+                                | Tipo::TextoEspecial { .. }
                                 | Tipo::Verdadero
                                 | Tipo::Falso
                                 | Tipo::Nada

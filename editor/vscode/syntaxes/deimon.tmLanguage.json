@@ -4,6 +4,9 @@
   "scopeName": "source.deimon",
   "patterns": [
     { "include": "#comentario" },
+    { "include": "#texto-f-triple" },
+    { "include": "#texto-triple" },
+    { "include": "#texto-f" },
     { "include": "#texto" },
     { "include": "#numero" },
     { "include": "#definicion-funcion" },
@@ -18,6 +21,43 @@
     "comentario": {
       "name": "comment.line.number-sign.deimon",
       "match": "#.*$"
+    },
+    "interpolacion": {
+      "patterns": [
+        { "name": "constant.character.escape.deimon", "match": "\\{\\{|\\}\\}" },
+        {
+          "name": "meta.interpolation.deimon",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [{ "include": "$self" }]
+        }
+      ]
+    },
+    "texto-f-triple": {
+      "name": "string.quoted.triple.deimon",
+      "begin": "f\"\"\"",
+      "end": "\"\"\"",
+      "patterns": [
+        { "name": "constant.character.escape.deimon", "match": "\\\\[nt\"\\\\]" },
+        { "include": "#interpolacion" }
+      ]
+    },
+    "texto-triple": {
+      "name": "string.quoted.triple.deimon",
+      "begin": "\"\"\"",
+      "end": "\"\"\"",
+      "patterns": [
+        { "name": "constant.character.escape.deimon", "match": "\\\\[nt\"\\\\]" }
+      ]
+    },
+    "texto-f": {
+      "name": "string.quoted.double.deimon",
+      "begin": "(?<![\\p{L}\\p{N}_])f\"",
+      "end": "\"|$",
+      "patterns": [
+        { "name": "constant.character.escape.deimon", "match": "\\\\[nt\"\\\\]" },
+        { "include": "#interpolacion" }
+      ]
     },
     "texto": {
       "name": "string.quoted.double.deimon",
