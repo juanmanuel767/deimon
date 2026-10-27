@@ -1,0 +1,68 @@
+# Justificar texto a un ancho fijo
+
+funcion justificar_linea(palabras, ancho, ultima) {
+    si medir(palabras) == 1 o ultima {
+        devolver unir(palabras, " ")
+    }
+    sea letras = 0
+    para p en palabras {
+        letras = letras + medir(p)
+    }
+    sea huecos = medir(palabras) - 1
+    sea espacios = ancho - letras
+    sea base = suelo(espacios / huecos)
+    sea extra = espacios - base * huecos
+    sea r = ""
+    sea k = 0
+    para p en palabras {
+        r = r + p
+        si k < huecos {
+            sea n = base
+            si k < extra {
+                n = n + 1
+            }
+            r = r + repetir(" ", n)
+        }
+        k = k + 1
+    }
+    devolver r
+}
+
+sea ancho = a_numero(recortar(pedir_texto("")))
+sea todas = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    para t en partir(linea, " ") {
+        si t != "" {
+            todas = agregar(todas, t)
+        }
+    }
+    linea = pedir_texto("")
+}
+
+sea lineas = []
+sea cur = []
+sea largo = 0
+para w en todas {
+    si medir(cur) == 0 {
+        cur = [w]
+        largo = medir(w)
+    } sino si largo + 1 + medir(w) <= ancho {
+        cur = agregar(cur, w)
+        largo = largo + 1 + medir(w)
+    } sino {
+        lineas = agregar(lineas, cur)
+        cur = [w]
+        largo = medir(w)
+    }
+}
+si medir(cur) > 0 {
+    lineas = agregar(lineas, cur)
+}
+
+sea n = medir(lineas)
+si n > 0 {
+    para i en rango(0, n - 1) {
+        mostrar(justificar_linea(lineas[i], ancho, i == n - 1))
+    }
+}

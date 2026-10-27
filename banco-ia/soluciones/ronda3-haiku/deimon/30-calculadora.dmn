@@ -1,0 +1,109 @@
+# Calculadora con precedencia (análisis recursivo)
+
+funcion tokenizar(texto) {
+    sea toks = []
+    sea numero = ""
+    sea i = 0
+    mientras i < medir(texto) {
+        sea c = cortar(texto, i, 1)
+        si incluye("0123456789", c) {
+            numero = numero + c
+        } sino {
+            si numero != "" {
+                toks = agregar(toks, numero)
+                numero = ""
+            }
+            si c != " " {
+                toks = agregar(toks, c)
+            }
+        }
+        i = i + 1
+    }
+    si numero != "" {
+        toks = agregar(toks, numero)
+    }
+    devolver toks
+}
+
+funcion dividir(a, b) {
+    si b == 0 {
+        provocar_error("division por cero")
+    }
+    sea q = suelo(absoluto(a) / absoluto(b))
+    si (a < 0) != (b < 0) y q != 0 {
+        q = 0 - q
+    }
+    devolver q
+}
+
+funcion primario(toks, pos) {
+    si toks[pos] == "(" {
+        sea r = expresion(toks, pos + 1)
+        devolver [r[0], r[1] + 1]
+    }
+    devolver [a_numero(toks[pos]), pos + 1]
+}
+
+funcion unario(toks, pos) {
+    si toks[pos] == "-" {
+        sea r = unario(toks, pos + 1)
+        devolver [0 - r[0], r[1]]
+    }
+    devolver primario(toks, pos)
+}
+
+funcion termino(toks, pos) {
+    sea r = unario(toks, pos)
+    sea val = r[0]
+    sea p = r[1]
+    mientras p < medir(toks) {
+        si toks[p] == "*" {
+            sea r2 = unario(toks, p + 1)
+            val = val * r2[0]
+            p = r2[1]
+        } sino si toks[p] == "/" {
+            sea r2 = unario(toks, p + 1)
+            val = dividir(val, r2[0])
+            p = r2[1]
+        } sino {
+            romper
+        }
+    }
+    devolver [val, p]
+}
+
+funcion expresion(toks, pos) {
+    sea r = termino(toks, pos)
+    sea val = r[0]
+    sea p = r[1]
+    mientras p < medir(toks) {
+        si toks[p] == "+" {
+            sea r2 = termino(toks, p + 1)
+            val = val + r2[0]
+            p = r2[1]
+        } sino si toks[p] == "-" {
+            sea r2 = termino(toks, p + 1)
+            val = val - r2[0]
+            p = r2[1]
+        } sino {
+            romper
+        }
+    }
+    devolver [val, p]
+}
+
+funcion evaluar(linea) {
+    sea toks = tokenizar(linea)
+    sea r = expresion(toks, 0)
+    devolver r[0]
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    intentar {
+        mostrar(a_texto(evaluar(linea)))
+    } si falla e {
+        mostrar("error: " + e["mensaje"])
+    }
+    linea = pedir_texto("")
+}

@@ -1,0 +1,26 @@
+# Agrupar por departamento y ordenar por salario
+
+sea grupos = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), ",")
+    sea rec = {"n": p[1], "s": a_numero(p[2])}
+    si tiene_clave(grupos, p[0]) {
+        grupos[p[0]] = agregar(grupos[p[0]], rec)
+    } sino {
+        grupos[p[0]] = [rec]
+    }
+    linea = pedir_texto("")
+}
+
+para d en listar_claves(grupos) {
+    sea gente = ordenar_por(grupos[d], ["-s", "n"])
+    sea total = 0
+    para r en gente {
+        total = total + r["s"]
+    }
+    mostrar(d + " (" + a_texto(medir(gente)) + " personas): total " + a_texto(total))
+    para r en gente {
+        mostrar("  " + r["n"] + ": " + a_texto(r["s"]))
+    }
+}

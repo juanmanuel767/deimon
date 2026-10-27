@@ -1,0 +1,73 @@
+# Juego de la vida
+
+funcion vecinas(g, F, C, i, j) {
+    sea n = 0
+    para di en rango(-1, 1) {
+        para dj en rango(-1, 1) {
+            si (di != 0 o dj != 0) y i + di >= 0 y i + di < F y j + dj >= 0 y j + dj < C {
+                n = n + g[i + di][j + dj]
+            }
+        }
+    }
+    devolver n
+}
+
+funcion paso(g, F, C) {
+    sea nuevo = []
+    para i en rango(0, F - 1) {
+        sea fila = []
+        para j en rango(0, C - 1) {
+            sea n = vecinas(g, F, C, i, j)
+            sea viva = 0
+            si g[i][j] == 1 {
+                si n == 2 o n == 3 {
+                    viva = 1
+                }
+            } sino {
+                si n == 3 {
+                    viva = 1
+                }
+            }
+            fila = agregar(fila, viva)
+        }
+        nuevo = agregar(nuevo, fila)
+    }
+    devolver nuevo
+}
+
+sea dims = partir(recortar(pedir_texto("")), " ")
+sea F = a_numero(dims[0])
+sea C = a_numero(dims[1])
+sea G = a_numero(dims[2])
+
+sea g = []
+para _f in rango(0, F - 1) {
+    sea fila = []
+    sea texto = recortar(pedir_texto(""))
+    para j en rango(0, C - 1) {
+        si cortar(texto, j, 1) == "#" {
+            fila = agregar(fila, 1)
+        } sino {
+            fila = agregar(fila, 0)
+        }
+    }
+    g = agregar(g, fila)
+}
+
+sea k = 0
+mientras k < G {
+    g = paso(g, F, C)
+    k = k + 1
+}
+
+para i en rango(0, F - 1) {
+    sea s = ""
+    para j en rango(0, C - 1) {
+        si g[i][j] == 1 {
+            s = s + "#"
+        } sino {
+            s = s + "."
+        }
+    }
+    mostrar(s)
+}

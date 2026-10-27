@@ -1,0 +1,51 @@
+# Las 3 palabras más repetidas
+
+funcion es_signo(c) {
+    devolver c == "." o c == "," o c == ";" o c == ":" o c == "!" o c == "?"
+}
+
+funcion quitar_signos(texto) {
+    sea r = texto
+    mientras medir(r) > 0 {
+        si es_signo(cortar(r, 0, 1)) {
+            r = cortar(r, 1, nada)
+        } sino {
+            romper
+        }
+    }
+    mientras medir(r) > 0 {
+        si es_signo(cortar(r, medir(r) - 1, 1)) {
+            r = cortar(r, 0, medir(r) - 1)
+        } sino {
+            romper
+        }
+    }
+    devolver r
+}
+
+sea conteo = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    para trozo en partir(minusculas(linea), " ") {
+        sea palabra = quitar_signos(trozo)
+        si palabra != "" {
+            si tiene_clave(conteo, palabra) {
+                conteo[palabra] = conteo[palabra] + 1
+            } sino {
+                conteo[palabra] = 1
+            }
+        }
+    }
+    linea = pedir_texto("")
+}
+
+sea registros = []
+para clave en listar_claves(conteo) {
+    registros = agregar(registros, {"p": clave, "v": conteo[clave]})
+}
+sea ordenados = ordenar_por(registros, ["-v", "p"])
+sea k = 0
+mientras k < medir(ordenados) y k < 3 {
+    mostrar(ordenados[k]["p"] + ": " + a_texto(ordenados[k]["v"]))
+    k = k + 1
+}

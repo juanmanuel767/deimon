@@ -1,5 +1,5 @@
 funcion media(suma_decimas, n) {
-    devolver suelo((suma_decimas * 10 * 20 + n) / (2 * n))
+    devolver suelo((suma_decimas * 10 * 2 + n) / (2 * n))
 }
 
 funcion formato(h) {

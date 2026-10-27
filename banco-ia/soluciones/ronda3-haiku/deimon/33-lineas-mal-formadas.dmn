@@ -1,0 +1,41 @@
+# Líneas mal formadas "nombre;edad;ciudad"
+
+sea n = 0
+sea validas = 0
+sea descartadas = 0
+sea ciudades = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    n = n + 1
+    sea p = partir(linea, ";")
+    sea motivo = ""
+    si medir(p) != 3 {
+        motivo = "numero de campos incorrecto"
+    } sino si p[0] == "" {
+        motivo = "nombre vacio"
+    } sino si no coincide_patron(p[1], "^[0-9]+$") {
+        motivo = "edad invalida"
+    } sino si a_numero(p[1]) > 120 {
+        motivo = "edad invalida"
+    } sino si p[2] == "" {
+        motivo = "ciudad vacia"
+    }
+    si motivo != "" {
+        mostrar("linea " + a_texto(n) + ": " + motivo)
+        descartadas = descartadas + 1
+    } sino {
+        validas = validas + 1
+        si tiene_clave(ciudades, p[2]) {
+            ciudades[p[2]] = ciudades[p[2]] + 1
+        } sino {
+            ciudades[p[2]] = 1
+        }
+    }
+    linea = pedir_texto("")
+}
+
+mostrar("validas: " + a_texto(validas))
+mostrar("descartadas: " + a_texto(descartadas))
+para c en listar_claves(ciudades) {
+    mostrar(c + ": " + a_texto(ciudades[c]))
+}

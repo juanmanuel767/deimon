@@ -1,0 +1,44 @@
+# Árbol de claves a partir de líneas "camino=valor"
+
+funcion camino_de(registro) {
+    devolver registro["segs"]
+}
+
+sea valores = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, "=")
+    valores[partes[0]] = unir(cortar(partes, 1, nada), "=")
+    linea = pedir_texto("")
+}
+
+sea registros = []
+para clave en listar_claves(valores) {
+    registros = agregar(registros, {"segs": partir(clave, "."), "v": valores[clave]})
+}
+sea ordenados = ordenar_por(registros, camino_de)
+
+sea previas = []
+para r en ordenados {
+    sea segs = r["segs"]
+    sea comun = 0
+    mientras verdadero {
+        si comun >= medir(previas) {
+            romper
+        }
+        si comun >= medir(segs) {
+            romper
+        }
+        si previas[comun] != segs[comun] {
+            romper
+        }
+        comun = comun + 1
+    }
+    sea j = comun
+    mientras j < medir(segs) - 1 {
+        mostrar(repetir("  ", j) + segs[j] + ":")
+        j = j + 1
+    }
+    mostrar(repetir("  ", medir(segs) - 1) + segs[medir(segs) - 1] + ": " + r["v"])
+    previas = segs
+}

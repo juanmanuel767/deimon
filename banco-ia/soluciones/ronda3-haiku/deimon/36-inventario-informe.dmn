@@ -1,0 +1,62 @@
+# Inventario con altas, ventas, reposiciones e informe (precios en céntimos)
+
+funcion centimos_texto(c) {
+    sea entero = suelo(c / 100)
+    sea resto = c - entero * 100
+    sea cents = a_texto(resto)
+    si resto < 10 {
+        cents = "0" + cents
+    }
+    devolver a_texto(entero) + "." + cents
+}
+
+sea prods = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), " ")
+    si p[0] == "alta" {
+        si tiene_clave(prods, p[1]) {
+            mostrar("error: codigo duplicado " + p[1])
+        } sino {
+            prods[p[1]] = {"n": p[2], "p": a_numero(p[3]), "s": a_numero(p[4]), "i": 0}
+        }
+    } sino si p[0] == "venta" {
+        sea n = a_numero(p[2])
+        si no tiene_clave(prods, p[1]) {
+            mostrar("error: codigo desconocido " + p[1])
+        } sino si prods[p[1]]["s"] < n {
+            mostrar("error: stock insuficiente de " + p[1] + " (hay " + a_texto(prods[p[1]]["s"]) + ", piden " + a_texto(n) + ")")
+        } sino {
+            sea r = prods[p[1]]
+            r["s"] = r["s"] - n
+            r["i"] = r["i"] + n * r["p"]
+            prods[p[1]] = r
+        }
+    } sino si p[0] == "reponer" {
+        si no tiene_clave(prods, p[1]) {
+            mostrar("error: codigo desconocido " + p[1])
+        } sino {
+            sea r = prods[p[1]]
+            r["s"] = r["s"] + a_numero(p[2])
+            prods[p[1]] = r
+        }
+    } sino si p[0] == "informe" {
+        sea total = 0
+        sea sin = []
+        para c en listar_claves(prods) {
+            sea r = prods[c]
+            mostrar(c + " " + r["n"] + " stock=" + a_texto(r["s"]) + " ingresos=" + centimos_texto(r["i"]))
+            total = total + r["i"]
+            si r["s"] == 0 {
+                sin = agregar(sin, c)
+            }
+        }
+        mostrar("ingresos totales: " + centimos_texto(total))
+        si medir(sin) == 0 {
+            mostrar("sin stock: ninguno")
+        } sino {
+            mostrar("sin stock: " + unir(sin, ", "))
+        }
+    }
+    linea = pedir_texto("")
+}

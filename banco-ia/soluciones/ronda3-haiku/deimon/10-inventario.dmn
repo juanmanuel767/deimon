@@ -1,0 +1,36 @@
+# Inventario con órdenes poner, quitar y ver
+
+sea stock = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), " ")
+    si p[0] == "ver" {
+        sea hay = falso
+        para prod en listar_claves(stock) {
+            si stock[prod] > 0 {
+                mostrar(prod + "=" + a_texto(stock[prod]))
+                hay = verdadero
+            }
+        }
+        si no hay {
+            mostrar("vacio")
+        }
+    } sino si p[0] == "poner" {
+        sea n = a_numero(p[2])
+        si tiene_clave(stock, p[1]) {
+            stock[p[1]] = stock[p[1]] + n
+        } sino {
+            stock[p[1]] = n
+        }
+    } sino si p[0] == "quitar" {
+        sea n = a_numero(p[2])
+        si no tiene_clave(stock, p[1]) {
+            mostrar("error: no hay " + p[2] + " de " + p[1])
+        } sino si stock[p[1]] < n {
+            mostrar("error: no hay " + p[2] + " de " + p[1])
+        } sino {
+            stock[p[1]] = stock[p[1]] - n
+        }
+    }
+    linea = pedir_texto("")
+}

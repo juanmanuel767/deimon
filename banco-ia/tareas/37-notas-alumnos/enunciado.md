@@ -31,12 +31,12 @@ Salida:
 
 ```
 == alumnos ==
-Ana: 77.50 sobresaliente
-Bea: 47.50 sobresaliente
-Carlos: 100.00 sobresaliente
+Ana: 7.75 notable
+Bea: 4.75 suspenso
+Carlos: 10.00 sobresaliente
 == asignaturas ==
-Lengua: 62.50
-Mates: 75.00
+Lengua: 6.25
+Mates: 7.50
 mejor alumno: Carlos
 ```
 

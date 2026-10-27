@@ -1,0 +1,20 @@
+# Torres de Hanoi con N discos
+
+funcion mover(n, de, a, via) {
+    si n > 0 {
+        mover(n - 1, de, via, a)
+        mostrar("mover disco " + a_texto(n) + " de " + de + " a " + a)
+        mover(n - 1, via, a, de)
+    }
+}
+
+sea n = a_numero(recortar(pedir_texto("")))
+mover(n, "A", "C", "B")
+
+sea total = 1
+sea k = 0
+mientras k < n {
+    total = total * 2
+    k = k + 1
+}
+mostrar("total: " + a_texto(total - 1))

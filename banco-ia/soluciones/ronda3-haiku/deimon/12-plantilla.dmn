@@ -1,0 +1,52 @@
+# Plantilla con marcadores {nombre}
+
+funcion buscar_llave(t, desde) {
+    sea j = desde
+    mientras j < medir(t) {
+        si cortar(t, j, 1) == "}" {
+            devolver j
+        }
+        j = j + 1
+    }
+    devolver -1
+}
+
+funcion sustituir(t, defs) {
+    sea res = ""
+    sea i = 0
+    mientras i < medir(t) {
+        sea c = cortar(t, i, 1)
+        sea fin = -1
+        si c == "{" {
+            fin = buscar_llave(t, i + 1)
+        }
+        si fin == -1 {
+            res = res + c
+            i = i + 1
+        } sino {
+            sea nombre = cortar(t, i + 1, fin - i - 1)
+            si coincide_patron(nombre, "^[A-Za-z0-9_]+$") {
+                si tiene_clave(defs, nombre) {
+                    res = res + defs[nombre]
+                } sino {
+                    res = res + "{" + nombre + "}"
+                }
+                i = fin + 1
+            } sino {
+                res = res + c
+                i = i + 1
+            }
+        }
+    }
+    devolver res
+}
+
+sea plantilla = pedir_texto("")
+sea defs = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, "=")
+    defs[partes[0]] = unir(cortar(partes, 1, nada), "=")
+    linea = pedir_texto("")
+}
+mostrar(sustituir(plantilla, defs))

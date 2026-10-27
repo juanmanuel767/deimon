@@ -1,0 +1,24 @@
+# Ordenar personas por edad y media de edades
+
+funcion media_una_cifra(suma, n) {
+    sea t = suelo((20 * suma + n) / (2 * n))
+    sea entero = suelo(t / 10)
+    devolver a_texto(entero) + "." + a_texto(t - entero * 10)
+}
+
+sea registros = []
+sea suma = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), ",")
+    sea edad = a_numero(p[1])
+    registros = agregar(registros, {"n": p[0], "e": edad})
+    suma = suma + edad
+    linea = pedir_texto("")
+}
+
+sea ordenados = ordenar_por(registros, ["-e", "n"])
+para r en ordenados {
+    mostrar(r["n"] + " (" + a_texto(r["e"]) + ")")
+}
+mostrar("media: " + media_una_cifra(suma, medir(registros)))

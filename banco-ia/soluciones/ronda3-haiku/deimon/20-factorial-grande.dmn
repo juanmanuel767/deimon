@@ -1,0 +1,36 @@
+# Factorial exacto (números grandes como lista de cifras)
+
+funcion multiplicar_corto(num, k) {
+    sea res = []
+    sea acarreo = 0
+    para d en num {
+        sea t = d * k + acarreo
+        res = agregar(res, t % 10)
+        acarreo = suelo(t / 10)
+    }
+    mientras acarreo > 0 {
+        res = agregar(res, acarreo % 10)
+        acarreo = suelo(acarreo / 10)
+    }
+    devolver res
+}
+
+funcion factorial_texto(n) {
+    sea num = [1]
+    sea k = 2
+    mientras k <= n {
+        num = multiplicar_corto(num, k)
+        k = k + 1
+    }
+    sea texto = ""
+    para d en invertir(num) {
+        texto = texto + a_texto(d)
+    }
+    devolver texto
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(factorial_texto(a_numero(recortar(linea))))
+    linea = pedir_texto("")
+}

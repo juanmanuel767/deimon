@@ -1,0 +1,100 @@
+# Validar correo, teléfono, fecha y código postal
+
+funcion bisiesto(y) {
+    si y % 400 == 0 {
+        devolver verdadero
+    }
+    si y % 100 == 0 {
+        devolver falso
+    }
+    devolver y % 4 == 0
+}
+
+funcion dias_mes(y, m) {
+    si m == 2 {
+        si bisiesto(y) {
+            devolver 29
+        }
+        devolver 28
+    }
+    si m == 4 o m == 6 o m == 9 o m == 11 {
+        devolver 30
+    }
+    devolver 31
+}
+
+funcion valido_correo(v) {
+    sea partes = partir(v, "@")
+    si medir(partes) != 2 {
+        devolver falso
+    }
+    si no coincide_patron(partes[0], "^[a-z0-9._-]+$") {
+        devolver falso
+    }
+    sea dom = partir(partes[1], ".")
+    si medir(dom) < 2 {
+        devolver falso
+    }
+    sea i = 0
+    mientras i < medir(dom) - 1 {
+        si no coincide_patron(dom[i], "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$") {
+            devolver falso
+        }
+        i = i + 1
+    }
+    devolver coincide_patron(dom[medir(dom) - 1], "^[a-z]{2,}$")
+}
+
+funcion valido_telefono(v) {
+    devolver coincide_patron(v, "^[6-9][0-9]{8}$")
+}
+
+funcion valido_fecha(v) {
+    si no coincide_patron(v, "^[0-9]{2}/[0-9]{2}/[0-9]{4}$") {
+        devolver falso
+    }
+    sea d = a_numero(cortar(v, 0, 2))
+    sea m = a_numero(cortar(v, 3, 2))
+    sea a = a_numero(cortar(v, 6, 4))
+    si a < 1900 o a > 2100 {
+        devolver falso
+    }
+    si m < 1 o m > 12 {
+        devolver falso
+    }
+    devolver d >= 1 y d <= dias_mes(a, m)
+}
+
+funcion valido_cp(v) {
+    si no coincide_patron(v, "^[0-9]{5}$") {
+        devolver falso
+    }
+    sea pre = a_numero(cortar(v, 0, 2))
+    devolver pre >= 1 y pre <= 52
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea tipo = p[0]
+    sea valor = ""
+    si medir(p) >= 2 {
+        valor = p[1]
+    }
+    sea ok = falso
+    si tipo == "correo" {
+        ok = valido_correo(valor)
+    } sino si tipo == "telefono" {
+        ok = valido_telefono(valor)
+    } sino si tipo == "fecha" {
+        ok = valido_fecha(valor)
+    } sino si tipo == "cp" {
+        ok = valido_cp(valor)
+    }
+    si ok {
+        mostrar(linea + ": valido")
+    } sino {
+        mostrar(linea + ": invalido")
+    }
+    linea = pedir_texto("")
+}

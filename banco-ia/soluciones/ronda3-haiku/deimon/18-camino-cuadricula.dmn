@@ -1,0 +1,55 @@
+# Camino más corto en una cuadrícula (búsqueda en anchura)
+
+sea dims = partir(recortar(pedir_texto("")), " ")
+sea F = a_numero(dims[0])
+sea C = a_numero(dims[1])
+sea filas = []
+para _f en rango(0, F - 1) {
+    filas = agregar(filas, recortar(pedir_texto("")))
+}
+
+sea inicio = -1
+sea fin = -1
+para i en rango(0, F - 1) {
+    para j en rango(0, C - 1) {
+        si cortar(filas[i], j, 1) == "S" {
+            inicio = i * C + j
+        }
+        si cortar(filas[i], j, 1) == "E" {
+            fin = i * C + j
+        }
+    }
+}
+
+sea dist = []
+para _k en rango(0, F * C - 1) {
+    dist = agregar(dist, -1)
+}
+dist[inicio] = 0
+sea cola = [inicio]
+sea cabeza = 0
+sea di = [-1, 1, 0, 0]
+sea dj = [0, 0, -1, 1]
+mientras cabeza < medir(cola) {
+    sea cur = cola[cabeza]
+    cabeza = cabeza + 1
+    sea ci = suelo(cur / C)
+    sea cj = cur - ci * C
+    para d en rango(0, 3) {
+        sea ni = ci + di[d]
+        sea nj = cj + dj[d]
+        si ni >= 0 y ni < F y nj >= 0 y nj < C {
+            sea idx = ni * C + nj
+            si cortar(filas[ni], nj, 1) != "#" y dist[idx] == -1 {
+                dist[idx] = dist[cur] + 1
+                cola = agregar(cola, idx)
+            }
+        }
+    }
+}
+
+si dist[fin] == -1 {
+    mostrar("sin camino")
+} sino {
+    mostrar(dist[fin])
+}

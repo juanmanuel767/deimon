@@ -1,6 +1,6 @@
 == alumnos ==
-a: 0.33 suspenso
+a: 0.03 suspenso
 == asignaturas ==
 m: 0.00
-n: 1.00
+n: 0.10
 mejor alumno: a

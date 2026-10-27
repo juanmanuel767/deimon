@@ -1,0 +1,57 @@
+# Contar islas de tierra (búsqueda por vecinos)
+
+funcion es_tierra(filas, C, s) {
+    sea i = suelo(s / C)
+    devolver cortar(filas[i], s - i * C, 1) == "#"
+}
+
+sea dims = partir(recortar(pedir_texto("")), " ")
+sea F = a_numero(dims[0])
+sea C = a_numero(dims[1])
+sea filas = []
+para _f en rango(0, F - 1) {
+    filas = agregar(filas, recortar(pedir_texto("")))
+}
+
+sea vis = []
+para _k en rango(0, F * C - 1) {
+    vis = agregar(vis, 0)
+}
+sea di = [-1, 1, 0, 0]
+sea dj = [0, 0, -1, 1]
+
+sea islas = 0
+sea mayor = 0
+para s en rango(0, F * C - 1) {
+    si vis[s] == 0 {
+        si es_tierra(filas, C, s) {
+            islas = islas + 1
+            vis[s] = 1
+            sea cola = [s]
+            sea cabeza = 0
+            mientras cabeza < medir(cola) {
+                sea cur = cola[cabeza]
+                cabeza = cabeza + 1
+                sea ci = suelo(cur / C)
+                sea cj = cur - ci * C
+                para d en rango(0, 3) {
+                    sea ni = ci + di[d]
+                    sea nj = cj + dj[d]
+                    si ni >= 0 y ni < F y nj >= 0 y nj < C {
+                        sea idx = ni * C + nj
+                        si vis[idx] == 0 y es_tierra(filas, C, idx) {
+                            vis[idx] = 1
+                            cola = agregar(cola, idx)
+                        }
+                    }
+                }
+            }
+            si medir(cola) > mayor {
+                mayor = medir(cola)
+            }
+        }
+    }
+}
+
+mostrar("islas: " + a_texto(islas))
+mostrar("mayor: " + a_texto(mayor))

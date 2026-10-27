@@ -1,0 +1,20 @@
+# Días entre dos fechas (número de día juliano)
+
+funcion dia_juliano(y, m, d) {
+    sea a = suelo((14 - m) / 12)
+    sea yy = y + 4800 - a
+    sea mm = m + 12 * a - 3
+    devolver d + suelo((153 * mm + 2) / 5) + 365 * yy + suelo(yy / 4) - suelo(yy / 100) + suelo(yy / 400) - 32045
+}
+
+funcion dia_de(t) {
+    sea p = partir(t, "-")
+    devolver dia_juliano(a_numero(p[0]), a_numero(p[1]), a_numero(p[2]))
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), " ")
+    mostrar(a_texto(dia_de(p[1]) - dia_de(p[0])))
+    linea = pedir_texto("")
+}

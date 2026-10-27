@@ -59,7 +59,26 @@ faltan tareas hasta 100, más IAs y webs completas.
 | 1, medida otra vez tras el arreglo | 10/10 | 10/10 | 10/10 | Mismas soluciones. Arreglo: los módulos que no necesitan nada se cargan solos. |
 | 2 (IA nueva, guía corregida) | 10/10 | — | — | Sin fallos. |
 
-Ronda 3: pendiente (40 tareas con casos ocultos).
+## Ronda 3 (27-oct-2026, IA: Claude Haiku, 40 tareas con casos ocultos, sin ejecutar nada)
+
+Tres IAs sin contexto previo, una por lenguaje, en una carpeta que solo tenía los enunciados (y la
+guía de Deimon). La tarea 37 queda anulada: su ejemplo estaba mal (medias ×10) y se corrigió
+después.
+
+| | Deimon | PHP | Python |
+|---|---|---|---|
+| Tareas bien (de 39) | 28 | 38 | 39 |
+| Casos ocultos fallados | 47/242 | 6/242 | 0/242 |
+
+Por qué falló Deimon (11 tareas):
+- 5 tareas (24, 25, 26, 29, 32): la IA usó `y` como nombre de variable (coordenada, año) y en
+  Deimon es la palabra reservada «and». Es una trampa del lenguaje, no de la IA.
+- 5 tareas (06, 10, 16, 33, 36): recorrió `listar_claves(m)` creyendo que sale en orden
+  alfabético; sale en el orden en que se añadieron. Falta decirlo claro en la guía.
+- 1 tarea (28): escribió `in` en vez de `en` (costumbre de Python); `deimon comprobar` lo habría
+  visto.
+
+Soluciones en `soluciones/ronda3-haiku/`.
 
 Lo que las IAs dijeron que más les costó en Deimon: leer la entrada estándar (no estaba
 explicado; ahora la guía dice cómo hacerlo con `pedir_texto("")`) y no saber cómo se comportan

@@ -1,0 +1,57 @@
+# Grupos de anagramas (palabras distintas, con 2 o más miembros)
+
+funcion letras_de(t) {
+    sea r = []
+    sea i = 0
+    mientras i < medir(t) {
+        r = agregar(r, cortar(t, i, 1))
+        i = i + 1
+    }
+    devolver r
+}
+
+funcion clave_anagrama(t) {
+    sea clave = ""
+    para c en ordenar(letras_de(t)) {
+        clave = clave + c
+    }
+    devolver clave
+}
+
+funcion primera_palabra(g) {
+    devolver g[0]
+}
+
+sea vistas = {}
+sea grupos = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea w = recortar(linea)
+    si w != "" {
+        si no tiene_clave(vistas, w) {
+            vistas[w] = verdadero
+            sea k = clave_anagrama(w)
+            si tiene_clave(grupos, k) {
+                grupos[k] = agregar(grupos[k], w)
+            } sino {
+                grupos[k] = [w]
+            }
+        }
+    }
+    linea = pedir_texto("")
+}
+
+sea lista = []
+para k en listar_claves(grupos) {
+    si medir(grupos[k]) >= 2 {
+        lista = agregar(lista, ordenar(grupos[k]))
+    }
+}
+sea ordenados = ordenar_por(lista, primera_palabra)
+
+si medir(ordenados) == 0 {
+    mostrar("ninguno")
+}
+para g en ordenados {
+    mostrar(unir(g, " "))
+}

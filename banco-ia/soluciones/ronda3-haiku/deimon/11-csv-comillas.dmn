@@ -1,0 +1,32 @@
+# CSV con campos entre comillas simples
+
+funcion campos_csv(linea) {
+    sea campos = []
+    sea actual = ""
+    sea dentro = falso
+    sea i = 0
+    mientras i < medir(linea) {
+        sea c = cortar(linea, i, 1)
+        si c == "'" {
+            dentro = no dentro
+        } sino si c == "," y no dentro {
+            campos = agregar(campos, actual)
+            actual = ""
+        } sino {
+            actual = actual + c
+        }
+        i = i + 1
+    }
+    devolver agregar(campos, actual)
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea campos = campos_csv(linea)
+    sea salida = ""
+    para f en campos {
+        salida = salida + "[" + f + "]"
+    }
+    mostrar(a_texto(medir(campos)) + " campos: " + salida)
+    linea = pedir_texto("")
+}

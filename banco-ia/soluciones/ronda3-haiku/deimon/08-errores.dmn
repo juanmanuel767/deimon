@@ -1,0 +1,15 @@
+# Números con errores: suma los enteros válidos y avisa de los demás
+
+sea suma = 0
+sea n = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    n = n + 1
+    si coincide_patron(linea, "^-?[0-9]+$") {
+        suma = suma + a_numero(linea)
+    } sino {
+        mostrar("linea " + a_texto(n) + ": no es un numero: " + linea)
+    }
+    linea = pedir_texto("")
+}
+mostrar("suma: " + a_texto(suma))

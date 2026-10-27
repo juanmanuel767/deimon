@@ -1,0 +1,50 @@
+# Producto de enteros grandes (cifras en listas, menor cifra primero)
+
+funcion digitos_le(t) {
+    sea r = []
+    para i en invertir(rango(0, medir(t) - 1)) {
+        r = agregar(r, a_numero(cortar(t, i, 1)))
+    }
+    devolver r
+}
+
+funcion multiplicar_grandes(a, b) {
+    sea res = []
+    para _k en rango(0, medir(a) + medir(b) - 1) {
+        res = agregar(res, 0)
+    }
+    para i en rango(0, medir(a) - 1) {
+        para j en rango(0, medir(b) - 1) {
+            res[i + j] = res[i + j] + a[i] * b[j]
+        }
+    }
+    sea acarreo = 0
+    para k en rango(0, medir(res) - 1) {
+        sea t = res[k] + acarreo
+        res[k] = t % 10
+        acarreo = suelo(t / 10)
+    }
+    mientras medir(res) > 1 {
+        si res[medir(res) - 1] == 0 {
+            res = cortar(res, 0, medir(res) - 1)
+        } sino {
+            romper
+        }
+    }
+    devolver res
+}
+
+funcion texto_de(num) {
+    sea s = ""
+    para d en invertir(num) {
+        s = s + a_texto(d)
+    }
+    devolver s
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(recortar(linea), " ")
+    mostrar(texto_de(multiplicar_grandes(digitos_le(partes[0]), digitos_le(partes[1]))))
+    linea = pedir_texto("")
+}

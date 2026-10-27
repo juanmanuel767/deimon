@@ -1091,7 +1091,7 @@ Escribe:
       "p;q;7.5\np;q;7\np;q;7\np;q;7\np;q;7\np;q;7\np;q;7\np;q;7.0\n", "u;m;10\nv;m;10.0\nw;m;9\n"])
 def _(lineas):
     def media(suma, n):
-        return (suma * 20 + n) // (2 * n)
+        return (suma * 2 + n) // (2 * n)
 
     def fmt(h):
         return f"{h // 100}.{h % 100:02d}"

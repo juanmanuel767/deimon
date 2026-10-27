@@ -1,0 +1,27 @@
+# Permutaciones de las letras de una palabra, en orden alfabético
+
+funcion permutaciones(letras) {
+    si medir(letras) == 0 {
+        devolver [""]
+    }
+    sea res = []
+    para i en rango(0, medir(letras) - 1) {
+        sea resto = cortar(letras, 0, i) + cortar(letras, i + 1, nada)
+        para s en permutaciones(resto) {
+            res = agregar(res, letras[i] + s)
+        }
+    }
+    devolver res
+}
+
+sea palabra = recortar(pedir_texto(""))
+sea letras = []
+sea k = 0
+mientras k < medir(palabra) {
+    letras = agregar(letras, cortar(palabra, k, 1))
+    k = k + 1
+}
+
+para s en permutaciones(ordenar(letras)) {
+    mostrar(s)
+}

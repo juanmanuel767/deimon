@@ -1,0 +1,47 @@
+# Ventas por producto, con importes en céntimos
+
+funcion centimos_de(t) {
+    sea partes = partir(t, ".")
+    sea entero = a_numero(partes[0]) * 100
+    si medir(partes) == 1 {
+        devolver entero
+    }
+    sea dec = partes[1]
+    si medir(dec) == 1 {
+        dec = dec + "0"
+    }
+    devolver entero + a_numero(cortar(dec, 0, 2))
+}
+
+funcion centimos_texto(c) {
+    sea entero = suelo(c / 100)
+    sea resto = c - entero * 100
+    sea cents = a_texto(resto)
+    si resto < 10 {
+        cents = "0" + cents
+    }
+    devolver a_texto(entero) + "." + cents
+}
+
+sea totales = {}
+sea total_general = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si recortar(linea) != "" {
+        sea campos = partir(recortar(linea), ";")
+        sea importe = a_numero(campos[1]) * centimos_de(campos[2])
+        sea producto = campos[0]
+        si tiene_clave(totales, producto) {
+            totales[producto] = totales[producto] + importe
+        } sino {
+            totales[producto] = importe
+        }
+        total_general = total_general + importe
+    }
+    linea = pedir_texto("")
+}
+
+para producto en listar_claves(totales) {
+    mostrar(producto + ": " + centimos_texto(totales[producto]))
+}
+mostrar("TOTAL: " + centimos_texto(total_general))

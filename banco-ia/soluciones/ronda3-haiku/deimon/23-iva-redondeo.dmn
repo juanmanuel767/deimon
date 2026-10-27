@@ -1,0 +1,42 @@
+# IVA con redondeo exacto (todo en céntimos)
+
+funcion centimos_de(t) {
+    sea partes = partir(t, ".")
+    sea entero = a_numero(partes[0]) * 100
+    si medir(partes) == 1 {
+        devolver entero
+    }
+    sea dec = partes[1]
+    si medir(dec) == 1 {
+        dec = dec + "0"
+    }
+    devolver entero + a_numero(cortar(dec, 0, 2))
+}
+
+funcion centimos_texto(c) {
+    sea entero = suelo(c / 100)
+    sea resto = c - entero * 100
+    sea cents = a_texto(resto)
+    si resto < 10 {
+        cents = "0" + cents
+    }
+    devolver a_texto(entero) + "." + cents
+}
+
+funcion redondeo_medio(x, pct) {
+    devolver suelo((x * pct + 50) / 100)
+}
+
+sea suma = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), " ")
+    sea base = centimos_de(p[0])
+    sea tipo = a_numero(p[1])
+    sea iva = redondeo_medio(base, tipo)
+    sea total = base + iva
+    suma = suma + total
+    mostrar(centimos_texto(base) + " " + a_texto(tipo) + "% -> iva " + centimos_texto(iva) + " total " + centimos_texto(total))
+    linea = pedir_texto("")
+}
+mostrar("suma de totales: " + centimos_texto(suma))

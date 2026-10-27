@@ -1,0 +1,31 @@
+# Robot en una cuadrícula
+
+sea nombres = ["norte", "este", "sur", "oeste"]
+sea dx = [0, 1, 0, -1]
+sea dy = [1, 0, -1, 0]
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea x = 0
+    sea y = 0
+    sea dir = 0
+    sea mejor = 0
+    sea i = 0
+    mientras i < medir(linea) {
+        sea c = cortar(linea, i, 1)
+        si c == "A" {
+            x = x + dx[dir]
+            y = y + dy[dir]
+            si x * x + y * y > mejor {
+                mejor = x * x + y * y
+            }
+        } sino si c == "G" {
+            dir = (dir + 1) % 4
+        } sino {
+            dir = (dir + 3) % 4
+        }
+        i = i + 1
+    }
+    mostrar(a_texto(x) + "," + a_texto(y) + " " + nombres[dir] + " max=" + a_texto(mejor))
+    linea = pedir_texto("")
+}

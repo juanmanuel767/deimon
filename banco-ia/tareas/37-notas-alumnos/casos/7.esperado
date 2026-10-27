@@ -1,7 +1,7 @@
 == alumnos ==
-u: 100.00 sobresaliente
-v: 100.00 sobresaliente
-w: 90.00 sobresaliente
+u: 10.00 sobresaliente
+v: 10.00 sobresaliente
+w: 9.00 sobresaliente
 == asignaturas ==
-m: 96.67
+m: 9.67
 mejor alumno: u

@@ -1,0 +1,35 @@
+# Leer un JSON de tienda y mostrar productos con stock
+
+funcion centimos_texto(c) {
+    sea entero = suelo(c / 100)
+    sea resto = c - entero * 100
+    sea cents = a_texto(resto)
+    si resto < 10 {
+        cents = "0" + cents
+    }
+    devolver a_texto(entero) + "." + cents
+}
+
+sea todo = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    todo = todo + " " + linea
+    linea = pedir_texto("")
+}
+
+sea datos = desde_json(todo)
+mostrar("tienda: " + datos["tienda"])
+
+sea agotados = 0
+sea total = 0
+para p en datos["productos"] {
+    si p["stock"] > 0 {
+        sea valor = p["precio"] * p["stock"]
+        mostrar(p["nombre"] + ": " + centimos_texto(p["precio"]) + " x " + a_texto(p["stock"]) + " = " + centimos_texto(valor))
+        total = total + valor
+    } sino {
+        agotados = agotados + 1
+    }
+}
+mostrar("agotados: " + a_texto(agotados))
+mostrar("valor total: " + centimos_texto(total))

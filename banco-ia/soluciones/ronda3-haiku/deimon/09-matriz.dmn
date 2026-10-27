@@ -1,0 +1,55 @@
+# Matriz en espiral
+
+funcion numeros_de(linea) {
+    sea res = []
+    para t en partir(recortar(linea), " ") {
+        si t != "" {
+            res = agregar(res, a_numero(t))
+        }
+    }
+    devolver res
+}
+
+funcion como_texto(x) {
+    devolver a_texto(x)
+}
+
+sea dims = numeros_de(pedir_texto(""))
+sea F = dims[0]
+sea C = dims[1]
+sea m = []
+para i en rango(0, F - 1) {
+    m = agregar(m, numeros_de(pedir_texto("")))
+}
+
+sea salida = []
+sea arriba = 0
+sea abajo = F - 1
+sea izq = 0
+sea der = C - 1
+mientras arriba <= abajo y izq <= der {
+    para j en rango(izq, der) {
+        salida = agregar(salida, m[arriba][j])
+    }
+    arriba = arriba + 1
+    si arriba <= abajo {
+        para i en rango(arriba, abajo) {
+            salida = agregar(salida, m[i][der])
+        }
+    }
+    der = der - 1
+    si arriba <= abajo y izq <= der {
+        para j en invertir(rango(izq, der)) {
+            salida = agregar(salida, m[abajo][j])
+        }
+        abajo = abajo - 1
+    }
+    si arriba <= abajo y izq <= der {
+        para i en invertir(rango(arriba, abajo)) {
+            salida = agregar(salida, m[i][izq])
+        }
+        izq = izq + 1
+    }
+}
+
+mostrar(unir(transformar(salida, como_texto), " "))

@@ -1,0 +1,48 @@
+# Día de la semana de cada fecha (0 = lunes, según el día juliano)
+
+funcion dia_juliano(y, m, d) {
+    sea a = suelo((14 - m) / 12)
+    sea yy = y + 4800 - a
+    sea mm = m + 12 * a - 3
+    devolver d + suelo((153 * mm + 2) / 5) + 365 * yy + suelo(yy / 4) - suelo(yy / 100) + suelo(yy / 400) - 32045
+}
+
+funcion bisiesto(y) {
+    si y % 400 == 0 {
+        devolver verdadero
+    }
+    si y % 100 == 0 {
+        devolver falso
+    }
+    devolver y % 4 == 0
+}
+
+funcion dias_mes(y, m) {
+    si m == 2 {
+        si bisiesto(y) {
+            devolver 29
+        }
+        devolver 28
+    }
+    si m == 4 o m == 6 o m == 9 o m == 11 {
+        devolver 30
+    }
+    devolver 31
+}
+
+sea nombres = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, "-")
+    sea y = a_numero(p[0])
+    sea m = a_numero(p[1])
+    sea d = a_numero(p[2])
+    si m < 1 o m > 12 {
+        mostrar(linea + ": invalida")
+    } sino si d < 1 o d > dias_mes(y, m) {
+        mostrar(linea + ": invalida")
+    } sino {
+        mostrar(linea + ": " + nombres[dia_juliano(y, m, d) % 7])
+    }
+    linea = pedir_texto("")
+}

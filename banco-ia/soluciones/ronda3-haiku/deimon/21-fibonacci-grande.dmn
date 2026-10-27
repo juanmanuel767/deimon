@@ -1,0 +1,43 @@
+# Fibonacci exacto (números grandes como lista de cifras, menor cifra primero)
+
+funcion sumar_grandes(a, b) {
+    sea res = []
+    sea acarreo = 0
+    sea i = 0
+    mientras i < medir(a) o i < medir(b) o acarreo > 0 {
+        sea t = acarreo
+        si i < medir(a) {
+            t = t + a[i]
+        }
+        si i < medir(b) {
+            t = t + b[i]
+        }
+        res = agregar(res, t % 10)
+        acarreo = suelo(t / 10)
+        i = i + 1
+    }
+    devolver res
+}
+
+funcion fib_texto(n) {
+    sea a = [0]
+    sea b = [1]
+    sea k = 0
+    mientras k < n {
+        sea sig = sumar_grandes(a, b)
+        a = b
+        b = sig
+        k = k + 1
+    }
+    sea texto = ""
+    para d en invertir(a) {
+        texto = texto + a_texto(d)
+    }
+    devolver texto
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(fib_texto(a_numero(recortar(linea))))
+    linea = pedir_texto("")
+}

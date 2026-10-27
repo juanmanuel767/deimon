@@ -1,0 +1,64 @@
+# Carrito con descuentos por cantidad y por pedido (todo en céntimos)
+
+funcion centimos_de(t) {
+    sea partes = partir(t, ".")
+    sea entero = a_numero(partes[0]) * 100
+    si medir(partes) == 1 {
+        devolver entero
+    }
+    sea dec = partes[1]
+    si medir(dec) == 1 {
+        dec = dec + "0"
+    }
+    devolver entero + a_numero(cortar(dec, 0, 2))
+}
+
+funcion centimos_texto(c) {
+    sea entero = suelo(c / 100)
+    sea resto = c - entero * 100
+    sea cents = a_texto(resto)
+    si resto < 10 {
+        cents = "0" + cents
+    }
+    devolver a_texto(entero) + "." + cents
+}
+
+# x * pct / 100 redondeado al céntimo, la mitad hacia arriba (x es entero en céntimos)
+funcion redondeo_medio(x, pct) {
+    devolver suelo((x * pct + 50) / 100)
+}
+
+sea subtotal = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), " ")
+    sea cant = a_numero(p[1])
+    sea bruto = cant * centimos_de(p[2])
+    sea pct = 0
+    si cant >= 10 {
+        pct = 10
+    } sino si cant >= 5 {
+        pct = 5
+    }
+    sea importe = bruto - redondeo_medio(bruto, pct)
+    sea marca = ""
+    si pct != 0 {
+        marca = " (-" + a_texto(pct) + "%)"
+    }
+    mostrar(p[0] + " x" + a_texto(cant) + ": " + centimos_texto(importe) + marca)
+    subtotal = subtotal + importe
+    linea = pedir_texto("")
+}
+
+mostrar("subtotal: " + centimos_texto(subtotal))
+sea total = subtotal
+si subtotal >= 10000 {
+    total = redondeo_medio(subtotal, 95)
+    mostrar("descuento pedido: -" + centimos_texto(subtotal - total))
+}
+sea envio = 495
+si total >= 5000 {
+    envio = 0
+}
+mostrar("envio: " + centimos_texto(envio))
+mostrar("total: " + centimos_texto(total + envio))

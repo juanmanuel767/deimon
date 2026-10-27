@@ -1,0 +1,38 @@
+# Cola de banco con K cajas
+
+sea k = a_numero(recortar(pedir_texto("")))
+sea libre = []
+para _i en rango(0, k - 1) {
+    libre = agregar(libre, 0)
+}
+
+sea espera_total = 0
+sea termina = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), " ")
+    sea llegada = a_numero(p[0])
+    sea duracion = a_numero(p[1])
+    sea mejor = 0
+    sea i = 1
+    mientras i < k {
+        si libre[i] < libre[mejor] {
+            mejor = i
+        }
+        i = i + 1
+    }
+    sea empieza = llegada
+    si libre[mejor] > llegada {
+        empieza = libre[mejor]
+    }
+    libre[mejor] = empieza + duracion
+    sea espera = empieza - llegada
+    espera_total = espera_total + espera
+    si libre[mejor] > termina {
+        termina = libre[mejor]
+    }
+    mostrar(p[2] + ": caja " + a_texto(mejor + 1) + " empieza " + a_texto(empieza) + " espera " + a_texto(espera))
+    linea = pedir_texto("")
+}
+mostrar("espera total: " + a_texto(espera_total))
+mostrar("termina: " + a_texto(termina))

@@ -1,0 +1,82 @@
+# Notas de alumnos con medias (escala y redondeo según el ejemplo del enunciado)
+
+funcion centimos_de(t) {
+    sea partes = partir(t, ".")
+    sea entero = a_numero(partes[0]) * 100
+    si medir(partes) == 1 {
+        devolver entero
+    }
+    sea dec = partes[1]
+    si medir(dec) == 1 {
+        dec = dec + "0"
+    }
+    devolver entero + a_numero(cortar(dec, 0, 2))
+}
+
+funcion centimos_texto(c) {
+    sea entero = suelo(c / 100)
+    sea resto = c - entero * 100
+    sea cents = a_texto(resto)
+    si resto < 10 {
+        cents = "0" + cents
+    }
+    devolver a_texto(entero) + "." + cents
+}
+
+# Devuelve la media mostrada en centésimas: (suma_en_centesimas * 10 / cuenta) redondeado
+funcion media_visible(suma, cuenta) {
+    devolver suelo((20 * suma + cuenta) / (2 * cuenta))
+}
+
+funcion calificacion(r) {
+    si r < 500 {
+        devolver "suspenso"
+    }
+    si r < 700 {
+        devolver "aprobado"
+    }
+    si r < 900 {
+        devolver "notable"
+    }
+    devolver "sobresaliente"
+}
+
+funcion sumar_en(mapa, clave, nota) {
+    sea r = {"s": 0, "c": 0}
+    si tiene_clave(mapa, clave) {
+        r = mapa[clave]
+    }
+    r["s"] = r["s"] + nota
+    r["c"] = r["c"] + 1
+    mapa[clave] = r
+    devolver mapa
+}
+
+sea alumnos = {}
+sea asignaturas = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(recortar(linea), ";")
+    sea nota = centimos_de(p[2])
+    alumnos = sumar_en(alumnos, p[0], nota)
+    asignaturas = sumar_en(asignaturas, p[1], nota)
+    linea = pedir_texto("")
+}
+
+mostrar("== alumnos ==")
+sea mejor = "nadie"
+sea mejor_r = -1
+para a en listar_claves(alumnos) {
+    sea r = media_visible(alumnos[a]["s"], alumnos[a]["c"])
+    mostrar(a + ": " + centimos_texto(r) + " " + calificacion(r))
+    si r > mejor_r {
+        mejor_r = r
+        mejor = a
+    }
+}
+
+mostrar("== asignaturas ==")
+para g en listar_claves(asignaturas) {
+    mostrar(g + ": " + centimos_texto(media_visible(asignaturas[g]["s"], asignaturas[g]["c"])))
+}
+mostrar("mejor alumno: " + mejor)

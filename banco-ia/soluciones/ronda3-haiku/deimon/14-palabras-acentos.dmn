@@ -1,0 +1,55 @@
+# Contar palabras (letras con acento y ñ incluidas)
+
+funcion es_letra(c) {
+    devolver incluye("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZáéíóúüñÁÉÍÓÚÜÑ", c)
+}
+
+funcion contar_palabra(mapa, p) {
+    si tiene_clave(mapa, p) {
+        mapa[p] = mapa[p] + 1
+    } sino {
+        mapa[p] = 1
+    }
+    devolver mapa
+}
+
+sea conteo = {}
+sea total = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea actual = ""
+    sea i = 0
+    mientras i < medir(linea) {
+        sea letra = cortar(linea, i, 1)
+        si es_letra(letra) {
+            actual = actual + letra
+        } sino {
+            si actual != "" {
+                conteo = contar_palabra(conteo, minusculas(actual))
+                total = total + 1
+                actual = ""
+            }
+        }
+        i = i + 1
+    }
+    si actual != "" {
+        conteo = contar_palabra(conteo, minusculas(actual))
+        total = total + 1
+    }
+    linea = pedir_texto("")
+}
+
+mostrar("total: " + a_texto(total))
+sea claves = listar_claves(conteo)
+mostrar("distintas: " + a_texto(medir(claves)))
+
+sea registros = []
+para clave en claves {
+    registros = agregar(registros, {"p": clave, "v": conteo[clave]})
+}
+sea ordenados = ordenar_por(registros, ["-v", "p"])
+sea k = 0
+mientras k < medir(ordenados) y k < 5 {
+    mostrar(ordenados[k]["p"] + ": " + a_texto(ordenados[k]["v"]))
+    k = k + 1
+}

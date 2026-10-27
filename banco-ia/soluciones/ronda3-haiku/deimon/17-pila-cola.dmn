@@ -1,0 +1,42 @@
+# Pila y cola
+
+sea pila = []
+sea cola = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(recortar(linea), " ")
+    sea orden = partes[0]
+    si orden == "apilar" {
+        pila = agregar(pila, partes[1])
+    } sino si orden == "desapilar" {
+        si medir(pila) == 0 {
+            mostrar("error: pila vacia")
+        } sino {
+            sea arriba = pila[medir(pila) - 1]
+            pila = cortar(pila, 0, medir(pila) - 1)
+            mostrar("pila->" + arriba)
+        }
+    } sino si orden == "encolar" {
+        cola = agregar(cola, partes[1])
+    } sino si orden == "desencolar" {
+        si medir(cola) == 0 {
+            mostrar("error: cola vacia")
+        } sino {
+            sea primero = cola[0]
+            cola = cortar(cola, 1, nada)
+            mostrar("cola->" + primero)
+        }
+    } sino si orden == "mostrar" {
+        sea txt_pila = "vacia"
+        si medir(pila) > 0 {
+            txt_pila = unir(pila, " ")
+        }
+        sea txt_cola = "vacia"
+        si medir(cola) > 0 {
+            txt_cola = unir(cola, " ")
+        }
+        mostrar("pila: " + txt_pila)
+        mostrar("cola: " + txt_cola)
+    }
+    linea = pedir_texto("")
+}
