@@ -12,7 +12,7 @@ termina, se marca con HECHO y la fecha.
 3. HECHO (26-oct-2026, `tipo Persona { nombre: texto }`, `Persona({...})`, tests/plan_lenguaje.rs) Tipos propios con nombre (como «Persona» con nombre y edad) que avisen si falta un campo.
 4. HECHO (26-oct-2026, `9007199254740993`, factorial de 30 exacto en los dos motores; con NaN las comparaciones dan falso; tests/plan_lenguaje.rs) Números enteros exactos y grandes.
 5. HECHO (26-oct-2026, `f"Hola {nombre}"`, `"""varias líneas"""`, tests/plan_lenguaje.rs) Textos de varias líneas y textos con variables dentro: `"Hola {nombre}"`.
-6. Comprobar tipos antes de ejecutar en todo el programa.
+6. HECHO (26-oct-2026, tipo devuelto por las funciones propias, tipos de los argumentos que entran en ellas, tabla de argumentos de integradas e índices; tests/plan_lenguaje.rs) Comprobar tipos antes de ejecutar en todo el programa.
 
 ## 2. Para que una IA no falle
 1. Ejemplos ejecutables en la guía para cada función de los módulos.

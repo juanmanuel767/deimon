@@ -86,7 +86,7 @@ fn un_error_en_ejecucion_no_aborta_las_demas_pruebas() {
     let f = escribir(
         &c,
         "error.dmn",
-        "funcion juntar(a, b) {\n  devolver a + b\n}\n\nprueba \"revienta\" {\n  sea x = juntar(1, verdadero)\n  comprobar(verdadero)\n}\n\nprueba \"sigue\" {\n  comprobar_igual(1 + 1, 2)\n}\n",
+        "funcion juntar(a, b) {\n  devolver a + b\n}\n\nprueba \"revienta\" {\n  sea x = juntar(1, elegir(verdadero, verdadero, 0))\n  comprobar(verdadero)\n}\n\nprueba \"sigue\" {\n  comprobar_igual(1 + 1, 2)\n}\n",
     );
     let o = deimon(&c, &["probar", f.to_str().unwrap()]);
     let texto = salida(&o);

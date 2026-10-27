@@ -274,7 +274,7 @@ fn error_en_ejecucion_con_la_linea_de_la_sentencia() {
     // Dentro de una función (y no la línea de la llamada).
     fs::write(
         c.join("b.dmn"),
-        "funcion mala(n) {\n  sea a = 1\n  devolver a + n[0]\n}\n\nmostrar(mala(1))\n",
+        "funcion mala(n) {\n  sea a = 1\n  devolver a + n[0]\n}\n\nmostrar(mala(elegir(verdadero, 1, 2)))\n",
     )
     .unwrap();
     let o = deimon(&c, &["ejecutar", "b.dmn"]);
@@ -328,7 +328,8 @@ fn la_guia_contiene_todas_las_integradas_y_el_generador_las_acepta() {
         assert!(texto.contains(&integrada.firma()), "falta {} en la guía", integrada.nombre);
         assert!(json.contains(&format!("\"nombre\":\"{}\"", integrada.nombre)));
         // El generador acepta la integrada con su número de argumentos...
-        let argumentos = vec!["1"; integrada.parametros.len()].join(", ");
+        // De tipo desconocido para el revisor de tipos (con un 1 avisaría de `medir(1)`).
+        let argumentos = vec!["elegir(verdadero, 1, 1)"; integrada.parametros.len()].join(", ");
         let fuente = format!(
             "ruta \"/\" {{\n  devolver \"x\"\n}}\n{}({})\n",
             integrada.nombre, argumentos

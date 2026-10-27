@@ -157,6 +157,26 @@ valor escrito tal cual, una variable que solo ha recibido ese tipo, el resultado
 `a_texto`, `medir`...); si duda, calla, así que nunca da falsas alarmas. Los mensajes son los
 mismos que daría el programa al fallar, con «(se ve sin ejecutar el programa)».
 
+La revisión alcanza a todo el programa, no solo a cada función por separado:
+
+- **Lo que devuelve una función tuya** se conoce si todos sus `devolver` dan el mismo tipo y la
+  función no puede acabar sin `devolver`; así `funcion nombre() { devolver "Ana" }` y
+  `nombre() - 1` avisa aunque la función esté definida más abajo. Si a veces devuelve texto y a
+  veces número, o a veces no devuelve nada, no se avisa.
+- **Lo que entra en una función tuya**: al llamarla con argumentos de tipo seguro se revisa su
+  cuerpo con esos tipos. Con `funcion doble(x) { devolver x * 2 }` y `doble("a")` el aviso señala
+  la línea de dentro de la función y la llamada: «(con doble("a") de la línea 4; se ve sin
+  ejecutar el programa)». Cada fallo se avisa una sola vez.
+- **Argumentos de las integradas**: `medir(5)` avisa «medir() espera una lista o un texto, no
+  número», igual que al ejecutar. Cubre `a_numero`, `medir`, `incluye`, `ordenar`, `ordenar_por`,
+  `invertir`, `cortar`, `sumar_lista`, `agregar`, `tiene_clave`, `quitar_clave` y
+  `rellenar_plantilla`.
+- **Índices**: `[1, 2]["a"]` avisa «el índice debe ser un número entero, no texto» (una lista
+  vacía no, porque es también una lista con claves).
+
+Las funciones guardadas en variables (`sea f = doble`) y los argumentos de tipo dudoso no se
+revisan: si duda, calla.
+
 `deimon comprobar` traduce el programa sin compilarlo ni ejecutarlo. Los errores de nombres,
 argumentos y estructura se recogen todos a la vez; los de caracteres y de sintaxis
 detienen el análisis en el primero. Termina con código 1 si hay errores y con 0 si no

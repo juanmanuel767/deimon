@@ -411,3 +411,238 @@ fn formatear_conserva_los_textos_con_valores_y_de_varias_lineas() {
     assert!(una.contains("f\"\"\"\n    v: {n}\n    \"\"\""), "{}", una);
     assert_eq!(deimon::formato::formatear(&una).unwrap(), una);
 }
+
+// --- Punto 6: comprobar tipos antes de ejecutar en todo el programa ---
+
+/// Revisa el programa con `deimon comprobar` y devuelve lo que escribe, sin exigir que falle.
+fn salida_de_comprobar(nombre: &str, programa: &str) -> (bool, String) {
+    let carpeta = carpeta(nombre);
+    let archivo = carpeta.join(format!("{}.dmn", nombre));
+    fs::write(&archivo, programa).expect("no se pudo escribir el programa");
+    let salida = Command::new(binario()).arg("comprobar").arg(&archivo).output().expect("deimon comprobar");
+    let texto = format!("{}{}", String::from_utf8_lossy(&salida.stdout), String::from_utf8_lossy(&salida.stderr));
+    (salida.status.success(), texto)
+}
+
+/// El programa es válido: `deimon comprobar` no da ningún aviso de tipos.
+fn sin_aviso_de_tipos(nombre: &str, programa: &str) {
+    let (valido, texto) = salida_de_comprobar(nombre, programa);
+    assert!(valido && !texto.contains("E025"), "no debía avisar:\n{}", texto);
+}
+
+#[test]
+fn lo_que_devuelve_una_funcion_propia_se_conoce_antes_de_ejecutar() {
+    let directo = revisar("devuelve_directo", "funcion nombre() {\n    devolver \"Ana\"\n}\nmostrar(nombre() - 1)\n");
+    assert!(directo.contains("línea 4: no se puede restar texto y número (se ve sin ejecutar el programa)"), "{}", directo);
+    assert!(directo.contains("E025"), "{}", directo);
+    let con_variable = revisar("devuelve_variable", "funcion g() {\n    devolver \"x\"\n}\nsea v = g()\nmostrar(v * 2)\n");
+    assert!(con_variable.contains("línea 5: no se puede multiplicar texto y número"), "{}", con_variable);
+    // La función se define después de la llamada.
+    let despues = revisar("devuelve_despues", "mostrar(g() - 1)\nfuncion g() {\n    devolver \"x\"\n}\n");
+    assert!(despues.contains("línea 1: no se puede restar texto y número"), "{}", despues);
+    // Una función que devuelve lo que devuelve otra.
+    let encadenada = revisar("devuelve_cadena", "funcion a() {\n    devolver b()\n}\nfuncion b() {\n    devolver 1 < 2\n}\nmostrar(a() + 1)\n");
+    assert!(encadenada.contains("no se puede sumar lógico y número"), "{}", encadenada);
+    // Al ejecutar falla igual.
+    assert!(error_de_ejecutar("devuelve_ejecutar", "funcion nombre() {\n    devolver \"Ana\"\n}\nmostrar(nombre() - 1)\n").contains("no se puede restar texto y número"));
+}
+
+#[test]
+fn los_tipos_de_los_argumentos_se_siguen_dentro_de_la_funcion() {
+    let programa = "funcion doble(x) {\n    devolver x * 2\n}\nmostrar(doble(\"a\"))\nmostrar(doble(\"b\"))\nmostrar(doble(3))\n";
+    let texto = revisar("entra_en_funcion", programa);
+    assert!(
+        texto.contains("línea 2: no se puede multiplicar texto y número (con doble(\"a\") de la línea 4; se ve sin ejecutar el programa)"),
+        "{}",
+        texto
+    );
+    assert_eq!(texto.matches("no se puede multiplicar").count(), 1, "el mismo aviso no se repite:\n{}", texto);
+    assert!(error_de_ejecutar("entra_en_funcion_ejecutar", programa).contains("no se puede multiplicar texto y número"));
+    // Pasa de una función a otra.
+    let encadenada = revisar(
+        "entra_en_cadena",
+        "funcion doble(x) {\n    devolver x * 2\n}\nfuncion uno(valor) {\n    devolver doble(valor)\n}\nmostrar(uno(verdadero))\n",
+    );
+    assert!(encadenada.contains("línea 2: no se puede multiplicar lógico y número (con uno(verdadero) de la línea 7;"), "{}", encadenada);
+}
+
+#[test]
+fn argumentos_de_las_integradas_y_indices_se_avisan_con_el_mensaje_de_ejecutar() {
+    let medir = revisar("integrada_medir", "mostrar(medir(5))\n");
+    assert!(medir.contains("medir() espera una lista o un texto, no número (se ve sin ejecutar el programa)"), "{}", medir);
+    assert!(error_de_ejecutar("integrada_medir_ejecutar", "mostrar(medir(5))\n").contains("medir() espera una lista o un texto, no número"));
+    let indice = revisar("indice_texto_en_lista", "sea l = [1, 2]\nmostrar(l[\"a\"])\n");
+    assert!(indice.contains("línea 2: el índice debe ser un número entero, no texto"), "{}", indice);
+    assert!(error_de_ejecutar("indice_texto_en_lista_ejecutar", "sea l = [1, 2]\nmostrar(l[\"a\"])\n").contains("el índice debe ser un número entero, no texto"));
+    let en_texto = revisar("indice_texto_en_texto", "sea t = \"hola\"\nmostrar(t[\"a\"])\n");
+    assert!(en_texto.contains("el índice debe ser un número entero, no texto"), "{}", en_texto);
+}
+
+/// Un valor de cada tipo, escrito tal cual (así el revisor sabe seguro de qué tipo es).
+fn muestra_de_tipo(tipo: &str) -> &'static str {
+    match tipo {
+        "número" => "5",
+        "texto" => "\"abc\"",
+        "lógico" => "verdadero",
+        "nada" => "nada",
+        "lista" => "[1, 2]",
+        "lista con claves" => "{\"a\": 1}",
+        otro => panic!("tipo sin muestra: {}", otro),
+    }
+}
+
+const TIPOS_DE_MUESTRA: [&str; 6] = ["número", "texto", "lógico", "nada", "lista", "lista con claves"];
+
+/// Los argumentos de la llamada: el de la regla es `probado`; los demás, valores que la tabla admite.
+fn argumentos_para(integrada: &str, reglas: &[deimon::tipos::ReglaArgumento], regla: &deimon::tipos::ReglaArgumento, probado: &str) -> String {
+    let cuantos = deimon::integradas::buscar(integrada).expect("la integrada existe").parametros.len();
+    let argumentos: Vec<String> = (0..cuantos)
+        .map(|posicion| {
+            if posicion == regla.posicion {
+                return muestra_de_tipo(probado).to_string();
+            }
+            if let Some((de, tipo)) = regla.cuando {
+                if de == posicion {
+                    return muestra_de_tipo(tipo).to_string();
+                }
+            }
+            match reglas.iter().find(|otra| otra.posicion == posicion) {
+                Some(otra) => muestra_de_tipo(otra.permitidos[0]).to_string(),
+                None => "\"x\"".to_string(),
+            }
+        })
+        .collect();
+    argumentos.join(", ")
+}
+
+#[test]
+fn la_tabla_de_integradas_no_miente() {
+    let mut casos = 0;
+    for (integrada, reglas) in deimon::tipos::TABLA_ARGUMENTOS {
+        for regla in reglas.iter() {
+            for tipo in TIPOS_DE_MUESTRA {
+                let programa = format!("mostrar({}({}))\n", integrada, argumentos_para(integrada, reglas, regla, tipo));
+                let nombre = format!("tabla_{}_{}_{}", integrada, regla.posicion, casos);
+                casos += 1;
+                let (_, comprobado) = salida_de_comprobar(&nombre, &programa);
+                if regla.permitidos.contains(&tipo) {
+                    // Tipo permitido: no hay aviso.
+                    assert!(!comprobado.contains("E025"), "{} no debía avisar:\n{}", programa, comprobado);
+                    continue;
+                }
+                let mensaje = regla.mensaje.replace("{}", tipo);
+                assert!(comprobado.contains("E025") && comprobado.contains(&mensaje), "{} debía avisar «{}»:\n{}", programa, mensaje, comprobado);
+                let ejecutado = error_de_ejecutar(&format!("{}_ejecutar", nombre), &programa);
+                assert!(ejecutado.contains(&mensaje), "{} al ejecutar dio otro mensaje (esperado «{}»):\n{}", programa, mensaje, ejecutado);
+            }
+        }
+    }
+    assert!(casos > 50, "la tabla parece vacía");
+}
+
+#[test]
+fn la_tabla_calla_cuando_no_esta_segura() {
+    // Un argumento de tipo desconocido (un parámetro) nunca avisa.
+    sin_aviso_de_tipos("tabla_desconocido", "funcion f(x) {\n    devolver medir(x)\n}\nmostrar(f(\"abc\"))\n");
+    // `incluye` en un texto busca un texto, pero en una lista vale cualquier cosa.
+    sin_aviso_de_tipos("tabla_incluye_lista", "mostrar(incluye([1, 2], 1))\nmostrar(incluye(\"abc\", \"b\"))\n");
+    // Una lista vacía admite un índice de texto (es también una lista con claves vacía).
+    sin_aviso_de_tipos("indice_en_lista_vacia", "sea d = []\nmostrar(d[\"a\"])\nmostrar(d[\"a\"] == nada)\n");
+    sin_aviso_de_tipos("indice_en_lista_con_claves", "sea d = {\"a\": 1}\nmostrar(d[\"a\"])\nmostrar(d[0])\n");
+}
+
+#[test]
+fn lo_que_no_se_sabe_con_seguridad_no_avisa() {
+    // A veces texto y a veces número.
+    sin_aviso_de_tipos(
+        "mezcla_de_tipos",
+        "funcion a(x) {\n    si x > 1 {\n        devolver \"s\"\n    }\n    devolver 3\n}\nmostrar(a(1) - 1)\n",
+    );
+    // No devuelve en todos los caminos (devuelve nada en alguno).
+    sin_aviso_de_tipos(
+        "sin_devolver_en_todo",
+        "funcion b(x) {\n    si x > 1 {\n        devolver \"s\"\n    }\n}\nmostrar(b(1) - 1)\n",
+    );
+    // Dos devolver de tipos distintos.
+    sin_aviso_de_tipos(
+        "dos_devolver_distintos",
+        "funcion c(x) {\n    si x > 1 {\n        devolver \"s\"\n    } sino {\n        devolver 2\n    }\n}\nmostrar(c(1) - 1)\n",
+    );
+    // Parámetro usado como número y llamado con número.
+    sin_aviso_de_tipos("parametro_numero", "funcion doble(x) {\n    devolver x * 2\n}\nmostrar(doble(4) + 1)\n");
+    // Recursiva llamada con número.
+    sin_aviso_de_tipos(
+        "recursiva",
+        "funcion fact(n) {\n    si n <= 1 {\n        devolver 1\n    }\n    devolver n * fact(n - 1)\n}\nmostrar(fact(5) - 1)\n",
+    );
+    // Funciones como valores: no se sabe qué función es.
+    sin_aviso_de_tipos(
+        "funcion_como_valor",
+        "funcion doble(x) {\n    devolver x * 2\n}\nsea f = doble\nmostrar(f(\"a\"))\nmostrar(f(3) - 1)\n",
+    );
+    // Una función que se llama con un parámetro de tipo desconocido.
+    sin_aviso_de_tipos(
+        "argumento_desconocido",
+        "funcion doble(x) {\n    devolver x * 2\n}\nfuncion triple(valor) {\n    devolver doble(valor) + valor\n}\nmostrar(triple(2))\n",
+    );
+}
+
+/// Todos los `.dmn` de una carpeta (y sus subcarpetas).
+fn programas_de(carpeta: &std::path::Path, lista: &mut Vec<PathBuf>) {
+    let Ok(entradas) = fs::read_dir(carpeta) else { return };
+    for entrada in entradas.flatten() {
+        let ruta = entrada.path();
+        if ruta.is_dir() {
+            if ruta.file_name().is_some_and(|n| n == "target") {
+                continue;
+            }
+            programas_de(&ruta, lista);
+        } else if ruta.extension().is_some_and(|e| e == "dmn") {
+            lista.push(ruta);
+        }
+    }
+}
+
+#[test]
+fn los_programas_del_repositorio_no_ganan_avisos_de_tipos() {
+    let raiz = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let mut programas = Vec::new();
+    for carpeta in ["ejemplos", "ejemplos-web", "ejemplos-nucleo", "proyectos"] {
+        programas_de(&raiz.join(carpeta), &mut programas);
+    }
+    assert!(programas.len() > 20, "no se encontraron los ejemplos");
+    for programa in programas {
+        let salida = Command::new(binario())
+            .arg("comprobar")
+            .arg(programa.file_name().expect("nombre"))
+            .current_dir(programa.parent().expect("carpeta"))
+            .output()
+            .expect("deimon comprobar");
+        let texto = format!("{}{}", String::from_utf8_lossy(&salida.stdout), String::from_utf8_lossy(&salida.stderr));
+        assert!(!texto.contains("E025"), "{} no debía tener avisos de tipos:\n{}", programa.display(), texto);
+    }
+}
+
+#[test]
+fn solo_avisa_de_lo_que_se_ejecuta_seguro_en_la_llamada() {
+    // Con modo 2 nunca se llega a `x - 1`.
+    sin_aviso_de_tipos(
+        "llamada_con_si",
+        "funcion p(x, modo) {\n    si modo == 1 {\n        devolver x - 1\n    }\n    devolver x\n}\nmostrar(p(\"a\", 2))\n",
+    );
+    // Lo que falla dentro de `intentar` lo atrapa `si falla`.
+    sin_aviso_de_tipos(
+        "dentro_de_intentar",
+        "intentar {\n    mostrar(\"a\" - 1)\n} si falla e {\n    mostrar(e[\"mensaje\"])\n}\n",
+    );
+    sin_aviso_de_tipos(
+        "llamada_dentro_de_intentar",
+        "funcion doble(x) {\n    devolver x * 2\n}\nintentar {\n    mostrar(doble(\"a\"))\n} si falla e {\n    mostrar(e[\"mensaje\"])\n}\n",
+    );
+    // Una sentencia del nivel superior del cuerpo sí se ejecuta seguro.
+    let texto = revisar(
+        "llamada_nivel_superior",
+        "funcion q(x) {\n    sea r = x - 1\n    mostrar(r)\n    devolver r\n}\nmostrar(q(\"a\"))\n",
+    );
+    assert!(texto.contains("línea 2: no se puede restar texto y número (con q(\"a\") de la línea 6;"), "{}", texto);
+}
