@@ -2,7 +2,7 @@
 # Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
 coincide_patron | texto, patron | dice si el patrón aparece en alguna parte del texto | coincide_patron("pedido 42", "\\d+")   # verdadero
 buscar_patron | texto, patron | busca la primera coincidencia: devuelve una lista [todo, grupo1, grupo2...] o nada | buscar_patron("ana@x.es", "(\\w+)@(\\w+)")   # [ana@x, ana, x]
-buscar_todos_patron | texto, patron | busca todas las coincidencias: devuelve una lista con una lista [todo, grupo1...] por cada una | buscar_todos_patron("a1 b22", "[a-z](\\d+)")
+buscar_todos_patron | texto, patron | busca todas las coincidencias: devuelve una lista con una lista [todo, grupo1...] por cada una | buscar_todos_patron("a1 b22", "[a-z](\\d+)")   # [[a1, 1], [b22, 22]]
 reemplazar_patron | texto, patron, nuevo | cambia las coincidencias por otro texto; en el nuevo texto $1, $2... son los grupos | reemplazar_patron("2024-05", "(\\d+)-(\\d+)", "$2/$1")   # 05/2024
-partir_patron | texto, patron | divide el texto en cada coincidencia del patrón y devuelve una lista | partir_patron("a, b;c", "[,;]\\s*")
-buscar_columnas_patron | texto, patron | como buscar_todos_patron pero ordenado por columnas: [todas las coincidencias, todos los grupo1, ...] | buscar_columnas_patron("a1 b2", "([a-z])(\\d)")
+partir_patron | texto, patron | divide el texto en cada coincidencia del patrón y devuelve una lista | partir_patron("a, b;c", "[,;]\\s*")   # [a, b, c]
+buscar_columnas_patron | texto, patron | como buscar_todos_patron pero ordenado por columnas: [todas las coincidencias, todos los grupo1, ...] | buscar_columnas_patron("a1 b2", "([a-z])(\\d)")   # [[a1, b2], [a, b], [1, 2]]

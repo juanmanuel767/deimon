@@ -1,7 +1,7 @@
 # Funciones del módulo "archivos" de la biblioteca estándar.
 # Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
-escribir_archivo | ruta, texto | guarda un texto en un archivo (lo crea o lo reemplaza) | escribir_archivo("informe.txt", "Hola")
-leer_archivo | ruta | devuelve el texto de un archivo, o nada si no existe | sea texto = leer_archivo("informe.txt")
-existe_archivo | ruta | dice si existe un archivo o carpeta | existe_archivo("informe.txt")
-borrar_archivo | ruta | borra un archivo (no pasa nada si no existe) | borrar_archivo("informe.txt")
+escribir_archivo | ruta, texto | guarda un texto en un archivo (lo crea o lo reemplaza) | escribir_archivo("informe.txt", "Hola")   # nada
+leer_archivo | ruta | devuelve el texto de un archivo, o nada si no existe | leer_archivo("no_existe.txt")   # nada
+existe_archivo | ruta | dice si existe un archivo o carpeta | existe_archivo("no_existe.txt")   # falso
+borrar_archivo | ruta | borra un archivo (no pasa nada si no existe) | borrar_archivo("informe.txt")   # nada
 listar_archivos | carpeta | lista ordenada de los nombres de una carpeta | listar_archivos(".")

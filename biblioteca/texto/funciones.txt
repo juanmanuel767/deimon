@@ -2,10 +2,10 @@
 # Cada línea es: nombre | parámetros separados por comas (0 si no tiene) | descripción en español | ejemplo de una línea
 mayusculas | texto | devuelve el texto en mayúsculas | mayusculas("hola")   # HOLA
 minusculas | texto | devuelve el texto en minúsculas | minusculas("HOLA")   # hola
-recortar | texto | quita los espacios del principio y del final | recortar("  hola  ")
+recortar | texto | quita los espacios del principio y del final | recortar("  hola  ")   # hola
 contiene | texto, buscado | dice si el texto contiene otro texto | contiene("hola mundo", "mundo")   # verdadero
-reemplazar | texto, buscado, nuevo | cambia todas las apariciones de un texto por otro | reemplazar("a-b", "-", "+")
-partir | texto, separador | divide el texto por un separador y devuelve una lista | partir("a,b", ",")
+reemplazar | texto, buscado, nuevo | cambia todas las apariciones de un texto por otro | reemplazar("a-b", "-", "+")   # a+b
+partir | texto, separador | divide el texto por un separador y devuelve una lista | partir("a,b", ",")   # [a, b]
 empieza_con | texto, inicio | dice si el texto empieza por otro texto | empieza_con("hola", "ho")   # verdadero
 termina_con | texto, final | dice si el texto termina en otro texto | termina_con("hola", "la")   # verdadero
 repetir | texto, veces | repite un texto varias veces | repetir("ja", 3)   # jajaja

@@ -4,10 +4,14 @@
 //! rutas web ni sesiones se ejecutan además con el intérprete, y si el ejemplo anuncia su
 //! resultado con un comentario (`# 3`, `# escribe 42`) se compara con lo que escribe de verdad.
 //!
-//! Para que nada se salte en silencio hay tres listas explícitas, cada entrada con su motivo:
-//! EXCEPCIONES (no se comprueban), NO_EJECUTAR (solo se comprueban) y NO_ES_RESULTADO
-//! (comentarios que no anuncian un resultado). Un ejemplo nuevo se comprueba solo; si falla,
-//! la prueba falla hasta arreglarlo o apuntarlo en la lista que toque.
+//! Para que nada se salte en silencio hay cuatro listas explícitas, cada entrada con su motivo:
+//! EXCEPCIONES (no se comprueban), NO_EJECUTAR (solo se comprueban), NO_ES_RESULTADO
+//! (comentarios que no anuncian un resultado) y SIN_RESULTADO (funciones de biblioteca cuyo
+//! ejemplo se ejecuta pero no puede anunciar su resultado). Un ejemplo nuevo se comprueba solo;
+//! si falla, la prueba falla hasta arreglarlo o apuntarlo en la lista que toque.
+//!
+//! Regla fija: todo ejemplo de biblioteca/*/funciones.txt que se ejecuta DEBE anunciar su
+//! resultado con `# ...`, para que quien lea la guía vea qué devuelve la función.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -99,13 +103,31 @@ const NO_ES_RESULTADO: &[(&str, &str)] = &[
     ("un dado", "explica para qué sirve, el número es al azar"),
     ("y lo siguiente sigue en la misma línea", "explica el comportamiento"),
     ("datos[\"usuario\"][\"nombre\"]", "enseña cómo leer el resultado, no lo que escribe"),
-    ("Array (...)", "resumen del formato, la salida real es más larga"),
     ("lista nueva, la original no cambia", "explica el comportamiento"),
     ("une dos listas", "explica el comportamiento"),
     ("cambia un valor", "explica el comportamiento"),
     ("añade uno nuevo", "explica el comportamiento"),
     ("recorre las claves en orden", "explica el comportamiento"),
     ("nada si no llegó archivo", "explica el comportamiento"),
+];
+
+/// Funciones de biblioteca cuyo ejemplo se ejecuta pero no anuncia su resultado: (función, motivo).
+const SIN_RESULTADO: &[(&str, &str)] = &[
+    ("listar_archivos", "el resultado depende de lo que haya en la carpeta"),
+    ("grafico_barras", "devuelve un SVG de una sola línea muy larga"),
+    ("grafico_lineas", "devuelve un SVG de una sola línea muy larga"),
+    ("grafico_tarta", "devuelve un SVG de una sola línea muy larga"),
+    ("aleatorio", "el número es distinto cada vez"),
+    ("entero_al_azar", "el número es distinto cada vez"),
+    ("ahora", "la hora es distinta cada vez"),
+    ("titulo", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("parrafo", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("elemento_lista", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("separador", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("boton", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("cuadro_texto", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("cuadro_clave", "devuelve el formato interno de la pantalla, con tabuladores"),
+    ("boton_enviar", "devuelve el formato interno de la pantalla, con tabuladores"),
 ];
 
 /// Valores de muestra para las variables que un ejemplo usa sin definir.
@@ -577,7 +599,17 @@ fn se_ejecuta(ej: &Ejemplo, programa: &str) -> bool {
     !NO_EJECUTAR.iter().any(|(clave, _)| hay(clave))
 }
 
-fn comprobar_ejemplo(indice: usize, ej: &Ejemplo) -> Result<(bool, bool), String> {
+/// Nombre de la función si el ejemplo viene de biblioteca/*/funciones.txt.
+fn funcion_de_biblioteca(ej: &Ejemplo) -> Option<&str> {
+    if ej.origen.starts_with("biblioteca/") {
+        ej.origen.rsplit(':').next()
+    } else {
+        None
+    }
+}
+
+/// Devuelve (comprobado, ejecutado, anuncia su resultado).
+fn comprobar_ejemplo(indice: usize, ej: &Ejemplo) -> Result<(bool, bool, bool), String> {
     let armado = armar(ej);
     let c = carpeta(&indice.to_string());
     fs::write(c.join("programa.dmn"), &armado.programa).unwrap();
@@ -596,7 +628,7 @@ fn comprobar_ejemplo(indice: usize, ej: &Ejemplo) -> Result<(bool, bool), String
     let ejecutable = se_ejecuta(ej, &armado.programa);
     if !ejecutable {
         let _ = fs::remove_dir_all(&c);
-        return Ok((true, false));
+        return Ok((true, false, false));
     }
     let orden = if armado.es_prueba { "probar" } else { "ejecutar" };
     let (bien, salida) = lanzar(&c, &[orden, "programa.dmn"], true);
@@ -624,7 +656,7 @@ fn comprobar_ejemplo(indice: usize, ej: &Ejemplo) -> Result<(bool, bool), String
         }
     }
     let _ = fs::remove_dir_all(&c);
-    Ok((true, true))
+    Ok((true, true, !armado.esperados.is_empty()))
 }
 
 #[test]
@@ -639,6 +671,15 @@ fn todos_los_ejemplos_de_la_documentacion_son_ciertos() {
     for (origen, _) in EXCEPCIONES {
         if !origenes.contains(origen) {
             fallos.push(format!("la excepción '{}' ya no corresponde a ningún ejemplo", origen));
+        }
+    }
+    let funciones: BTreeSet<&str> = ejemplos.iter().filter_map(funcion_de_biblioteca).collect();
+    for (funcion, _) in SIN_RESULTADO {
+        if !funciones.contains(funcion) {
+            fallos.push(format!(
+                "SIN_RESULTADO: '{}' ya no es una función de biblioteca/*/funciones.txt; quítala de la lista",
+                funcion
+            ));
         }
     }
     let (mut comprobados, mut ejecutados, mut excepciones) = (0, 0, 0);
@@ -665,10 +706,26 @@ fn todos_los_ejemplos_de_la_documentacion_son_ciertos() {
     for (i, r) in resultados {
         match r {
             Ok(None) => excepciones += 1,
-            Ok(Some((_, ejecutado))) => {
+            Ok(Some((_, ejecutado, anuncia))) => {
                 comprobados += 1;
                 if ejecutado {
                     ejecutados += 1;
+                }
+                if let Some(funcion) = funcion_de_biblioteca(&ejemplos[i]) {
+                    let en_lista = SIN_RESULTADO.iter().any(|(f, _)| *f == funcion);
+                    if ejecutado && !anuncia && !en_lista {
+                        fallos.push(format!(
+                            "[{}] el ejemplo de `{}` no anuncia su resultado: añade `   # resultado` al final del ejemplo en su funciones.txt (ejecútalo con `deimon ejecutar` para ver el resultado exacto), o, si no puede anunciarse, apunta la función en SIN_RESULTADO con su motivo",
+                            ejemplos[i].origen, funcion
+                        ));
+                    } else if en_lista && (anuncia || !ejecutado) {
+                        fallos.push(format!(
+                            "[{}] SIN_RESULTADO ya no hace falta para `{}` (el ejemplo {}); quítala de la lista",
+                            ejemplos[i].origen,
+                            funcion,
+                            if anuncia { "ya anuncia su resultado" } else { "no se ejecuta" }
+                        ));
+                    }
                 }
             }
             Err(e) => fallos.push(format!("[{}] {}", ejemplos[i].origen, e)),

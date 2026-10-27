@@ -15,7 +15,7 @@ termina, se marca con HECHO y la fecha.
 6. HECHO (26-oct-2026, tipo devuelto por las funciones propias, tipos de los argumentos que entran en ellas, tabla de argumentos de integradas e índices; tests/plan_lenguaje.rs) Comprobar tipos antes de ejecutar en todo el programa.
 
 ## 2. Para que una IA no falle
-1. Ejemplos ejecutables en la guía para cada función de los módulos.
+1. HECHO (26-oct-2026, cada ejemplo de biblioteca/*/funciones.txt que se ejecuta anuncia su resultado con `# ...` y la prueba lo exige; las excepciones están en SIN_RESULTADO, tests/ejemplos_documentados.rs) Ejemplos ejecutables en la guía para cada función de los módulos.
 2. `deimon comprobar --estricto` que avise de todo lo dudoso.
 3. Más arreglos automáticos con `--arreglar`.
 4. Banco de pruebas más grande: 100 tareas, varias IAs, webs completas.

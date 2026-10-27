@@ -206,6 +206,9 @@ nombres separados por comas (`texto, veces`), o `0` si no tiene; también vale p
 solo cuántos son (`2`), aunque así `deimon modulos` y la guía no pueden decir qué es
 cada uno. La llamada debe llevar ese número de argumentos (si no, sale el error `E007`).
 La descripción y el ejemplo se muestran en `deimon guia archivo.dmn`.
+El ejemplo debe ser una línea que se pueda ejecutar y anunciar su resultado con `# ...`
+(`mayusculas("hola")   # HOLA`), salvo que necesite red o cambie cada vez; la prueba
+`tests/ejemplos_documentados.rs` lo ejecuta y compara.
 
 ### codigo.rs
 
