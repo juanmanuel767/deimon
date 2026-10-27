@@ -1,0 +1,88 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "a": -5,
+   "b": 12,
+   "suma": 7
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "a": -10,
+   "b": -20,
+   "suma": -30
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "a": 999999999999999,
+   "b": 1,
+   "suma": 1000000000000000
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "a": 0,
+   "b": 0,
+   "suma": 0
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "numeros enteros"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "numeros enteros"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "numeros enteros"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "numeros enteros"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "numeros enteros"
+  }
+ }
+]

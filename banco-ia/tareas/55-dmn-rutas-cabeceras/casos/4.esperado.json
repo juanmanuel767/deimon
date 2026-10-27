@@ -1,0 +1,42 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "Hola, María"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "Hola, a b"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "Hola, Ñandú"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "Hola, a+b"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ }
+]

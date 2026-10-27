@@ -1,0 +1,61 @@
+# Matriz recorrida en espiral
+funcion leer_fila() {
+    sea trozos = partir(recortar(pedir_texto("")), " ")
+    sea fila = []
+    para t en trozos {
+        fila = agregar(fila, a_numero(t))
+    }
+    devolver fila
+}
+
+funcion espiral(m, filas, columnas) {
+    sea res = []
+    sea arriba = 0
+    sea abajo = filas - 1
+    sea izq = 0
+    sea der = columnas - 1
+    sea i = 0
+    sea j = 0
+    mientras arriba <= abajo y izq <= der {
+        j = izq
+        mientras j <= der {
+            res = agregar(res, a_texto(m[arriba][j]))
+            j = j + 1
+        }
+        arriba = arriba + 1
+        i = arriba
+        mientras i <= abajo {
+            res = agregar(res, a_texto(m[i][der]))
+            i = i + 1
+        }
+        der = der - 1
+        si arriba <= abajo {
+            j = der
+            mientras j >= izq {
+                res = agregar(res, a_texto(m[abajo][j]))
+                j = j - 1
+            }
+            abajo = abajo - 1
+        }
+        si izq <= der {
+            i = abajo
+            mientras i >= arriba {
+                res = agregar(res, a_texto(m[i][izq]))
+                i = i - 1
+            }
+            izq = izq + 1
+        }
+    }
+    devolver res
+}
+
+sea cabecera = partir(recortar(pedir_texto("")), " ")
+sea filas = a_numero(cabecera[0])
+sea columnas = a_numero(cabecera[1])
+sea m = []
+sea r = 0
+mientras r < filas {
+    m = agregar(m, leer_fila())
+    r = r + 1
+}
+mostrar(unir(espiral(m, filas, columnas), " "))

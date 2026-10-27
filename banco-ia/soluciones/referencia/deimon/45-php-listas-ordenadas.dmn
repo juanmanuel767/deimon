@@ -1,0 +1,31 @@
+funcion mostrar_pares(titulo, claves, m) {
+    mostrar("== " + titulo + " ==")
+    para k en claves {
+        mostrar(k + ": " + m[k])
+    }
+}
+
+funcion claves_de(filas) {
+    sea r = []
+    para f en filas {
+        r = agregar(r, f["k"])
+    }
+    devolver r
+}
+
+sea m = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, "=")
+    m[p[0]] = a_numero(p[1])
+    linea = pedir_texto("")
+}
+sea filas = []
+para k en listar_claves(m) {
+    filas = agregar(filas, {"k": k, "v": m[k]})
+}
+mostrar_pares("asort", claves_de(ordenar_por(filas, ["v"])), m)
+mostrar_pares("arsort", claves_de(ordenar_por(filas, ["-v"])), m)
+sea alfabeticas = ordenar(listar_claves(m))
+mostrar_pares("ksort", alfabeticas, m)
+mostrar_pares("krsort", invertir(alfabeticas), m)

@@ -1,0 +1,17 @@
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, ";")
+    sea n = a_numero(partes[0])
+    sea d = a_numero(partes[1])
+    sea europeo = formatear_numero(n, d, ",", ".")
+    sea ingles = formatear_numero(n, d, ".", ",")
+    sea plano = formatear_numero(n, d, ".", "")
+    sea signo = ""
+    si empieza_con(plano, "-") {
+        signo = "-"
+        plano = cortar(plano, 1, nada)
+    }
+    plano = signo + rellenar_texto(plano, 10 - medir(signo), "0", "izquierda")
+    mostrar(europeo + " | " + ingles + " | " + plano)
+    linea = pedir_texto("")
+}

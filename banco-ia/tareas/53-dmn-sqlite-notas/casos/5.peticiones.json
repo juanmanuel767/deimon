@@ -1,0 +1,72 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=uno"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=dos"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=tres"
+ },
+ {
+  "accion": "reiniciar"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=cuatro"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "accion": "reiniciar"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=+"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=cinco"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ }
+]

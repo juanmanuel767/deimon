@@ -11,7 +11,12 @@ import os
 import re
 import shutil
 import datetime
+import itertools
+import json
 from collections import Counter
+from decimal import Decimal, ROUND_HALF_UP
+
+import tareas_web
 
 TAREAS = []
 
@@ -1211,6 +1216,445 @@ def _(lineas):
     return gs or ["ninguno"]
 
 
+# ---------------------------------------------------------------- 41 a 45: especialidad de PHP
+
+def esc_html(s):
+    """Escape de PHP (htmlspecialchars con ENT_QUOTES): & < > " ' -> &amp; &lt; &gt; &quot; &#039;"""
+    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;").replace("'", "&#039;"))
+
+
+@tarea("41-php-tabla-html", """
+# Tabla HTML con datos escapados
+
+Cada línea de la entrada tiene exactamente tres campos separados por «;»: nombre, cantidad y
+comentario (cualquier texto salvo «;»; un campo puede estar vacío). Escribe una tabla HTML con
+este formato exacto (cada etiqueta de fila en su propia línea, sin espacios ni sangría):
+
+- primera línea `<table>`;
+- la cabecera `<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>`;
+- una fila por cada línea de entrada, en su orden: `<tr><td>NOMBRE</td><td>CANTIDAD</td><td>COMENTARIO</td></tr>`,
+  pero las filas pares (la 2.ª, 4.ª, 6.ª... contando desde 1 las filas de datos, sin la cabecera)
+  empiezan con `<tr class="par">` en vez de `<tr>`;
+- última línea `</table>`.
+
+Los tres campos se escriben escapados como HTML: `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;`,
+`"` → `&quot;` y `'` → `&#039;` (cada carácter se sustituye una sola vez; un `&` ya escrito en la
+entrada también se escapa). Sin entrada, solo salen `<table>`, la cabecera y `</table>`.
+""", ["Pan;3;fresco & caliente\nLeche;2;<b>entera</b>\nQueso;1;\"curado\" de l'Alt\n",
+      "", "Solo;1;uno\n", ";;\n;0;\na;b;c\n",
+      "Ñandú;10;ñ á é\n&amp;&#039;AT&T\n\"'<>;x;y\n",
+      "a;1;1\nb;2;2\nc;3;3\nd;4;4\ne;5;5\n"])
+def _(lineas):
+    out = ["<table>", "<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>"]
+    for i, l in enumerate(lineas, 1):
+        n, c, k = l.split(";")
+        ab = '<tr class="par">' if i % 2 == 0 else "<tr>"
+        out.append(f"{ab}<td>{esc_html(n)}</td><td>{esc_html(c)}</td><td>{esc_html(k)}</td></tr>")
+    out.append("</table>")
+    return out
+
+
+def decimal_php(texto, dec):
+    """Redondea el número escrito en 'texto' a 'dec' decimales como number_format (empates alejándose del cero)."""
+    return Decimal(texto).quantize(Decimal(1).scaleb(-dec), rounding=ROUND_HALF_UP)
+
+
+def number_format(texto, dec, sep_dec, sep_mil):
+    r = decimal_php(texto, dec)
+    s = f"{abs(r):.{dec}f}"
+    ent, _, fr = s.partition(".")
+    ent = f"{int(ent):,}".replace(",", sep_mil)
+    return ("-" if r < 0 else "") + ent + (sep_dec + fr if dec else "")
+
+
+@tarea("42-php-numeros", """
+# Formato de números
+
+Cada línea tiene un número decimal N y un número de decimales D (de 0 a 4) separados por «;»,
+por ejemplo `1234567.891;2`. N se escribe con cifras, un «-» opcional delante y, si tiene parte
+decimal, un punto (nunca notación científica); su valor absoluto es menor que 1.000.000.000 y
+nunca es un número negativo que al redondear dé cero. Escribe una línea con tres formatos
+separados por « | » (espacio, barra, espacio):
+
+1. como `number_format(N, D, ',', '.')` de PHP: D decimales con coma y miles con punto;
+2. como `number_format(N, D, '.', ',')` de PHP: D decimales con punto y miles con coma;
+3. como `sprintf("%010.Df", round(N, D))` de PHP: D decimales con punto, sin separador de miles, rellenado
+   con ceros a la izquierda hasta 10 caracteres (el signo «-», si lo hay, va delante de los ceros;
+   si ya tiene 10 o más caracteres no se rellena).
+
+El redondeo es el decimal habitual: se redondea al valor más cercano con D decimales y, si queda
+justo a la mitad, se aleja del cero (2.5 → 3, -2.5 → -3, 1.005 con 2 decimales → 1.01), calculado
+sobre el número tal como está escrito (no sobre su aproximación en coma flotante).
+""", ["1234567.891;2\n0.5;0\n-1234.5;1\n7;3\n", "", "2.675;2\n1.005;2\n-2.5;0\n0.125;2\n0.000;4\n",
+      "999999999.999;2\n-999999.5;0\n100;0\n1000;0\n999.9;0\n", "0;0\n0.04;1\n12.3456;4\n-0.05;1\n-12345.6789;3\n",
+      "1234.5;0\n1234.4999;0\n-1234.5001;0\n0.1;4\n123456789;1\n"])
+def _(lineas):
+    out = []
+    for l in lineas:
+        n, d = l.split(";")
+        d = int(d)
+        r = decimal_php(n, d)
+        s = f"{abs(r):.{d}f}"
+        signo = "-" if r < 0 else ""
+        tercero = signo + s.rjust(10 - len(signo), "0")
+        out.append(f"{number_format(n, d, ',', '.')} | {number_format(n, d, '.', ',')} | {tercero}")
+    return out
+
+
+DIAS_ES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre",
+            "octubre", "noviembre", "diciembre"]
+
+
+@tarea("43-php-fechas", """
+# Formato de fechas
+
+Cada línea es una fecha y hora válida, sin zona horaria (todo en el mismo horario), con la forma
+`AAAA-MM-DD HH:MM:SS` y año entre 1970 y 2100. Escribe una línea con tres formatos separados por
+« | » (espacio, barra, espacio):
+
+1. `DIA J de MES de AAAA, G:MM am|pm`: nombre del día de la semana y del mes **en español y en
+   minúsculas** (lunes, martes, miércoles, jueves, viernes, sábado, domingo; enero, febrero...
+   diciembre), J el día del mes sin cero delante, el año con 4 cifras, G la hora en formato de 12
+   horas sin cero delante (la medianoche es 12 am y el mediodía 12 pm), MM los minutos con dos
+   cifras, y «am» o «pm» en minúsculas;
+2. como `date('d/m/y')` de PHP: día y mes con dos cifras y año de dos cifras;
+3. `dia N`, donde N es el día del año (1 el 1 de enero; 366 el 31 de diciembre de un año bisiesto).
+""", ["1970-01-01 00:00:00\n2024-02-29 13:05:09\n2000-12-31 23:59:59\n", "",
+      "2026-10-27 12:00:00\n", "1999-03-01 00:30:00\n2100-12-31 12:59:00\n2024-12-31 00:00:01\n",
+      "2023-12-31 18:07:08\n2024-03-01 09:09:09\n2025-07-04 11:11:11\n2038-01-19 03:14:07\n"])
+def _(lineas):
+    out = []
+    for l in lineas:
+        d = datetime.datetime.strptime(l, "%Y-%m-%d %H:%M:%S")
+        h12 = d.hour % 12 or 12
+        out.append(f"{DIAS_ES[d.weekday()]} {d.day} de {MESES_ES[d.month - 1]} de {d.year}, "
+                   f"{h12}:{d.minute:02d} {'am' if d.hour < 12 else 'pm'} | {d:%d/%m/%y} | dia {d.timetuple().tm_yday}")
+    return out
+
+
+def mayus_a_z(c):
+    return c.upper() if "a" <= c <= "z" else c
+
+
+@tarea("44-php-texto", """
+# Funciones de texto al estilo PHP
+
+Cada línea tiene la forma `operacion;argumento;texto`: separa solo por los dos primeros «;», así
+que el texto es todo lo que viene después (puede llevar más «;», o estar vacío). Aplica la
+operación y escribe el resultado entre corchetes `[...]`; si el resultado ocupa varias líneas,
+escribe cada línea entre sus propios corchetes. Operaciones:
+
+- `ucfirst` (argumento vacío): como `ucfirst` de PHP: la primera letra pasa a mayúscula **solo si
+  es una letra a-z sin acento**; si es cualquier otro carácter (incluidas ñ, á, etc.) el texto no cambia.
+- `ucwords` (argumento vacío): como `ucfirst` pero para cada palabra: una palabra empieza al
+  principio del texto o justo después de un espacio; solo se pasan a mayúscula las letras a-z.
+  El resto del texto (otras letras, mayúsculas ya escritas) no cambia.
+- `wordwrap` (argumento: ancho W, entero ≥ 1): como `wordwrap($texto, W, "\\n", false)` de PHP,
+  para textos solo con letras, cifras y signos ASCII y palabras separadas por un único espacio
+  (sin espacios al principio ni al final). Se van poniendo las palabras en la línea actual
+  mientras la línea resultante no pase de W caracteres; si la siguiente palabra no cabe, empieza
+  una línea nueva. Una palabra más larga que W no se corta: queda sola en su línea. Un texto
+  vacío da una sola línea vacía.
+- `str_pad` (argumento: `LARGO,LADO,RELLENO`; LARGO entero, LADO `izq`, `der` o `centro`,
+  RELLENO uno o más caracteres ASCII sin comas ni «;»): como `str_pad` de PHP para textos ASCII.
+  Si el texto ya tiene LARGO caracteres o más, no cambia. Si no, faltan F = LARGO − largo del
+  texto caracteres: `izq` pone F caracteres de relleno delante, `der` detrás, y `centro` pone
+  F ÷ 2 (redondeado hacia abajo) delante y el resto detrás. El relleno se repite desde su primer
+  carácter tantas veces como haga falta y se corta al llegar a los caracteres necesarios (cada
+  lado empieza otra vez por el primer carácter del relleno).
+""", ["ucfirst;;hola mundo\nucwords;;hola mundo feliz\nwordwrap;10;el veloz zorro salta la valla\nstr_pad;8,izq,*;abc\n",
+      "", "ucfirst;;ñandú\nucfirst;;\nucfirst;;Hola\nucfirst;;1abc\nucwords;;  dos  espacios\nucwords;;ya Hecho; otro\n",
+      "wordwrap;5;abcdefghij kl mn op\nwordwrap;3;a b c d e f\nwordwrap;100;una linea corta\nwordwrap;4;\nwordwrap;1;x yy z\n",
+      "str_pad;10,centro,ab;hola\nstr_pad;11,centro,-=;hola\nstr_pad;3,der,x;largo\nstr_pad;7,der,123;ab\nstr_pad;6,izq,xyz;a;b\n",
+      "wordwrap;10;The quick brown fox sat over the lazy dog\nstr_pad;5,centro,0;7\nucwords;;hello world-wide web\n"])
+def _(lineas):
+    out = []
+    for l in lineas:
+        op, arg, texto = l.split(";", 2)
+        if op == "ucfirst":
+            res = [mayus_a_z(texto[:1]) + texto[1:]]
+        elif op == "ucwords":
+            res = ["".join(mayus_a_z(c) if i == 0 or texto[i - 1] == " " else c for i, c in enumerate(texto))]
+        elif op == "wordwrap":
+            ancho = int(arg)
+            res = [""]
+            for p in (texto.split(" ") if texto else []):
+                if res[-1] == "":
+                    res[-1] = p
+                elif len(res[-1]) + 1 + len(p) <= ancho:
+                    res[-1] += " " + p
+                else:
+                    res.append(p)
+        else:
+            largo, lado, relleno = arg.split(",")
+            f = int(largo) - len(texto)
+            ciclo = lambda n: (relleno * (n // len(relleno) + 1))[:n]
+            if f <= 0:
+                res = [texto]
+            elif lado == "izq":
+                res = [ciclo(f) + texto]
+            elif lado == "der":
+                res = [texto + ciclo(f)]
+            else:
+                res = [ciclo(f // 2) + texto + ciclo(f - f // 2)]
+        out.extend("[" + r + "]" for r in res)
+    return out
+
+
+@tarea("45-php-listas-ordenadas", """
+# Listas con claves ordenadas
+
+Cada línea es `clave=valor`: la clave es un texto sin «=» y no vacío (letras, cifras, ñ, acentos o
+guiones) y el valor un entero (puede ser negativo). Se construye una lista con claves como un
+array de PHP: si una clave se repite, **conserva la posición de su primera aparición** y toma el
+**último** valor. Escribe cuatro bloques, cada uno con su cabecera y después una línea
+`clave: valor` por elemento:
+
+```
+== asort ==    valor de menor a mayor; los empates, en el orden de primera aparición
+== arsort ==   valor de mayor a menor; los empates, en el orden de primera aparición
+== ksort ==    clave de menor a mayor, comparando las claves como textos por el código de sus caracteres
+== krsort ==   clave de mayor a menor, igual (el orden inverso exacto de ksort)
+```
+
+(Las claves se comparan siempre como texto, también las que parecen números: «10» va antes que «9».)
+Sin entrada, salen solo las cuatro cabeceras.
+""", ["pera=3\nmanzana=5\nuva=3\nkiwi=-1\npera=7\n", "", "solo=0\n", "b=1\na=1\nc=1\nB=1\n10=2\n9=2\n",
+      "ñu=4\nárbol=4\nzorro=-9\nabeja=-9\nZeta=0\n", "x=1\nx=2\nx=3\ny=0\nx=-4\n"])
+def _(lineas):
+    d = {}
+    for l in lineas:
+        k, v = l.split("=")
+        d[k] = int(v)
+    items = list(d.items())
+    out = ["== asort =="] + [f"{k}: {v}" for k, v in sorted(items, key=lambda kv: kv[1])]
+    out += ["== arsort =="] + [f"{k}: {v}" for k, v in sorted(items, key=lambda kv: -kv[1])]
+    out += ["== ksort =="] + [f"{k}: {v}" for k, v in sorted(items, key=lambda kv: kv[0])]
+    out += ["== krsort =="] + [f"{k}: {v}" for k, v in sorted(items, key=lambda kv: kv[0], reverse=True)]
+    return out
+
+
+# ---------------------------------------------------------------- 46 a 50: especialidad de Python
+
+@tarea("46-py-contador", """
+# Contar con criterios (tipo Counter)
+
+La primera línea es un entero N ≥ 1. Las demás forman un texto: las palabras son los trozos
+separados por espacios (uno o varios seguidos; sin quitar signos ni cambiar mayúsculas: «Hola» y
+«hola» son palabras distintas). Escribe, en este orden:
+
+1. las N palabras más repetidas, una por línea, `palabra: veces`, de más a menos veces; **si dos
+   palabras empatan, va primero la que apareció antes en el texto** (como `Counter.most_common`
+   de Python). Si hay menos de N palabras distintas, salen todas;
+2. una línea `distintas: K` con el número de palabras distintas;
+3. por cada longitud de palabra (en caracteres) que exista, de menor a mayor, una línea
+   `longitud L: M` con M = cuántas palabras **en total** (contando repeticiones) tienen esa longitud.
+""", ["2\nel gato y el perro y el pez\nel gato\n", "3\n", "1\nuno\n", "5\nb a b a c c d\n",
+      "3\nHola hola  Hola\nñandú ñandú  ab\n\nab ab zz\n", "10\nx y z\nz y x\n"])
+def _(lineas):
+    n = int(lineas[0])
+    palabras = [w for l in lineas[1:] for w in l.split(" ") if w]
+    c = Counter(palabras)
+    out = [f"{w}: {v}" for w, v in c.most_common(n)]
+    out.append(f"distintas: {len(c)}")
+    por_largo = Counter(len(w) for w in palabras)
+    out += [f"longitud {L}: {por_largo[L]}" for L in sorted(por_largo)]
+    return out
+
+
+@tarea("47-py-combinaciones", """
+# Producto cartesiano y combinaciones
+
+La primera línea es un entero R ≥ 1. Las demás (al menos una) son listas de elementos separados
+por comas, sin espacios, todos no vacíos (por ejemplo `rojo,verde`); un elemento puede repetirse.
+Escribe:
+
+- la línea `producto:` y después una línea por cada elemento del producto cartesiano de todas las
+  listas (uno de cada lista), con sus elementos separados por un espacio, en el orden de
+  `itertools.product` de Python (la primera lista cambia más despacio, la última más deprisa);
+- la línea `combinaciones:` y después una línea por cada combinación de R elementos de la
+  **primera** lista (`itertools.combinations`: se eligen por posición, no por valor, y salen en
+  el orden de la lista), con sus elementos separados por un espacio. Si R es mayor que la
+  cantidad de elementos de la primera lista, no sale ninguna línea.
+""", ["2\na,b,c\n1,2\n", "1\nx\n", "3\nrojo,verde\nsi,no\n", "2\na,b,a\nz\n", "4\np,q\nm,n,o\nu\n",
+      "2\n1,2,3,4\nA\nB,C\n"])
+def _(lineas):
+    r = int(lineas[0])
+    listas = [l.split(",") for l in lineas[1:]]
+    out = ["producto:"] + [" ".join(p) for p in itertools.product(*listas)]
+    out += ["combinaciones:"] + [" ".join(c) for c in itertools.combinations(listas[0], r)]
+    return out
+
+
+@tarea("48-py-conjuntos", """
+# Operaciones de conjuntos
+
+La entrada tiene exactamente dos líneas: el conjunto A y el conjunto B. Cada una son palabras
+separadas por espacios (pueden repetirse; la línea puede estar vacía = conjunto vacío). Escribe
+estas siete líneas, en este orden, donde cada conjunto se escribe con sus palabras sin repetir,
+ordenadas por código de caracteres y separadas por un espacio:
+
+```
+union: ...           todas las palabras de A o de B
+interseccion: ...    las que están en A y en B
+solo A: ...          las de A que no están en B
+solo B: ...          las de B que no están en A
+simetrica: ...       las que están en uno solo de los dos
+A en B: si|no        «si» si todas las palabras de A están en B (un A vacío está en cualquier B)
+disjuntos: si|no     «si» si no tienen ninguna palabra en común
+```
+
+Si un conjunto sale vacío, la línea es solo la etiqueta con los dos puntos, sin espacio detrás
+(por ejemplo `interseccion:`).
+""", ["a b c c\nb c d\n", "\n\n", "x y\n\n", "\nx y\n", "ñu ola ola Ola\nola ñu zz\n", "uno dos\ntres cuatro\n",
+      "a b\na b\n"])
+def _(lineas):
+    A, B = set(lineas[0].split()), set(lineas[1].split())
+
+    def f(etiqueta, s):
+        return etiqueta + ":" + ("" if not s else " " + " ".join(sorted(s)))
+    return [f("union", A | B), f("interseccion", A & B), f("solo A", A - B), f("solo B", B - A),
+            f("simetrica", A ^ B), "A en B: " + ("si" if A <= B else "no"),
+            "disjuntos: " + ("si" if A.isdisjoint(B) else "no")]
+
+
+RE_LOG = re.compile(r"(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) \[(INFO|WARN|ERROR)\] "
+                    r"(\d{1,3}(?:\.\d{1,3}){3}) (GET|POST|PUT|DELETE) (/\S*) (\d{3})")
+
+
+@tarea("49-py-registro-regex", """
+# Analizar un registro (log) con expresiones regulares
+
+Cada línea de la entrada es una línea de un registro. Una línea es **válida** si toda ella tiene
+exactamente esta forma (y no tiene nada más, ni espacios al principio o al final):
+
+```
+AAAA-MM-DD HH:MM:SS [NIVEL] IP METODO RUTA ESTADO
+```
+
+con: fecha de 4-2-2 cifras y hora de 2-2-2 cifras (solo se comprueba la forma, no que existan);
+NIVEL una de las palabras `INFO`, `WARN` o `ERROR`; IP cuatro grupos de 1 a 3 cifras separados por
+puntos; METODO uno de `GET`, `POST`, `PUT`, `DELETE`; RUTA un texto que empieza por «/» y no tiene
+espacios; ESTADO tres cifras. Los elementos van separados por un único espacio. Las líneas que no
+cumplan (también las vacías) son **inválidas**. Escribe, con solo las líneas válidas:
+
+```
+validas: N
+invalidas: M
+ERROR: a
+INFO: b
+WARN: c
+estados: 200=3 404=1
+hora 09: 2
+ruta mas pedida: /x (3)
+```
+
+- `ERROR`, `INFO` y `WARN` (en ese orden alfabético): cuántas líneas válidas tiene cada nivel
+  (0 si ninguna);
+- `estados:` los estados que aparecen con cuántas veces (`estado=veces`), de menor a mayor estado
+  (como números) y separados por un espacio; si no hay líneas válidas, `estados: ninguno`;
+- una línea `hora HH: n` por cada hora (00 a 23, dos cifras) en que hay alguna línea válida, de
+  menor a mayor hora, con cuántas líneas válidas hay;
+- `ruta mas pedida: RUTA (veces)`, la ruta con más líneas válidas (empate: la primera por orden
+  alfabético de código de caracteres); si no hay líneas válidas, `ruta mas pedida: ninguna`.
+""", ["2026-10-27 09:15:01 [INFO] 10.0.0.1 GET /inicio 200\n2026-10-27 09:15:07 [ERROR] 10.0.0.2 POST /pago 500\n"
+      "basura\n2026-10-27 10:00:00 [WARN] 10.0.0.1 GET /inicio 404\n2026-10-27 10:30:30 [INFO] 192.168.1.20 DELETE /a/b?x=1 200\n",
+      "", "\n\n", "2026-01-01 00:00:00 [INFO] 1.1.1.1 GET / 200\n",
+      "2026-1-01 00:00:00 [INFO] 1.1.1.1 GET / 200\n 2026-01-01 00:00:00 [INFO] 1.1.1.1 GET / 200\n"
+      "2026-01-01 00:00:00 [DEBUG] 1.1.1.1 GET / 200\n2026-01-01 00:00:00 [INFO] 1.1.1.1.1 GET / 200\n"
+      "2026-01-01 00:00:00 [INFO] 1.1.1.1 PATCH / 200\n2026-01-01 00:00:00 [INFO] 1.1.1.1 GET x 200\n"
+      "2026-01-01 00:00:00 [INFO] 1.1.1.1 GET / 20\n2026-01-01 00:00:00 [INFO] 1.1.1.1 GET / 200 \n"
+      "2026-01-01 00:00:00  [INFO] 1.1.1.1 GET / 200\n",
+      "2026-05-05 23:59:59 [ERROR] 999.999.999.999 PUT /b 503\n2026-05-05 23:00:00 [ERROR] 1.2.3.4 PUT /a 503\n"
+      "2026-05-06 00:00:00 [WARN] 1.2.3.4 GET /b 301\n2026-05-06 00:10:00 [WARN] 1.2.3.4 GET /a 100\n"
+      "2026-05-06 00:20:00 [INFO] 1.2.3.4 GET /ñ 200\n"])
+def _(lineas):
+    validas = []
+    for l in lineas:
+        m = RE_LOG.fullmatch(l)
+        if m:
+            validas.append(m)
+    out = [f"validas: {len(validas)}", f"invalidas: {len(lineas) - len(validas)}"]
+    niveles = Counter(m.group(7) for m in validas)
+    out += [f"{n}: {niveles[n]}" for n in ("ERROR", "INFO", "WARN")]
+    estados = Counter(m.group(11) for m in validas)
+    out.append("estados: " + (" ".join(f"{e}={estados[e]}" for e in sorted(estados, key=int)) or "ninguno"))
+    horas = Counter(m.group(4) for m in validas)
+    out += [f"hora {h}: {horas[h]}" for h in sorted(horas)]
+    rutas = Counter(m.group(10) for m in validas)
+    if rutas:
+        r = sorted(rutas, key=lambda x: (-rutas[x], x))[0]
+        out.append(f"ruta mas pedida: {r} ({rutas[r]})")
+    else:
+        out.append("ruta mas pedida: ninguna")
+    return out
+
+
+@tarea("50-py-json-anidado", """
+# Procesar un JSON anidado
+
+La entrada completa (varias líneas) es un único documento JSON con esta forma:
+
+```
+{"tienda": "Nombre",
+ "pedidos": [
+   {"id": 1,
+    "cliente": {"nombre": "Ana", "ciudad": "Madrid"},
+    "lineas": [{"sku": "A1", "cantidad": 2, "centimos": 150}],
+    "cancelado": true}
+ ]}
+```
+
+`cantidad` y `centimos` (precio de una unidad) son enteros ≥ 0. `ciudad` puede faltar (entonces la
+ciudad es «sin ciudad»), `lineas` puede ser una lista vacía y `cancelado` solo aparece (con
+`true`) en algunos pedidos. Los textos pueden llevar letras con acento, ñ y secuencias `\\uXXXX`.
+`pedidos` puede ser una lista vacía. Los importes se escriben en euros con dos decimales
+(1250 céntimos → `12.50`). Escribe:
+
+- `tienda: NOMBRE`;
+- una línea por pedido, en el orden del documento: `pedido ID: CLIENTE (CIUDAD) - TOTAL`, donde
+  TOTAL es la suma de cantidad × centimos de sus líneas; si el pedido está cancelado, en vez de
+  ` - TOTAL` se escribe ` - cancelado`;
+- una línea por ciudad con pedidos no cancelados: `ciudad NOMBRE: TOTAL` (suma de los totales de
+  esos pedidos), de más a menos total y, si empatan, por orden alfabético de código de caracteres;
+- `total tienda: TOTAL` (suma de los pedidos no cancelados).
+""", ['{"tienda": "Demo", "pedidos": [\n {"id": 1, "cliente": {"nombre": "Ana", "ciudad": "Madrid"},\n'
+      '  "lineas": [{"sku": "A1", "cantidad": 2, "centimos": 150}, {"sku": "B2", "cantidad": 1, "centimos": 1000}]},\n'
+      ' {"id": 2, "cliente": {"nombre": "Luis"}, "lineas": [{"sku": "A1", "cantidad": 3, "centimos": 150}]},\n'
+      ' {"id": 3, "cliente": {"nombre": "Eva", "ciudad": "Madrid"}, "lineas": [], "cancelado": true}\n]}\n',
+      '{"tienda": "Vac\\u00edo", "pedidos": []}\n', '{"tienda":"x","pedidos":[]}\n',
+      '{"tienda": "Ni\\u00f1o \\u00e1", "pedidos": [{"id": 10, "cliente": {"nombre": "Mar\\u00eda", "ciudad": "A Coru\\u00f1a"}, '
+      '"lineas": [{"sku": "z", "cantidad": 0, "centimos": 999}, {"sku": "y", "cantidad": 7, "centimos": 5}]},\n'
+      '{"id": 11, "cliente": {"nombre": "Bea", "ciudad": "Cádiz"}, "lineas": [{"sku": "q", "cantidad": 1, "centimos": 35}]},\n'
+      '{"id": 12, "cliente": {"nombre": "Cris", "ciudad": "Cádiz"}, "lineas": [{"sku": "q", "cantidad": 1, "centimos": 5}]},\n'
+      '{"id": 13, "cliente": {"nombre": "Dani", "ciudad": "Vigo"}, "lineas": [{"sku": "q", "cantidad": 2, "centimos": 20}]}]}\n',
+      '{"pedidos": [{"id": 5, "lineas": [{"sku": "a", "cantidad": 1, "centimos": 99}], "cliente": {"ciudad": "Z", "nombre": "N"}},\n'
+      '{"id": 6, "cancelado": true, "cliente": {"nombre": "O"}, "lineas": [{"sku": "a", "cantidad": 1, "centimos": 1}]}], "tienda": "Orden"}\n',
+      '{"tienda": "Grande", "pedidos": [{"id": 1, "cliente": {"nombre": "R", "ciudad": "X"}, '
+      '"lineas": [{"sku": "a", "cantidad": 1000000, "centimos": 9999999}]}]}\n'])
+def _(lineas):
+    doc = json.loads("\n".join(lineas))
+    out = [f"tienda: {doc['tienda']}"]
+    ciudades = {}
+    total = 0
+    for p in doc["pedidos"]:
+        cliente = p["cliente"]
+        ciudad = cliente.get("ciudad", "sin ciudad")
+        if p.get("cancelado"):
+            out.append(f"pedido {p['id']}: {cliente['nombre']} ({ciudad}) - cancelado")
+            continue
+        t = sum(li["cantidad"] * li["centimos"] for li in p["lineas"])
+        out.append(f"pedido {p['id']}: {cliente['nombre']} ({ciudad}) - {euros(t)}")
+        ciudades[ciudad] = ciudades.get(ciudad, 0) + t
+        total += t
+    for c in sorted(ciudades, key=lambda x: (-ciudades[x], x)):
+        out.append(f"ciudad {c}: {euros(ciudades[c])}")
+    out.append(f"total tienda: {euros(total)}")
+    return out
+
+
 # ---------------------------------------------------------------- generación
 
 def texto_enunciado(nombre, enunciado, casos, funcion):
@@ -1239,10 +1683,33 @@ def generar(raiz):
                 f.write("".join(l + "\n" for l in funcion(lineas)))
 
 
+def texto_enunciado_web(nombre, enunciado, casos):
+    peticiones, esperado = casos[0]
+    ejemplo = ("\n\n## Ejemplo (caso 1)\n\nPeticiones y respuestas esperadas, en orden:\n\n```\n"
+               + tareas_web.texto_ejemplo(peticiones, esperado) + "\n```\n")
+    return enunciado.rstrip("\n") + ejemplo + tareas_web.COMUN_WEB
+
+
+def generar_webs(raiz):
+    for nombre, enunciado, casos in tareas_web.WEBS:
+        carpeta = os.path.join(raiz, nombre)
+        shutil.rmtree(carpeta, ignore_errors=True)
+        os.makedirs(os.path.join(carpeta, "casos"))
+        with open(os.path.join(carpeta, "enunciado.md"), "w") as f:
+            f.write(texto_enunciado_web(nombre, enunciado, casos))
+        for k, (peticiones, esperado) in enumerate(casos, 1):
+            assert len(peticiones) == len(esperado), f"{nombre} caso {k}: peticiones y respuestas no coinciden"
+            for sufijo, datos in (("peticiones", peticiones), ("esperado", esperado)):
+                with open(os.path.join(carpeta, "casos", f"{k}.{sufijo}.json"), "w") as f:
+                    json.dump(datos, f, ensure_ascii=False, indent=1)
+                    f.write("\n")
+
+
 def main():
     raiz = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tareas")
     generar(raiz)
-    print(f"{len(TAREAS)} tareas en {os.path.normpath(raiz)}")
+    generar_webs(raiz)
+    print(f"{len(TAREAS) + len(tareas_web.WEBS)} tareas ({len(tareas_web.WEBS)} webs) en {os.path.normpath(raiz)}")
 
 
 if __name__ == "__main__":

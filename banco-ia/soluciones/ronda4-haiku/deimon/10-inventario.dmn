@@ -1,0 +1,42 @@
+# Inventario con órdenes poner, quitar y ver
+funcion mostrar_stock(st) {
+    sea hay = falso
+    para clave en ordenar(listar_claves(st)) {
+        si st[clave] > 0 {
+            mostrar(clave + "=" + a_texto(st[clave]))
+            hay = verdadero
+        }
+    }
+    si no hay {
+        mostrar("vacio")
+    }
+}
+
+sea stock = {}
+sea trozos = []
+sea producto = ""
+sea cantidad = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), " ")
+    si trozos[0] == "poner" {
+        producto = trozos[1]
+        cantidad = a_numero(trozos[2])
+        si tiene_clave(stock, producto) {
+            stock[producto] = stock[producto] + cantidad
+        } sino {
+            stock[producto] = cantidad
+        }
+    } sino si trozos[0] == "quitar" {
+        producto = trozos[1]
+        cantidad = a_numero(trozos[2])
+        si tiene_clave(stock, producto) y stock[producto] >= cantidad {
+            stock[producto] = stock[producto] - cantidad
+        } sino {
+            mostrar("error: no hay " + a_texto(cantidad) + " de " + producto)
+        }
+    } sino si trozos[0] == "ver" {
+        mostrar_stock(stock)
+    }
+    linea = pedir_texto("")
+}

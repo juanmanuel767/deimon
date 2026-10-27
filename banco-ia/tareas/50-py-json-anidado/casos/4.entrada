@@ -1,0 +1,4 @@
+{"tienda": "Ni\u00f1o \u00e1", "pedidos": [{"id": 10, "cliente": {"nombre": "Mar\u00eda", "ciudad": "A Coru\u00f1a"}, "lineas": [{"sku": "z", "cantidad": 0, "centimos": 999}, {"sku": "y", "cantidad": 7, "centimos": 5}]},
+{"id": 11, "cliente": {"nombre": "Bea", "ciudad": "Cádiz"}, "lineas": [{"sku": "q", "cantidad": 1, "centimos": 35}]},
+{"id": 12, "cliente": {"nombre": "Cris", "ciudad": "Cádiz"}, "lineas": [{"sku": "q", "cantidad": 1, "centimos": 5}]},
+{"id": 13, "cliente": {"nombre": "Dani", "ciudad": "Vigo"}, "lineas": [{"sku": "q", "cantidad": 2, "centimos": 20}]}]}

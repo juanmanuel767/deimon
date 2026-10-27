@@ -1,0 +1,117 @@
+# Validar correos, teléfonos, fechas y códigos postales
+funcion solo_chars(t, permitidos) {
+    sea i = 0
+    mientras i < medir(t) {
+        si no incluye(permitidos, t[i]) {
+            devolver falso
+        }
+        i = i + 1
+    }
+    devolver verdadero
+}
+
+funcion correo_valido(v) {
+    sea partes = partir(v, "@")
+    si medir(partes) != 2 {
+        devolver falso
+    }
+    sea local = partes[0]
+    sea dominio = partes[1]
+    si medir(local) == 0 o no solo_chars(local, "abcdefghijklmnopqrstuvwxyz0123456789._-") {
+        devolver falso
+    }
+    sea etiquetas = partir(dominio, ".")
+    si medir(etiquetas) < 2 {
+        devolver falso
+    }
+    sea i = 0
+    sea e = ""
+    sea ultimo = medir(etiquetas) - 1
+    mientras i < medir(etiquetas) {
+        e = etiquetas[i]
+        si medir(e) == 0 {
+            devolver falso
+        }
+        si no solo_chars(e, "abcdefghijklmnopqrstuvwxyz0123456789-") {
+            devolver falso
+        }
+        si e[0] == "-" o e[medir(e) - 1] == "-" {
+            devolver falso
+        }
+        i = i + 1
+    }
+    si medir(etiquetas[ultimo]) < 2 o no solo_chars(etiquetas[ultimo], "abcdefghijklmnopqrstuvwxyz") {
+        devolver falso
+    }
+    devolver verdadero
+}
+
+funcion telefono_valido(v) {
+    si medir(v) != 9 o no solo_chars(v, "0123456789") {
+        devolver falso
+    }
+    devolver incluye("6789", v[0])
+}
+
+funcion fecha_valida(v) {
+    sea partes = partir(v, "/")
+    si medir(partes) != 3 {
+        devolver falso
+    }
+    si medir(partes[0]) != 2 o medir(partes[1]) != 2 o medir(partes[2]) != 4 {
+        devolver falso
+    }
+    si no solo_chars(partes[0] + partes[1] + partes[2], "0123456789") {
+        devolver falso
+    }
+    sea dia = a_numero(partes[0])
+    sea mes = a_numero(partes[1])
+    sea anio = a_numero(partes[2])
+    si anio < 1900 o anio > 2100 {
+        devolver falso
+    }
+    devolver mes >= 1 y mes <= 12 y dia >= 1 y dia <= dias_del_mes(anio, mes)
+}
+
+funcion cp_valido(v) {
+    si medir(v) != 5 o no solo_chars(v, "0123456789") {
+        devolver falso
+    }
+    sea prov = a_numero(cortar(v, 0, 2))
+    devolver prov >= 1 y prov <= 52
+}
+
+funcion validar(tipo, valor) {
+    si tipo == "correo" {
+        devolver correo_valido(valor)
+    }
+    si tipo == "telefono" {
+        devolver telefono_valido(valor)
+    }
+    si tipo == "fecha" {
+        devolver fecha_valida(valor)
+    }
+    si tipo == "cp" {
+        devolver cp_valido(valor)
+    }
+    devolver falso
+}
+
+sea linea = pedir_texto("")
+sea partes = []
+sea tipo = ""
+sea valor = ""
+mientras linea != nada {
+    partes = partir(linea, " ")
+    tipo = partes[0]
+    valor = ""
+    si medir(partes) > 1 {
+        valor = partes[1]
+    }
+    si validar(tipo, valor) {
+        mostrar(linea + ": valido")
+    } sino {
+        mostrar(linea + ": invalido")
+    }
+    linea = pedir_texto("")
+}

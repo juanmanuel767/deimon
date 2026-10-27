@@ -1,0 +1,50 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/suma/-5/12"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/-10/-20"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/999999999999999/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/0/0"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/abc/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/1.5/2"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/+3/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/1/"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/1/2/3"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/1234567890123456/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/-/1"
+ }
+]

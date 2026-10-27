@@ -1,0 +1,6 @@
+<table>
+<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>
+<tr><td>Pan</td><td>3</td><td>fresco &amp; caliente</td></tr>
+<tr class="par"><td>Leche</td><td>2</td><td>&lt;b&gt;entera&lt;/b&gt;</td></tr>
+<tr><td>Queso</td><td>1</td><td>&quot;curado&quot; de l&#039;Alt</td></tr>
+</table>

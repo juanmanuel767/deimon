@@ -1,0 +1,70 @@
+# Justificar un texto a un ancho dado
+funcion justificar(palabras, ancho) {
+    sea n = medir(palabras)
+    sea letras = 0
+    sea i = 0
+    mientras i < n {
+        letras = letras + medir(palabras[i])
+        i = i + 1
+    }
+    sea huecos = n - 1
+    sea total_sp = ancho - letras
+    sea base = suelo(total_sp / huecos)
+    sea extra = total_sp % huecos
+    sea res = ""
+    i = 0
+    mientras i < n {
+        res = res + palabras[i]
+        si i < huecos {
+            res = res + repetir(" ", base + elegir(i < extra, 1, 0))
+        }
+        i = i + 1
+    }
+    devolver res
+}
+
+sea ancho = a_numero(recortar(pedir_texto("")))
+sea palabras = []
+sea trozos = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(linea, " ")
+    para t en trozos {
+        si medir(t) > 0 {
+            palabras = agregar(palabras, t)
+        }
+    }
+    linea = pedir_texto("")
+}
+
+# reparto en líneas sin justificar
+sea lineas = []
+sea actual = []
+sea longitud = 0
+para p en palabras {
+    si medir(actual) == 0 {
+        actual = [p]
+        longitud = medir(p)
+    } sino si longitud + 1 + medir(p) <= ancho {
+        actual = agregar(actual, p)
+        longitud = longitud + 1 + medir(p)
+    } sino {
+        lineas = agregar(lineas, actual)
+        actual = [p]
+        longitud = medir(p)
+    }
+}
+si medir(actual) > 0 {
+    lineas = agregar(lineas, actual)
+}
+
+sea k = 0
+sea ultimo = medir(lineas) - 1
+mientras k <= ultimo {
+    si k == ultimo o medir(lineas[k]) == 1 {
+        mostrar(unir(lineas[k], " "))
+    } sino {
+        mostrar(justificar(lineas[k], ancho))
+    }
+    k = k + 1
+}

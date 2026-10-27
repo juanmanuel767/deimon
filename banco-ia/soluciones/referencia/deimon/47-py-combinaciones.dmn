@@ -1,0 +1,41 @@
+funcion combinaciones(elementos, r) {
+    si r == 0 {
+        devolver [[]]
+    }
+    si medir(elementos) == 0 {
+        devolver []
+    }
+    sea resultado = []
+    para i en rango(0, medir(elementos) - 1) {
+        para c en combinaciones(cortar(elementos, i + 1, nada), r - 1) {
+            resultado = agregar(resultado, [elementos[i]] + c)
+        }
+    }
+    devolver resultado
+}
+
+sea r = a_numero(pedir_texto(""))
+sea listas = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    listas = agregar(listas, partir(linea, ","))
+    linea = pedir_texto("")
+}
+sea producto = [[]]
+para lista en listas {
+    sea nuevo = []
+    para parcial en producto {
+        para x en lista {
+            nuevo = agregar(nuevo, agregar(parcial, x))
+        }
+    }
+    producto = nuevo
+}
+mostrar("producto:")
+para p en producto {
+    mostrar(unir(p, " "))
+}
+mostrar("combinaciones:")
+para c en combinaciones(listas[0], r) {
+    mostrar(unir(c, " "))
+}

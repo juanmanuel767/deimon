@@ -1,0 +1,22 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"Comprar pan\"}"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/2"
+ }
+]

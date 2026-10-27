@@ -1,0 +1,2 @@
+{"pedidos": [{"id": 5, "lineas": [{"sku": "a", "cantidad": 1, "centimos": 99}], "cliente": {"ciudad": "Z", "nombre": "N"}},
+{"id": 6, "cancelado": true, "cliente": {"nombre": "O"}, "lineas": [{"sku": "a", "cantidad": 1, "centimos": 1}]}], "tienda": "Orden"}

@@ -1,0 +1,13 @@
+funcion nombre_dia(n) {
+    sea nombres = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+    devolver nombres[n - 1]
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea s = leer_fecha(linea)
+    sea inicio_anio = crear_fecha(a_numero(cortar(linea, 0, 4)), 1, 1, 0, 0, 0)
+    sea parte1 = nombre_dia(dia_de_la_semana(s, "UTC")) + " " + formatear_fecha(s, "j", "UTC") + " de " + formatear_fecha(s, "F", "UTC") + " de " + formatear_fecha(s, "Y", "UTC") + ", " + formatear_fecha(s, "g:i a", "UTC")
+    mostrar(parte1 + " | " + formatear_fecha(s, "d/m/y", "UTC") + " | dia " + (diferencia_fechas(s, inicio_anio, "dias") + 1))
+    linea = pedir_texto("")
+}

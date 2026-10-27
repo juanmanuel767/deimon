@@ -1,0 +1,73 @@
+# Almacén con altas, ventas, reposiciones e informe (precios en céntimos)
+funcion dinero(c) {
+    sea t = rellenar_texto(a_texto(c), 3, "0", "izquierda")
+    devolver cortar(t, 0, medir(t) - 2) + "." + cortar(t, medir(t) - 2, nada)
+}
+
+funcion mostrar_informe(productos) {
+    sea total = 0
+    sea sin = []
+    sea p = {}
+    para cod en ordenar(listar_claves(productos)) {
+        p = productos[cod]
+        mostrar(cod + " " + p["nombre"] + " stock=" + a_texto(p["stock"]) + " ingresos=" + dinero(p["ingresos"]))
+        total = total + p["ingresos"]
+        si p["stock"] == 0 {
+            sin = agregar(sin, cod)
+        }
+    }
+    mostrar("ingresos totales: " + dinero(total))
+    si medir(sin) == 0 {
+        mostrar("sin stock: ninguno")
+    } sino {
+        mostrar("sin stock: " + unir(sin, ", "))
+    }
+}
+
+sea productos = {}
+sea trozos = []
+sea orden = ""
+sea cod = ""
+sea n = 0
+sea prod = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), " ")
+    orden = trozos[0]
+    si orden == "alta" {
+        cod = trozos[1]
+        si tiene_clave(productos, cod) {
+            mostrar("error: codigo duplicado " + cod)
+        } sino {
+            productos[cod] = {"nombre": trozos[2], "precio": a_numero(trozos[3]), "stock": a_numero(trozos[4]), "ingresos": 0}
+        }
+    } sino si orden == "venta" {
+        cod = trozos[1]
+        n = a_numero(trozos[2])
+        si no tiene_clave(productos, cod) {
+            mostrar("error: codigo desconocido " + cod)
+        } sino {
+            prod = productos[cod]
+            si prod["stock"] < n {
+                mostrar("error: stock insuficiente de " + cod + " (hay " + a_texto(prod["stock"]) + ", piden " + a_texto(n) + ")")
+            } sino {
+                prod["stock"] = prod["stock"] - n
+                prod["ingresos"] = prod["ingresos"] + n * prod["precio"]
+                productos[cod] = prod
+            }
+        }
+    } sino si orden == "reponer" {
+        cod = trozos[1]
+        n = a_numero(trozos[2])
+        si no tiene_clave(productos, cod) {
+            mostrar("error: codigo desconocido " + cod)
+        } sino {
+            prod = productos[cod]
+            prod["stock"] = prod["stock"] + n
+            productos[cod] = prod
+        }
+    } sino si orden == "informe" {
+        mostrar_informe(productos)
+    }
+    linea = pedir_texto("")
+}

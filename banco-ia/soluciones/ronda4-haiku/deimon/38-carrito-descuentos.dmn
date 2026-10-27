@@ -1,0 +1,57 @@
+# Carrito: descuentos por cantidad y por pedido, envío, todo en céntimos
+funcion a_centimos(t) {
+    sea partes = partir(t, ".")
+    sea c = a_numero(partes[0]) * 100
+    si medir(partes) > 1 {
+        c = c + a_numero(rellenar_texto(partes[1], 2, "0", "derecha"))
+    }
+    devolver c
+}
+
+funcion dos_decimales(c) {
+    sea t = rellenar_texto(a_texto(c), 3, "0", "izquierda")
+    devolver cortar(t, 0, medir(t) - 2) + "." + cortar(t, medir(t) - 2, nada)
+}
+
+funcion etiqueta_descuento(pct) {
+    si pct == 0 {
+        devolver ""
+    }
+    devolver " (-" + a_texto(pct) + "%)"
+}
+
+sea subtotal = 0
+sea trozos = []
+sea cant = 0
+sea bruto = 0
+sea pct = 0
+sea importe = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), " ")
+    cant = a_numero(trozos[1])
+    bruto = cant * a_centimos(trozos[2])
+    pct = 0
+    si cant >= 10 {
+        pct = 10
+    } sino si cant >= 5 {
+        pct = 5
+    }
+    importe = suelo((bruto * (100 - pct) + 50) / 100)
+    subtotal = subtotal + importe
+    mostrar(trozos[0] + " x" + a_texto(cant) + ": " + dos_decimales(importe) + etiqueta_descuento(pct))
+    linea = pedir_texto("")
+}
+
+mostrar("subtotal: " + dos_decimales(subtotal))
+sea base_total = subtotal
+si subtotal >= 10000 {
+    base_total = suelo((subtotal * 95 + 50) / 100)
+    mostrar("descuento pedido: -" + dos_decimales(subtotal - base_total))
+}
+sea envio = 495
+si base_total >= 5000 {
+    envio = 0
+}
+mostrar("envio: " + dos_decimales(envio))
+mostrar("total: " + dos_decimales(base_total + envio))

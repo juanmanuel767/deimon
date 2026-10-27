@@ -1,0 +1,39 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/contar"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contar"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=ana&clave=pez12345"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contar"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/salir"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contar"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contar",
+  "cliente": "B"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contar"
+ }
+]

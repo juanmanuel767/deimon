@@ -1,0 +1,12 @@
+# Torres de Hanoi: movimientos de A a C usando B
+funcion hanoi(n, origen, destino, auxiliar) {
+    si n > 0 {
+        hanoi(n - 1, origen, auxiliar, destino)
+        mostrar("mover disco " + a_texto(n) + " de " + origen + " a " + destino)
+        hanoi(n - 1, auxiliar, destino, origen)
+    }
+}
+
+sea n = a_numero(recortar(pedir_texto("")))
+hanoi(n, "A", "C", "B")
+mostrar("total: " + a_texto(potencia(2, n) - 1))

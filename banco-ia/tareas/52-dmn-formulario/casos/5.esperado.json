@@ -1,0 +1,22 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;&lt;&quot;: debe tener entre 2 y 20 caracteres</li><li>edad &quot;&quot;x&quot;&quot;: debe ser un entero entre 18 y 120</li><li>mensaje &quot;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&quot;: debe tener entre 1 y 50 caracteres</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;&#039;&quot;: debe tener entre 2 y 20 caracteres</li><li>edad &quot;&#039;&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Gracias, a&amp;b</h1><p>18 anos: &lt;script&gt;alert(&#039;x&#039;)&lt;/script&gt;</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<form method=\"post\" action=\"/contacto\"><input name=\"nombre\"><input name=\"edad\"><textarea name=\"mensaje\"></textarea><button>Enviar</button></form>"
+ }
+]

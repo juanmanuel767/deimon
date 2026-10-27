@@ -1,0 +1,49 @@
+# Compresión por repeticiones (C) y descompresión (D)
+funcion comprimir(t) {
+    sea res = ""
+    sea i = 0
+    sea j = 0
+    sea n = medir(t)
+    mientras i < n {
+        j = i
+        mientras j < n y t[j] == t[i] {
+            j = j + 1
+        }
+        res = res + a_texto(j - i) + t[i]
+        i = j
+    }
+    devolver res
+}
+
+funcion descomprimir(t) {
+    sea res = ""
+    sea num = ""
+    sea c = ""
+    sea i = 0
+    sea n = medir(t)
+    mientras i < n {
+        c = t[i]
+        si incluye("0123456789", c) {
+            num = num + c
+        } sino {
+            res = res + repetir(c, a_numero(num))
+            num = ""
+        }
+        i = i + 1
+    }
+    devolver res
+}
+
+sea linea = pedir_texto("")
+sea modo = ""
+sea texto = ""
+mientras linea != nada {
+    modo = linea[0]
+    texto = cortar(linea, 2, nada)
+    si modo == "C" {
+        mostrar(comprimir(texto))
+    } sino {
+        mostrar(descomprimir(texto))
+    }
+    linea = pedir_texto("")
+}

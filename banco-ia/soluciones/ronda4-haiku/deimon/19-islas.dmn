@@ -1,0 +1,69 @@
+# Contar islas de tierra (#) y la más grande
+funcion analizar(filas, nfilas, ncols) {
+    sea total = nfilas * ncols
+    sea visitado = []
+    sea k = 0
+    mientras k < total {
+        visitado = agregar(visitado, falso)
+        k = k + 1
+    }
+    sea islas = 0
+    sea mayor = 0
+    sea tam = 0
+    sea pila = []
+    sea actual = 0
+    sea r = 0
+    sea c = 0
+    sea nr = 0
+    sea nc = 0
+    sea idx = 0
+    sea dr = [-1, 1, 0, 0]
+    sea dc = [0, 0, -1, 1]
+    k = 0
+    mientras k < total {
+        r = suelo(k / ncols)
+        c = k % ncols
+        si filas[r][c] == "#" y no visitado[k] {
+            islas = islas + 1
+            tam = 0
+            pila = [k]
+            visitado[k] = verdadero
+            mientras medir(pila) > 0 {
+                actual = pila[medir(pila) - 1]
+                pila = cortar(pila, 0, medir(pila) - 1)
+                tam = tam + 1
+                r = suelo(actual / ncols)
+                c = actual % ncols
+                para d en rango(0, 3) {
+                    nr = r + dr[d]
+                    nc = c + dc[d]
+                    si nr >= 0 y nr < nfilas y nc >= 0 y nc < ncols {
+                        idx = nr * ncols + nc
+                        si filas[nr][nc] == "#" y no visitado[idx] {
+                            visitado[idx] = verdadero
+                            pila = agregar(pila, idx)
+                        }
+                    }
+                }
+            }
+            si tam > mayor {
+                mayor = tam
+            }
+        }
+        k = k + 1
+    }
+    devolver [islas, mayor]
+}
+
+sea cabecera = partir(recortar(pedir_texto("")), " ")
+sea nfilas = a_numero(cabecera[0])
+sea ncols = a_numero(cabecera[1])
+sea filas = []
+sea i = 0
+mientras i < nfilas {
+    filas = agregar(filas, recortar(pedir_texto("")))
+    i = i + 1
+}
+sea res = analizar(filas, nfilas, ncols)
+mostrar("islas: " + a_texto(res[0]))
+mostrar("mayor: " + a_texto(res[1]))

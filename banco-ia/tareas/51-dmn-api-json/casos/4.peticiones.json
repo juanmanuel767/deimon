@@ -1,0 +1,74 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"uno\"}"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/abc"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/0"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/01"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/-1"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/9/hecha"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/abc/hecha"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/otra"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/"
+ },
+ {
+  "metodo": "DELETE",
+  "ruta": "/api/tareas"
+ },
+ {
+  "metodo": "DELETE",
+  "ruta": "/api/tareas/1"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/1/hecha"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/1/2/3"
+ },
+ {
+  "metodo": "PUT",
+  "ruta": "/api/tareas/1"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/"
+ }
+]

@@ -1,0 +1,21 @@
+# Personas ordenadas por edad (mayor a menor) y media de edades
+sea personas = []
+sea trozos = []
+sea suma = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), ",")
+    personas = agregar(personas, {"nombre": trozos[0], "edad": a_numero(trozos[1])})
+    suma = suma + a_numero(trozos[1])
+    linea = pedir_texto("")
+}
+
+sea orden = ordenar_por(personas, ["-edad", "nombre"])
+para p en orden {
+    mostrar(p["nombre"] + " (" + a_texto(p["edad"]) + ")")
+}
+
+# media en décimas, redondeada hacia arriba si queda justo en la mitad
+sea n = medir(personas)
+sea decimas = suelo((suma * 20 + n) / (2 * n))
+mostrar("media: " + a_texto(suelo(decimas / 10)) + "." + a_texto(decimas % 10))

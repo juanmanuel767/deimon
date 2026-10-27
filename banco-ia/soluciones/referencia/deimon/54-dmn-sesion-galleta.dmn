@@ -1,0 +1,42 @@
+funcion texto_campo(nombre) {
+    sea v = campo(nombre)
+    si v == nada {
+        devolver ""
+    }
+    devolver v
+}
+
+ruta "/entrar" {
+    sea claves = {"ana": "pez12345", "luis": "sol45678"}
+    sea nombre = texto_campo("nombre")
+    si tiene_clave(claves, nombre) y claves[nombre] == texto_campo("clave") {
+        guardar_en_sesion("usuario", nombre)
+        devolver "<p>Hola, " + nombre + "</p>"
+    }
+    devolver "<p>Usuario o clave incorrectos</p>"
+}
+
+ruta "/salir" {
+    borrar_de_sesion("usuario")
+    devolver "<p>Adios</p>"
+}
+
+ruta "/yo" {
+    sea usuario = leer_de_sesion("usuario")
+    si usuario == nada {
+        devolver "<p>No has entrado</p>"
+    }
+    devolver "<p>Eres " + usuario + "</p>"
+}
+
+ruta "/contar" {
+    sea pasos = leer_de_sesion("pasos")
+    si pasos == nada {
+        pasos = 0
+    }
+    pasos = pasos + 1
+    guardar_en_sesion("pasos", pasos)
+    devolver "<p>pasos: " + pasos + "</p>"
+}
+
+servir(8080)

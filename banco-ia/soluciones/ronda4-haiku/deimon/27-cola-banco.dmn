@@ -1,0 +1,45 @@
+# Cola de banco con K cajas: asignar cada cliente a la caja que quede libre antes
+sea k = a_numero(recortar(pedir_texto("")))
+sea libres = []
+sea j = 0
+mientras j < k {
+    libres = agregar(libres, 0)
+    j = j + 1
+}
+
+sea espera_total = 0
+sea termina = 0
+sea trozos = []
+sea llegada = 0
+sea dur = 0
+sea mejor = 0
+sea caja = 0
+sea inicio = 0
+sea espera = 0
+sea fin = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), " ")
+    llegada = a_numero(trozos[0])
+    dur = a_numero(trozos[1])
+    mejor = 0
+    caja = 1
+    mientras caja < k {
+        si libres[caja] < libres[mejor] {
+            mejor = caja
+        }
+        caja = caja + 1
+    }
+    inicio = maximo(llegada, libres[mejor])
+    espera = inicio - llegada
+    fin = inicio + dur
+    libres[mejor] = fin
+    espera_total = espera_total + espera
+    si fin > termina {
+        termina = fin
+    }
+    mostrar(trozos[2] + ": caja " + a_texto(mejor + 1) + " empieza " + a_texto(inicio) + " espera " + a_texto(espera))
+    linea = pedir_texto("")
+}
+mostrar("espera total: " + a_texto(espera_total))
+mostrar("termina: " + a_texto(termina))

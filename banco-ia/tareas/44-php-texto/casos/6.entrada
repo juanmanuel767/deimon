@@ -1,0 +1,3 @@
+wordwrap;10;The quick brown fox sat over the lazy dog
+str_pad;5,centro,0;7
+ucwords;;hello world-wide web

@@ -1,0 +1,70 @@
+funcion mayus_a_z(c) {
+    si medir(c) == 1 y incluye("abcdefghijklmnopqrstuvwxyz", c) {
+        devolver mayusculas(c)
+    }
+    devolver c
+}
+
+funcion ciclo(relleno, n) {
+    si n <= 0 {
+        devolver ""
+    }
+    devolver cortar(repetir(relleno, n), 0, n)
+}
+
+funcion aplicar(op, arg, texto) {
+    si op == "ucfirst" {
+        si medir(texto) == 0 {
+            devolver [""]
+        }
+        devolver [mayus_a_z(texto[0]) + cortar(texto, 1, nada)]
+    }
+    si op == "ucwords" {
+        sea r = ""
+        si medir(texto) > 0 {
+            para i en rango(0, medir(texto) - 1) {
+                r = r + elegir(i == 0, mayus_a_z(texto[i]), elegir(texto[i - 1] == " ", mayus_a_z(texto[i]), texto[i]))
+            }
+        }
+        devolver [r]
+    }
+    si op == "wordwrap" {
+        sea ancho = a_numero(arg)
+        sea lineas = [""]
+        si texto != "" {
+            para p en partir(texto, " ") {
+                sea ultima = medir(lineas) - 1
+                si lineas[ultima] == "" {
+                    lineas[ultima] = p
+                } sino si medir(lineas[ultima]) + 1 + medir(p) <= ancho {
+                    lineas[ultima] = lineas[ultima] + " " + p
+                } sino {
+                    lineas = agregar(lineas, p)
+                }
+            }
+        }
+        devolver lineas
+    }
+    sea partes = partir(arg, ",")
+    sea falta = a_numero(partes[0]) - medir(texto)
+    si falta <= 0 {
+        devolver [texto]
+    }
+    si partes[1] == "izq" {
+        devolver [ciclo(partes[2], falta) + texto]
+    }
+    si partes[1] == "der" {
+        devolver [texto + ciclo(partes[2], falta)]
+    }
+    sea izquierda = suelo(falta / 2)
+    devolver [ciclo(partes[2], izquierda) + texto + ciclo(partes[2], falta - izquierda)]
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, ";")
+    para r en aplicar(p[0], p[1], unir(cortar(p, 2, nada), ";")) {
+        mostrar("[" + r + "]")
+    }
+    linea = pedir_texto("")
+}

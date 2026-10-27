@@ -1,0 +1,30 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/contacto",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=%3C&edad=%22x%22&mensaje=%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26%26"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/contacto",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=%27&edad=%27&mensaje=%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27%27"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/contacto",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=a%26b&edad=18&mensaje=%3Cscript%3Ealert%28%27x%27%29%3C%2Fscript%3E"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contacto"
+ }
+]

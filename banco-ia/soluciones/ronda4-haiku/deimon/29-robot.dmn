@@ -1,0 +1,34 @@
+# Robot con órdenes A (avanzar), G (girar derecha) e I (girar izquierda)
+funcion recorrer(orden) {
+    sea x = 0
+    sea y = 0
+    sea dir = 0
+    sea mejor = 0
+    sea dx = [0, 1, 0, -1]
+    sea dy = [1, 0, -1, 0]
+    sea nombres = ["norte", "este", "sur", "oeste"]
+    sea k = 0
+    sea letra = ""
+    mientras k < medir(orden) {
+        letra = orden[k]
+        si letra == "G" {
+            dir = (dir + 1) % 4
+        } sino si letra == "I" {
+            dir = (dir + 3) % 4
+        } sino {
+            x = x + dx[dir]
+            y = y + dy[dir]
+            si x * x + y * y > mejor {
+                mejor = x * x + y * y
+            }
+        }
+        k = k + 1
+    }
+    devolver a_texto(x) + "," + a_texto(y) + " " + nombres[dir] + " max=" + a_texto(mejor)
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(recorrer(recortar(linea)))
+    linea = pedir_texto("")
+}

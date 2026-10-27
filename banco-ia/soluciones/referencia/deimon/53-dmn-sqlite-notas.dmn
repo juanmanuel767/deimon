@@ -1,0 +1,61 @@
+usar modulo "sql"
+
+funcion escapar(texto) {
+    sea r = reemplazar(texto, "&", "&amp;")
+    r = reemplazar(r, "<", "&lt;")
+    r = reemplazar(r, ">", "&gt;")
+    r = reemplazar(r, "\"", "&quot;")
+    r = reemplazar(r, "'", "&#039;")
+    devolver r
+}
+
+funcion preparar() {
+    ejecutar_sql("datos.db", "CREATE TABLE IF NOT EXISTS notas (id INTEGER PRIMARY KEY AUTOINCREMENT, texto TEXT NOT NULL)", [])
+    ejecutar_sql("datos.db", "CREATE TABLE IF NOT EXISTS visitas (id INTEGER PRIMARY KEY, total INTEGER NOT NULL)", [])
+}
+
+# campo() entrega el valor ya escapado: se deshace para guardar el texto original en la base.
+funcion leer_campo(nombre) {
+    sea v = campo(nombre)
+    si v == nada {
+        devolver ""
+    }
+    v = reemplazar(v, "&#39;", "'")
+    v = reemplazar(v, "&quot;", "\"")
+    v = reemplazar(v, "&lt;", "<")
+    v = reemplazar(v, "&gt;", ">")
+    v = reemplazar(v, "&amp;", "&")
+    devolver recortar(v)
+}
+
+ruta "/notas" {
+    preparar()
+    si es_envio() {
+        sea texto = leer_campo("texto")
+        si texto == "" {
+            devolver "<p>texto vacio</p>"
+        }
+        ejecutar_sql("datos.db", "INSERT INTO notas (texto) VALUES (?)", [texto])
+        sea filas = consultar_sql("datos.db", "SELECT MAX(id) FROM notas", [])
+        devolver "<p>nota " + filas[0][0] + " guardada</p>"
+    }
+    sea notas = consultar_sql("datos.db", "SELECT texto FROM notas ORDER BY id", [])
+    si medir(notas) == 0 {
+        devolver "<p>sin notas</p>"
+    }
+    sea html = "<ol>"
+    para fila en notas {
+        html = html + "<li>" + escapar(fila[0]) + "</li>"
+    }
+    devolver html + "</ol>"
+}
+
+ruta "/visitas" {
+    preparar()
+    ejecutar_sql("datos.db", "INSERT OR IGNORE INTO visitas (id, total) VALUES (1, 0)", [])
+    ejecutar_sql("datos.db", "UPDATE visitas SET total = total + 1 WHERE id = 1", [])
+    sea filas = consultar_sql("datos.db", "SELECT total FROM visitas WHERE id = 1", [])
+    devolver "<p>visitas: " + filas[0][0] + "</p>"
+}
+
+servir(8080)

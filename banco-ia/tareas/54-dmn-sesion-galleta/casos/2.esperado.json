@@ -1,0 +1,32 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Usuario o clave incorrectos</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>No has entrado</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Usuario o clave incorrectos</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Hola, luis</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Usuario o clave incorrectos</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Eres luis</p>"
+ }
+]

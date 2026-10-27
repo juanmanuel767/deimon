@@ -1,0 +1,11 @@
+# Producto exacto de dos enteros grandes
+funcion producto(linea) {
+    sea trozos = partir(recortar(linea), " ")
+    devolver a_numero(trozos[0]) * a_numero(trozos[1])
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(producto(linea))
+    linea = pedir_texto("")
+}

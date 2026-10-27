@@ -1,0 +1,9 @@
+validas: 5
+invalidas: 0
+ERROR: 2
+INFO: 1
+WARN: 2
+estados: 100=1 200=1 301=1 503=2
+hora 00: 3
+hora 23: 2
+ruta mas pedida: /a (2)

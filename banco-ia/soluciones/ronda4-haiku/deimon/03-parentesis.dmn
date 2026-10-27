@@ -1,0 +1,52 @@
+# Paréntesis, corchetes y llaves equilibrados
+funcion es_apertura(c) {
+    devolver c == "(" o c == "[" o c == "{"
+}
+
+funcion es_cierre(c) {
+    devolver c == ")" o c == "]" o c == "}"
+}
+
+funcion pareja_de(c) {
+    si c == ")" {
+        devolver "("
+    }
+    si c == "]" {
+        devolver "["
+    }
+    devolver "{"
+}
+
+funcion equilibrada(t) {
+    sea pila = ""
+    sea abre = ""
+    sea c = ""
+    sea i = 0
+    mientras i < medir(t) {
+        c = t[i]
+        si es_apertura(c) {
+            pila = pila + c
+        } sino si es_cierre(c) {
+            si medir(pila) == 0 {
+                devolver falso
+            }
+            abre = pila[medir(pila) - 1]
+            si abre != pareja_de(c) {
+                devolver falso
+            }
+            pila = cortar(pila, 0, medir(pila) - 1)
+        }
+        i = i + 1
+    }
+    devolver medir(pila) == 0
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    si equilibrada(linea) {
+        mostrar("si")
+    } sino {
+        mostrar("no")
+    }
+    linea = pedir_texto("")
+}

@@ -1,0 +1,6 @@
+<table>
+<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>
+<tr><td></td><td></td><td></td></tr>
+<tr class="par"><td></td><td>0</td><td></td></tr>
+<tr><td>a</td><td>b</td><td>c</td></tr>
+</table>

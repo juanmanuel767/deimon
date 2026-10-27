@@ -1,0 +1,10 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/contacto",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=%3Cb%3EJo%26e%3C%2Fb%3E&edad=18&mensaje=%22Hola%22+%27mundo%27+%26+%3Cx%3E"
+ }
+]

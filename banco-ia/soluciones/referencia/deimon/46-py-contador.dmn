@@ -1,0 +1,33 @@
+sea n = a_numero(pedir_texto(""))
+sea veces = {}
+sea largos = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    para p en partir(linea, " ") {
+        si p != "" {
+            veces[p] = elegir(tiene_clave(veces, p), veces[p], 0) + 1
+            sea largo = a_texto(medir(p))
+            largos[largo] = elegir(tiene_clave(largos, largo), largos[largo], 0) + 1
+        }
+    }
+    linea = pedir_texto("")
+}
+# listar_claves devuelve las palabras en orden de primera aparición; ordenar_por mantiene ese orden en los empates.
+sea filas = []
+para p en listar_claves(veces) {
+    filas = agregar(filas, {"palabra": p, "veces": veces[p]})
+}
+sea ordenadas = ordenar_por(filas, ["-veces"])
+para i en rango(0, n - 1) {
+    si i < medir(ordenadas) {
+        mostrar(ordenadas[i]["palabra"] + ": " + ordenadas[i]["veces"])
+    }
+}
+mostrar("distintas: " + medir(filas))
+sea numeros = []
+para largo en listar_claves(largos) {
+    numeros = agregar(numeros, a_numero(largo))
+}
+para largo en ordenar(numeros) {
+    mostrar("longitud " + largo + ": " + largos[a_texto(largo)])
+}

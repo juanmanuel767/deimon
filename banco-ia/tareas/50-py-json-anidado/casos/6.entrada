@@ -1,0 +1,1 @@
+{"tienda": "Grande", "pedidos": [{"id": 1, "cliente": {"nombre": "R", "ciudad": "X"}, "lineas": [{"sku": "a", "cantidad": 1000000, "centimos": 9999999}]}]}

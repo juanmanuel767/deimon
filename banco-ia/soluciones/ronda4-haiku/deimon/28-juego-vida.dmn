@@ -1,0 +1,80 @@
+# Juego de la vida: G generaciones en una cuadrícula F por C
+funcion leer_grilla(nf) {
+    sea g = []
+    sea linea = ""
+    sea fila = []
+    sea c = 0
+    sea r = 0
+    mientras r < nf {
+        linea = pedir_texto("")
+        fila = []
+        c = 0
+        mientras c < medir(linea) {
+            fila = agregar(fila, elegir(linea[c] == "#", 1, 0))
+            c = c + 1
+        }
+        g = agregar(g, fila)
+        r = r + 1
+    }
+    devolver g
+}
+
+funcion vecinas(g, nf, nc, r, c) {
+    sea n = 0
+    para dr en rango(-1, 1) {
+        para dc en rango(-1, 1) {
+            si (dr != 0 o dc != 0) y r + dr >= 0 y r + dr < nf y c + dc >= 0 y c + dc < nc {
+                n = n + g[r + dr][c + dc]
+            }
+        }
+    }
+    devolver n
+}
+
+funcion paso(g, nf, nc) {
+    sea nuevo = []
+    sea fila = []
+    sea r = 0
+    sea c = 0
+    sea v = 0
+    sea vivo = 0
+    mientras r < nf {
+        fila = []
+        c = 0
+        mientras c < nc {
+            v = vecinas(g, nf, nc, r, c)
+            vivo = g[r][c]
+            si (vivo == 1 y (v == 2 o v == 3)) o (vivo == 0 y v == 3) {
+                fila = agregar(fila, 1)
+            } sino {
+                fila = agregar(fila, 0)
+            }
+            c = c + 1
+        }
+        nuevo = agregar(nuevo, fila)
+        r = r + 1
+    }
+    devolver nuevo
+}
+
+funcion linea_grilla(fila) {
+    sea res = ""
+    para v en fila {
+        res = res + elegir(v == 1, "#", ".")
+    }
+    devolver res
+}
+
+sea cabecera = partir(recortar(pedir_texto("")), " ")
+sea nf = a_numero(cabecera[0])
+sea nc = a_numero(cabecera[1])
+sea ng = a_numero(cabecera[2])
+sea g = leer_grilla(nf)
+sea gen = 0
+mientras gen < ng {
+    g = paso(g, nf, nc)
+    gen = gen + 1
+}
+para fila_final en g {
+    mostrar(linea_grilla(fila_final))
+}

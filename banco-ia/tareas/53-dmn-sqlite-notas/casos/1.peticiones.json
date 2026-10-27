@@ -1,0 +1,26 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=Primera"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=Segunda+%26+%3Cb%3E"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ }
+]

@@ -1,0 +1,46 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"a\"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"b\"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"c\"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/1/hecha"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/3/hecha"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/2"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/4/hecha"
+ }
+]

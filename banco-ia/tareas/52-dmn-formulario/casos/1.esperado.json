@@ -1,0 +1,17 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<form method=\"post\" action=\"/contacto\"><input name=\"nombre\"><input name=\"edad\"><textarea name=\"mensaje\"></textarea><button>Enviar</button></form>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Gracias, Ana</h1><p>30 anos: Hola</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;A&quot;: debe tener entre 2 y 20 caracteres</li><li>edad &quot;abc&quot;: debe ser un entero entre 18 y 120</li><li>mensaje &quot;&quot;: debe tener entre 1 y 50 caracteres</li></ul>"
+ }
+]

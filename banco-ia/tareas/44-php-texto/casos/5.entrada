@@ -1,0 +1,5 @@
+str_pad;10,centro,ab;hola
+str_pad;11,centro,-=;hola
+str_pad;3,der,x;largo
+str_pad;7,der,123;ab
+str_pad;6,izq,xyz;a;b

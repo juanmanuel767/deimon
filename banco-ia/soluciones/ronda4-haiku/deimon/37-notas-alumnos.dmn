@@ -1,0 +1,84 @@
+# Medias de notas por alumno y por asignatura (notas en centésimas)
+funcion nota_a_centesimas(t) {
+    sea partes = partir(t, ".")
+    sea c = a_numero(partes[0]) * 100
+    si medir(partes) > 1 {
+        c = c + a_numero(rellenar_texto(partes[1], 2, "0", "derecha"))
+    }
+    devolver c
+}
+
+# media en centésimas redondeada hacia arriba si queda justo en la mitad
+funcion media_c(suma, n) {
+    devolver suelo((2 * suma + n) / (2 * n))
+}
+
+funcion dos_decimales(c) {
+    sea t = rellenar_texto(a_texto(c), 3, "0", "izquierda")
+    devolver cortar(t, 0, medir(t) - 2) + "." + cortar(t, medir(t) - 2, nada)
+}
+
+funcion calificacion(m) {
+    si m < 500 {
+        devolver "suspenso"
+    }
+    si m < 700 {
+        devolver "aprobado"
+    }
+    si m < 900 {
+        devolver "notable"
+    }
+    devolver "sobresaliente"
+}
+
+funcion sumar_en(mapa, clave, h) {
+    sea acum = {"suma": 0, "n": 0}
+    si tiene_clave(mapa, clave) {
+        acum = mapa[clave]
+    }
+    acum["suma"] = acum["suma"] + h
+    acum["n"] = acum["n"] + 1
+    mapa[clave] = acum
+    devolver mapa
+}
+
+sea alumnos = {}
+sea asigs = {}
+sea trozos = []
+sea h = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), ";")
+    h = nota_a_centesimas(trozos[2])
+    alumnos = sumar_en(alumnos, trozos[0], h)
+    asigs = sumar_en(asigs, trozos[1], h)
+    linea = pedir_texto("")
+}
+
+mostrar("== alumnos ==")
+sea nombres = ordenar(listar_claves(alumnos))
+sea mejor_nombre = ""
+sea mejor_media = -1
+sea m = 0
+sea acumulado = {}
+para a in nombres {
+    acumulado = alumnos[a]
+    m = media_c(acumulado["suma"], acumulado["n"])
+    mostrar(a + ": " + dos_decimales(m) + " " + calificacion(m))
+    si m > mejor_media {
+        mejor_media = m
+        mejor_nombre = a
+    }
+}
+
+mostrar("== asignaturas ==")
+para s en ordenar(listar_claves(asigs)) {
+    acumulado = asigs[s]
+    mostrar(s + ": " + dos_decimales(media_c(acumulado["suma"], acumulado["n"])))
+}
+
+si medir(nombres) == 0 {
+    mostrar("mejor alumno: nadie")
+} sino {
+    mostrar("mejor alumno: " + mejor_nombre)
+}

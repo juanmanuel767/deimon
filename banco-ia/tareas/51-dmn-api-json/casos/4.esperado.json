@@ -1,0 +1,123 @@
+[
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "uno",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no encontrado"
+  }
+ }
+]

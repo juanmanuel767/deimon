@@ -1,0 +1,92 @@
+[
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 400,
+  "tipo": "application/json",
+  "json": {
+   "error": "peticion invalida"
+  }
+ },
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "  hola  ",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": [
+   {
+    "id": 1,
+    "titulo": "  hola  ",
+    "hecha": false
+   }
+  ]
+ }
+]

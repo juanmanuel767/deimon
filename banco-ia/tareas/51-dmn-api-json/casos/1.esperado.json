@@ -1,0 +1,32 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": []
+ },
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "Comprar pan",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "Comprar pan",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ }
+]

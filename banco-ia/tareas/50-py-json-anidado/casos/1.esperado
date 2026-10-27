@@ -1,0 +1,7 @@
+tienda: Demo
+pedido 1: Ana (Madrid) - 13.00
+pedido 2: Luis (sin ciudad) - 4.50
+pedido 3: Eva (Madrid) - cancelado
+ciudad Madrid: 13.00
+ciudad sin ciudad: 4.50
+total tienda: 17.50

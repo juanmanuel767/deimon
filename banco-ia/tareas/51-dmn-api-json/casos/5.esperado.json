@@ -1,0 +1,84 @@
+[
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "a",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 2,
+   "titulo": "b",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 3,
+   "titulo": "c",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "a",
+   "hecha": true
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 3,
+   "titulo": "c",
+   "hecha": true
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": [
+   {
+    "id": 1,
+    "titulo": "a",
+    "hecha": true
+   },
+   {
+    "id": 2,
+    "titulo": "b",
+    "hecha": false
+   },
+   {
+    "id": 3,
+    "titulo": "c",
+    "hecha": true
+   }
+  ]
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 2,
+   "titulo": "b",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "application/json",
+  "json": {
+   "error": "no existe"
+  }
+ }
+]

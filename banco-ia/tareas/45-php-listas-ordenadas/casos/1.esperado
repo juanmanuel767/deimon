@@ -1,0 +1,20 @@
+== asort ==
+kiwi: -1
+uva: 3
+manzana: 5
+pera: 7
+== arsort ==
+pera: 7
+manzana: 5
+uva: 3
+kiwi: -1
+== ksort ==
+kiwi: -1
+manzana: 5
+pera: 7
+uva: 3
+== krsort ==
+uva: 3
+pera: 7
+manzana: 5
+kiwi: -1

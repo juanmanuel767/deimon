@@ -1,0 +1,19 @@
+# Día de la semana de una fecha AAAA-MM-DD, o invalida
+funcion dia_de_semana_texto(linea) {
+    sea anio = a_numero(cortar(linea, 0, 4))
+    sea mes = a_numero(cortar(linea, 5, 2))
+    sea dia = a_numero(cortar(linea, 8, 2))
+    sea valida = mes >= 1 y mes <= 12 y dia >= 1 y dia <= dias_del_mes(anio, mes)
+    si no valida {
+        devolver "invalida"
+    }
+    sea segundos = crear_fecha(anio, mes, dia, 0, 0, 0)
+    sea nombres = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+    devolver nombres[dia_de_la_semana(segundos, "UTC") - 1]
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(linea + ": " + dia_de_semana_texto(linea))
+    linea = pedir_texto("")
+}

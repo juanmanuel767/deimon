@@ -1,0 +1,8 @@
+<table>
+<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>
+<tr><td>a</td><td>1</td><td>1</td></tr>
+<tr class="par"><td>b</td><td>2</td><td>2</td></tr>
+<tr><td>c</td><td>3</td><td>3</td></tr>
+<tr class="par"><td>d</td><td>4</td><td>4</td></tr>
+<tr><td>e</td><td>5</td><td>5</td></tr>
+</table>

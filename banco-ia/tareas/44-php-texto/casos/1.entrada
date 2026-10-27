@@ -1,0 +1,4 @@
+ucfirst;;hola mundo
+ucwords;;hola mundo feliz
+wordwrap;10;el veloz zorro salta la valla
+str_pad;8,izq,*;abc

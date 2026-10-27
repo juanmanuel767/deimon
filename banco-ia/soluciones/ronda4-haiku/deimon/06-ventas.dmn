@@ -1,0 +1,38 @@
+# Ventas por producto en orden alfabético, con total
+funcion a_centimos(t) {
+    sea partes = partir(t, ".")
+    sea c = a_numero(partes[0]) * 100
+    si medir(partes) > 1 {
+        c = c + a_numero(rellenar_texto(partes[1], 2, "0", "derecha"))
+    }
+    devolver c
+}
+
+funcion dinero(c) {
+    sea t = rellenar_texto(a_texto(c), 3, "0", "izquierda")
+    devolver cortar(t, 0, medir(t) - 2) + "." + cortar(t, medir(t) - 2, nada)
+}
+
+sea totales = {}
+sea total = 0
+sea partes = []
+sea producto = ""
+sea importe = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    partes = partir(linea, ";")
+    producto = partes[0]
+    importe = a_numero(partes[1]) * a_centimos(partes[2])
+    total = total + importe
+    si tiene_clave(totales, producto) {
+        totales[producto] = totales[producto] + importe
+    } sino {
+        totales[producto] = importe
+    }
+    linea = pedir_texto("")
+}
+
+para nombre_p en ordenar(listar_claves(totales)) {
+    mostrar(nombre_p + ": " + dinero(totales[nombre_p]))
+}
+mostrar("TOTAL: " + dinero(total))

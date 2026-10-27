@@ -1,0 +1,12 @@
+== asort ==
+x: -4
+y: 0
+== arsort ==
+y: 0
+x: -4
+== ksort ==
+x: -4
+y: 0
+== krsort ==
+y: 0
+x: -4

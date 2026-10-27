@@ -1,0 +1,92 @@
+# Calculadora con precedencia, paréntesis y división entera hacia cero
+# Cada función devuelve [valor, posición siguiente]
+funcion dividir(a, b) {
+    si b == 0 {
+        provocar_error("division por cero")
+    }
+    sea cociente = suelo(absoluto(a) / absoluto(b))
+    si (a < 0) != (b < 0) {
+        devolver -cociente
+    }
+    devolver cociente
+}
+
+funcion numero_en(s, p) {
+    sea digitos = "0123456789"
+    sea fin = p
+    mientras fin < medir(s) y incluye(digitos, s[fin]) {
+        fin = fin + 1
+    }
+    si fin == p {
+        provocar_error("se esperaba un numero")
+    }
+    devolver [a_numero(cortar(s, p, fin - p)), fin]
+}
+
+funcion factor(s, p) {
+    si s[p] == "-" {
+        sea r = factor(s, p + 1)
+        devolver [-r[0], r[1]]
+    }
+    si s[p] == "(" {
+        sea e = expresion(s, p + 1)
+        devolver [e[0], e[1] + 1]
+    }
+    devolver numero_en(s, p)
+}
+
+funcion termino(s, p) {
+    sea r = factor(s, p)
+    sea valor = r[0]
+    sea pos = r[1]
+    sea op = ""
+    sea r2 = []
+    mientras pos < medir(s) y (s[pos] == "*" o s[pos] == "/") {
+        op = s[pos]
+        r2 = factor(s, pos + 1)
+        si op == "*" {
+            valor = valor * r2[0]
+        } sino {
+            valor = dividir(valor, r2[0])
+        }
+        pos = r2[1]
+    }
+    devolver [valor, pos]
+}
+
+funcion expresion(s, p) {
+    sea r = termino(s, p)
+    sea valor = r[0]
+    sea pos = r[1]
+    sea op = ""
+    sea r2 = []
+    mientras pos < medir(s) y (s[pos] == "+" o s[pos] == "-") {
+        op = s[pos]
+        r2 = termino(s, pos + 1)
+        si op == "+" {
+            valor = valor + r2[0]
+        } sino {
+            valor = valor - r2[0]
+        }
+        pos = r2[1]
+    }
+    devolver [valor, pos]
+}
+
+funcion evaluar(linea) {
+    sea s = reemplazar(linea, " ", "")
+    sea resultado = ""
+    intentar {
+        sea r = expresion(s, 0)
+        resultado = a_texto(r[0])
+    } si falla e {
+        resultado = "error: " + e["mensaje"]
+    }
+    devolver resultado
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(evaluar(linea))
+    linea = pedir_texto("")
+}

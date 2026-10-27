@@ -1,0 +1,6 @@
+<table>
+<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>
+<tr><td>Ñandú</td><td>10</td><td>ñ á é</td></tr>
+<tr class="par"><td>&amp;amp</td><td>&amp;#039</td><td>AT&amp;T</td></tr>
+<tr><td>&quot;&#039;&lt;&gt;</td><td>x</td><td>y</td></tr>
+</table>

@@ -1,0 +1,20 @@
+# Término N de Fibonacci exacto
+funcion fibonacci(n) {
+    sea a = 0
+    sea b = 1
+    sea t = 0
+    sea i = 0
+    mientras i < n {
+        t = a + b
+        a = b
+        b = t
+        i = i + 1
+    }
+    devolver a
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(fibonacci(a_numero(recortar(linea))))
+    linea = pedir_texto("")
+}

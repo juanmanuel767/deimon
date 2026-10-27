@@ -1,0 +1,22 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>sin notas</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>nota 1 guardada</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>nota 2 guardada</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<ol><li>Primera</li><li>Segunda &amp; &lt;b&gt;</li></ol>"
+ }
+]

@@ -1,0 +1,13 @@
+# Sumar N días a una fecha AAAA-MM-DD
+funcion sumar_dias_texto(linea) {
+    sea trozos = partir(recortar(linea), " ")
+    sea base = leer_fecha(trozos[0])
+    sea nuevo = sumar_tiempo(base, a_numero(trozos[1]), "dias")
+    devolver cortar(fecha(nuevo), 0, 10)
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(sumar_dias_texto(linea))
+    linea = pedir_texto("")
+}

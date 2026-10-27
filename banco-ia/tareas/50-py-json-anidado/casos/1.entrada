@@ -1,0 +1,6 @@
+{"tienda": "Demo", "pedidos": [
+ {"id": 1, "cliente": {"nombre": "Ana", "ciudad": "Madrid"},
+  "lineas": [{"sku": "A1", "cantidad": 2, "centimos": 150}, {"sku": "B2", "cantidad": 1, "centimos": 1000}]},
+ {"id": 2, "cliente": {"nombre": "Luis"}, "lineas": [{"sku": "A1", "cantidad": 3, "centimos": 150}]},
+ {"id": 3, "cliente": {"nombre": "Eva", "ciudad": "Madrid"}, "lineas": [], "cancelado": true}
+]}

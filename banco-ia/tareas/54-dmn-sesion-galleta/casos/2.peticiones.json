@@ -1,0 +1,42 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=ana&clave=mala"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/yo"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=pepe&clave=x"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=luis&clave=sol45678"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=ana&clave=otra"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/yo"
+ }
+]

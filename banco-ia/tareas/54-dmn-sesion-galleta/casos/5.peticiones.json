@@ -1,0 +1,62 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=&clave="
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=Ana&clave=pez12345"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=ana&clave=PEZ12345"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/salir"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/yo"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=luis&clave=sol45678"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/yo"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/entrar",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=ana&clave=pez12345"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/yo"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/contar"
+ }
+]

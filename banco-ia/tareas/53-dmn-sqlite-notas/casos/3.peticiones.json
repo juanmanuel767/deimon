@@ -1,0 +1,46 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto="
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": ""
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=+++"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=+Hola+"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "otro=x"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ }
+]

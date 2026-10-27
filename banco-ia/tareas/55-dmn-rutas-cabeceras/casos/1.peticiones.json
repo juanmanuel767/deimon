@@ -1,0 +1,26 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/hola.txt"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/estilo.css"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/pagina"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/Ana"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/suma/2/3"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/otra"
+ }
+]

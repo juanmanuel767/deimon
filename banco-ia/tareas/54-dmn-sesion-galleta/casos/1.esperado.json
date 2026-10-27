@@ -1,0 +1,27 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>No has entrado</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Hola, ana</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Eres ana</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>Adios</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<p>No has entrado</p>"
+ }
+]

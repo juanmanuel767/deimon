@@ -1,0 +1,65 @@
+# Líneas nombre;edad;ciudad: descartar las mal formadas y contar ciudades
+funcion solo_chars(t, permitidos) {
+    sea i = 0
+    mientras i < medir(t) {
+        si no incluye(permitidos, t[i]) {
+            devolver falso
+        }
+        i = i + 1
+    }
+    devolver verdadero
+}
+
+funcion motivo_error(linea) {
+    sea partes = partir(linea, ";")
+    si medir(partes) != 3 {
+        devolver "numero de campos incorrecto"
+    }
+    si medir(partes[0]) == 0 {
+        devolver "nombre vacio"
+    }
+    sea edad = partes[1]
+    si medir(edad) == 0 o no solo_chars(edad, "0123456789") {
+        devolver "edad invalida"
+    }
+    si a_numero(edad) > 120 {
+        devolver "edad invalida"
+    }
+    si medir(partes[2]) == 0 {
+        devolver "ciudad vacia"
+    }
+    devolver ""
+}
+
+sea n = 0
+sea validas = 0
+sea descartadas = 0
+sea ciudades = {}
+sea partes = []
+sea motivo = ""
+sea ciudad = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    n = n + 1
+    motivo = motivo_error(linea)
+    si motivo == "" {
+        validas = validas + 1
+        partes = partir(linea, ";")
+        ciudad = partes[2]
+        si tiene_clave(ciudades, ciudad) {
+            ciudades[ciudad] = ciudades[ciudad] + 1
+        } sino {
+            ciudades[ciudad] = 1
+        }
+    } sino {
+        descartadas = descartadas + 1
+        mostrar("linea " + a_texto(n) + ": " + motivo)
+    }
+    linea = pedir_texto("")
+}
+
+mostrar("validas: " + a_texto(validas))
+mostrar("descartadas: " + a_texto(descartadas))
+para c en ordenar(listar_claves(ciudades)) {
+    mostrar(c + ": " + a_texto(ciudades[c]))
+}

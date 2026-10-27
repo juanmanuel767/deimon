@@ -1,0 +1,38 @@
+funcion euros(centimos) {
+    devolver suelo(centimos / 100) + "." + rellenar_texto(a_texto(centimos % 100), 2, "0", "izquierda")
+}
+
+sea lineas = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    lineas = agregar(lineas, linea)
+    linea = pedir_texto("")
+}
+sea doc = desde_json(unir(lineas, "\n"))
+mostrar("tienda: " + doc["tienda"])
+sea ciudades = {}
+sea total = 0
+para p en doc["pedidos"] {
+    sea cliente = p["cliente"]
+    sea ciudad = elegir(tiene_clave(cliente, "ciudad"), cliente["ciudad"], "sin ciudad")
+    sea cancelado = tiene_clave(p, "cancelado") y p["cancelado"] == verdadero
+    si cancelado {
+        mostrar("pedido " + p["id"] + ": " + cliente["nombre"] + " (" + ciudad + ") - cancelado")
+    } sino {
+        sea t = 0
+        para li en p["lineas"] {
+            t = t + li["cantidad"] * li["centimos"]
+        }
+        mostrar("pedido " + p["id"] + ": " + cliente["nombre"] + " (" + ciudad + ") - " + euros(t))
+        ciudades[ciudad] = elegir(tiene_clave(ciudades, ciudad), ciudades[ciudad], 0) + t
+        total = total + t
+    }
+}
+sea filas = []
+para c en listar_claves(ciudades) {
+    filas = agregar(filas, {"ciudad": c, "total": ciudades[c]})
+}
+para f en ordenar_por(filas, ["-total", "ciudad"]) {
+    mostrar("ciudad " + f["ciudad"] + ": " + euros(f["total"]))
+}
+mostrar("total tienda: " + euros(total))

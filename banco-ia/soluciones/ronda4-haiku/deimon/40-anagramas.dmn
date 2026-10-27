@@ -1,0 +1,49 @@
+# Grupos de anagramas entre palabras distintas
+funcion clave_anagrama(w) {
+    sea letras = []
+    sea i = 0
+    mientras i < medir(w) {
+        letras = agregar(letras, w[i])
+        i = i + 1
+    }
+    devolver unir(ordenar(letras), "")
+}
+
+sea vistas = {}
+sea distintas = []
+sea w = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    w = recortar(linea)
+    si medir(w) > 0 y no tiene_clave(vistas, w) {
+        vistas[w] = verdadero
+        distintas = agregar(distintas, w)
+    }
+    linea = pedir_texto("")
+}
+
+sea grupos = {}
+sea k = ""
+para w2 en distintas {
+    k = clave_anagrama(w2)
+    si tiene_clave(grupos, k) {
+        grupos[k] = agregar(grupos[k], w2)
+    } sino {
+        grupos[k] = [w2]
+    }
+}
+
+sea lineas = []
+para k2 en listar_claves(grupos) {
+    si medir(grupos[k2]) >= 2 {
+        lineas = agregar(lineas, unir(ordenar(grupos[k2]), " "))
+    }
+}
+
+si medir(lineas) == 0 {
+    mostrar("ninguno")
+} sino {
+    para l en ordenar(lineas) {
+        mostrar(l)
+    }
+}

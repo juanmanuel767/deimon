@@ -1,0 +1,71 @@
+# Camino más corto de S a E en una cuadrícula (búsqueda en anchura)
+funcion buscar_celda(filas, nfilas, ncols, marca) {
+    sea r = 0
+    sea c = 0
+    mientras r < nfilas {
+        c = 0
+        mientras c < ncols {
+            si filas[r][c] == marca {
+                devolver r * ncols + c
+            }
+            c = c + 1
+        }
+        r = r + 1
+    }
+    devolver -1
+}
+
+funcion distancia_minima(filas, nfilas, ncols, inicio, fin) {
+    sea total = nfilas * ncols
+    sea dist = []
+    sea k = 0
+    mientras k < total {
+        dist = agregar(dist, -1)
+        k = k + 1
+    }
+    sea cola = [inicio]
+    dist[inicio] = 0
+    sea cabeza = 0
+    sea actual = 0
+    sea r = 0
+    sea c = 0
+    sea nr = 0
+    sea nc = 0
+    sea idx = 0
+    sea dr = [-1, 1, 0, 0]
+    sea dc = [0, 0, -1, 1]
+    mientras cabeza < medir(cola) {
+        actual = cola[cabeza]
+        cabeza = cabeza + 1
+        r = suelo(actual / ncols)
+        c = actual % ncols
+        para d en rango(0, 3) {
+            nr = r + dr[d]
+            nc = c + dc[d]
+            si nr >= 0 y nr < nfilas y nc >= 0 y nc < ncols {
+                idx = nr * ncols + nc
+                si filas[nr][nc] != "#" y dist[idx] == -1 {
+                    dist[idx] = dist[actual] + 1
+                    cola = agregar(cola, idx)
+                }
+            }
+        }
+    }
+    si dist[fin] == -1 {
+        devolver "sin camino"
+    }
+    devolver a_texto(dist[fin])
+}
+
+sea cabecera = partir(recortar(pedir_texto("")), " ")
+sea nfilas = a_numero(cabecera[0])
+sea ncols = a_numero(cabecera[1])
+sea filas = []
+sea k = 0
+mientras k < nfilas {
+    filas = agregar(filas, recortar(pedir_texto("")))
+    k = k + 1
+}
+sea inicio = buscar_celda(filas, nfilas, ncols, "S")
+sea fin = buscar_celda(filas, nfilas, ncols, "E")
+mostrar(distancia_minima(filas, nfilas, ncols, inicio, fin))

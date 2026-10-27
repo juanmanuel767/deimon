@@ -1,0 +1,29 @@
+# Leer el JSON de una tienda y sacar stock, agotados y valor total
+funcion dinero(c) {
+    sea t = rellenar_texto(a_texto(c), 3, "0", "izquierda")
+    devolver cortar(t, 0, medir(t) - 2) + "." + cortar(t, medir(t) - 2, nada)
+}
+
+sea todo = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    todo = todo + linea
+    linea = pedir_texto("")
+}
+
+sea datos = desde_json(todo)
+mostrar("tienda: " + datos["tienda"])
+sea agotados = 0
+sea total = 0
+sea valor = 0
+para p en datos["productos"] {
+    si p["stock"] > 0 {
+        valor = p["precio"] * p["stock"]
+        total = total + valor
+        mostrar(p["nombre"] + ": " + dinero(p["precio"]) + " x " + a_texto(p["stock"]) + " = " + dinero(valor))
+    } sino {
+        agotados = agotados + 1
+    }
+}
+mostrar("agotados: " + a_texto(agotados))
+mostrar("valor total: " + dinero(total))

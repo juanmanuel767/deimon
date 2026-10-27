@@ -1,0 +1,43 @@
+funcion unicos(lista) {
+    sea r = []
+    para x en lista {
+        si x != "" y no incluye(r, x) {
+            r = agregar(r, x)
+        }
+    }
+    devolver ordenar(r)
+}
+
+funcion salida(etiqueta, conjunto) {
+    si medir(conjunto) == 0 {
+        mostrar(etiqueta + ":")
+    } sino {
+        mostrar(etiqueta + ": " + unir(conjunto, " "))
+    }
+}
+
+sea a = unicos(partir(pedir_texto(""), " "))
+sea b = unicos(partir(pedir_texto(""), " "))
+sea union = unicos(a + b)
+sea inter = []
+sea solo_a = []
+sea solo_b = []
+para x en a {
+    si incluye(b, x) {
+        inter = agregar(inter, x)
+    } sino {
+        solo_a = agregar(solo_a, x)
+    }
+}
+para x en b {
+    si no incluye(a, x) {
+        solo_b = agregar(solo_b, x)
+    }
+}
+salida("union", union)
+salida("interseccion", inter)
+salida("solo A", solo_a)
+salida("solo B", solo_b)
+salida("simetrica", unicos(solo_a + solo_b))
+mostrar("A en B: " + elegir(medir(solo_a) == 0, "si", "no"))
+mostrar("disjuntos: " + elegir(medir(inter) == 0, "si", "no"))

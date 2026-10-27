@@ -1,0 +1,22 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/contacto"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/contacto",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=Ana&edad=30&mensaje=Hola"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/contacto",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "nombre=A&edad=abc&mensaje="
+ }
+]

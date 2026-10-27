@@ -1,0 +1,38 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=%27%3B+DROP+TABLE+notas%3B+--"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=%C3%B1and%C3%BA+%3Ci%3E%C3%A9%3C%2Fi%3E+%22q%22"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=a%25b%2Bc%26d%3De"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ }
+]

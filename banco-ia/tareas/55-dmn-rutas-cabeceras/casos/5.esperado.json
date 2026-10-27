@@ -1,0 +1,42 @@
+[
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/css; charset=utf-8",
+  "cuerpo": "body{margin:0}"
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "hola\n"
+ }
+]

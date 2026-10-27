@@ -1,0 +1,35 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/cabeceras",
+  "cabeceras": {
+   "X-Demo": "hola"
+  }
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/cabeceras"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/cabeceras",
+  "cabeceras": {
+   "x-demo": "uno dos"
+  }
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/cabeceras",
+  "cabeceras": {
+   "X-Otro": "1"
+  }
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/cabeceras",
+  "cabeceras": {
+   "X-Demo": "p"
+  },
+  "cuerpo": ""
+ }
+]

@@ -1,0 +1,35 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/Mar%C3%ADa"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/a%20b"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/saludo/x",
+  "cuerpo": ""
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/%C3%91and%C3%BA"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/a+b"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/saludo/x/y"
+ }
+]

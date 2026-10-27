@@ -1,0 +1,7 @@
+union: x y
+interseccion:
+solo A:
+solo B: x y
+simetrica: x y
+A en B: si
+disjuntos: si

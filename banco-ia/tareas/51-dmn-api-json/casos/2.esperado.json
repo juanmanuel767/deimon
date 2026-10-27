@@ -1,0 +1,77 @@
+[
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 1,
+   "titulo": "Estudiar ñandú",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 2,
+   "titulo": "Decir \"hola\" <b>&",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 201,
+  "tipo": "application/json",
+  "json": {
+   "id": 3,
+   "titulo": "x",
+   "hecha": false
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 2,
+   "titulo": "Decir \"hola\" <b>&",
+   "hecha": true
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 2,
+   "titulo": "Decir \"hola\" <b>&",
+   "hecha": true
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": [
+   {
+    "id": 1,
+    "titulo": "Estudiar ñandú",
+    "hecha": false
+   },
+   {
+    "id": 2,
+    "titulo": "Decir \"hola\" <b>&",
+    "hecha": true
+   },
+   {
+    "id": 3,
+    "titulo": "x",
+    "hecha": false
+   }
+  ]
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "id": 3,
+   "titulo": "x",
+   "hecha": false
+  }
+ }
+]

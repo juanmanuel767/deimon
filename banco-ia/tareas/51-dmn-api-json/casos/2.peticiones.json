@@ -1,0 +1,42 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"Estudiar ñandú\"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"Decir \\\"hola\\\" <b>&\"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"x\", \"hecha\": true, \"id\": 99}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/2/hecha"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas/2/hecha"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas/3"
+ }
+]

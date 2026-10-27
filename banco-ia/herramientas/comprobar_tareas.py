@@ -4,9 +4,13 @@
   - el caso 1 (entrada y salida) aparece en enunciado.md;
   - lo que hay en disco coincide con lo que calcula la referencia en Python (crear_tareas.py);
   - la solución de referencia en Deimon (soluciones/referencia/deimon/) da la salida de Python
-    en todos los casos.
+    en todos los casos;
+  - tareas web (51-55): casos .peticiones.json/.esperado.json en disco = los del generador (tareas_web.py), ≥4 casos,
+    el caso 1 dentro del enunciado, y las DOS referencias (Python y Deimon) pasan todos los casos con el arnés
+    medir_web.py; salvo las que hoy Deimon no puede hacer (IMPOSIBLE_EN_DEIMON).
 Uso: python3 herramientas/comprobar_tareas.py   (desde banco-ia/). Código de salida 1 si algo falla.
 La variable DEIMON elige el compilador (por defecto ../compilador/target/release/deimon)."""
+import json
 import os
 import subprocess
 import sys
@@ -14,14 +18,69 @@ import sys
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 import crear_tareas  # noqa: E402
+import medir_web  # noqa: E402
+import tareas_web  # noqa: E402
 
 RAIZ = os.path.normpath(os.path.join(AQUI, ".."))
 DEIMON = os.environ.get("DEIMON") or os.path.normpath(os.path.join(RAIZ, "..", "compilador", "target", "release", "deimon"))
 
 
+# Tareas web que la referencia de Deimon no puede resolver con el compilador actual (motivo y ejemplo mínimo).
+# Si algún día Deimon puede, hay que escribir su referencia y quitarla de aquí (se avisa si pasa).
+IMPOSIBLE_EN_DEIMON = {
+    "51-dmn-api-json": "una ruta solo responde 200 text/html (o 303, o el 404 propio): no hay forma de elegir 201/400/404 ni "
+                       "application/json, y solo se aceptan los métodos GET y POST (PUT/DELETE dan 405). "
+                       'Ejemplo mínimo: ruta "/api/tareas" { devolver "[]" } da «200 text/html; charset=utf-8».',
+    "55-dmn-rutas-cabeceras": "no se puede elegir el Content-Type (text/plain, text/css, application/json: siempre sale "
+                              "text/html; charset=utf-8) ni el código 400 / un 404 con cuerpo propio. "
+                              'Ejemplo mínimo: ruta "/hola.txt" { devolver "hola" } da «text/html».',
+}
+
+
 def leer(ruta):
     with open(ruta, encoding="utf-8") as f:
         return f.read()
+
+
+def comprobar_webs(fallos):
+    for nombre, enunciado, casos in tareas_web.WEBS:
+        carpeta = os.path.join(RAIZ, "tareas", nombre)
+        if len(casos) < 4:
+            fallos.append(f"{nombre}: solo {len(casos)} casos (mínimo 4)")
+        try:
+            en_disco = leer(os.path.join(carpeta, "enunciado.md"))
+        except OSError:
+            fallos.append(f"{nombre}: falta enunciado.md (ejecuta crear_tareas.py)")
+            continue
+        if en_disco != crear_tareas.texto_enunciado_web(nombre, enunciado, casos):
+            fallos.append(f"{nombre}: enunciado.md en disco no coincide con el generador")
+        if tareas_web.texto_ejemplo(*casos[0]) not in en_disco:
+            fallos.append(f"{nombre}: el caso 1 no aparece en el enunciado")
+        for k, (peticiones, esperado) in enumerate(casos, 1):
+            if len(peticiones) != len(esperado):
+                fallos.append(f"{nombre}: caso {k}: distinto número de peticiones y respuestas")
+            for sufijo, datos in (("peticiones", peticiones), ("esperado", esperado)):
+                try:
+                    with open(os.path.join(carpeta, "casos", f"{k}.{sufijo}.json"), encoding="utf-8") as f:
+                        if json.load(f) != datos:
+                            fallos.append(f"{nombre}: caso {k}.{sufijo}.json en disco no coincide con el generador")
+                except (OSError, ValueError):
+                    fallos.append(f"{nombre}: falta o está roto casos/{k}.{sufijo}.json (ejecuta crear_tareas.py)")
+        referencias = [("python", os.path.join(RAIZ, "soluciones", "referencia", "python", nombre + ".py")),
+                       ("deimon", os.path.join(RAIZ, "soluciones", "referencia", "deimon", nombre + ".dmn"))]
+        for lenguaje, archivo in referencias:
+            existe = os.path.isfile(archivo)
+            if lenguaje == "deimon" and nombre in IMPOSIBLE_EN_DEIMON:
+                if existe:
+                    fallos.append(f"{nombre}: ya hay referencia en Deimon; quita la tarea de IMPOSIBLE_EN_DEIMON")
+                continue
+            if not existe:
+                fallos.append(f"{nombre}: falta la referencia en {lenguaje}")
+                continue
+            detalles = []
+            c, f, _o = medir_web.medir_tarea(lenguaje, archivo, carpeta, detalles.append)
+            if f:
+                fallos.append(f"{nombre}: la referencia de {lenguaje} falla {f}/{c} casos" + "".join("\n" + d for d in detalles))
 
 
 def main():
@@ -64,12 +123,15 @@ def main():
             if r.stdout != esperado:
                 fallos.append(f"{nombre}: caso {k}: la referencia de Deimon no coincide con la de Python"
                               + (f" ({r.stderr.strip().splitlines()[0]})" if r.stderr.strip() else ""))
-    total = len(crear_tareas.TAREAS)
+    comprobar_webs(fallos)
+    total = len(crear_tareas.TAREAS) + len(tareas_web.WEBS)
     if fallos:
         print("\n".join(fallos))
         print(f"FALLOS: {len(fallos)} en {total} tareas")
         sys.exit(1)
-    print(f"bien: {total} tareas, todas con >=4 casos, caso 1 en el enunciado y Deimon = Python en todos")
+    print(f"bien: {total} tareas, todas con >=4 casos y caso 1 en el enunciado; Deimon = Python en todos los casos de 01-50; "
+          f"webs 51-55: referencia Python pasa las 5 y la de Deimon las {len(tareas_web.WEBS) - len(IMPOSIBLE_EN_DEIMON)} "
+          f"posibles (imposibles hoy: {', '.join(sorted(IMPOSIBLE_EN_DEIMON))})")
 
 
 if __name__ == "__main__":

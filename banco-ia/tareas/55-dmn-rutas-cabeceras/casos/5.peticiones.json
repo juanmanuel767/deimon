@@ -1,0 +1,35 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/nada"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/hola.txt/extra"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/hola.txt",
+  "cuerpo": ""
+ },
+ {
+  "metodo": "DELETE",
+  "ruta": "/pagina"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/estilo.css"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/Pagina"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/hola.txt"
+ }
+]

@@ -1,0 +1,35 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "x_demo": "hola"
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "x_demo": null
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "x_demo": "uno dos"
+  }
+ },
+ {
+  "codigo": 200,
+  "tipo": "application/json",
+  "json": {
+   "x_demo": null
+  }
+ },
+ {
+  "codigo": 404,
+  "tipo": "text/plain; charset=utf-8",
+  "cuerpo": "no encontrado"
+ }
+]

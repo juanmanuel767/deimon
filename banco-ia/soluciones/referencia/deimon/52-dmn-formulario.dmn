@@ -1,0 +1,51 @@
+funcion escapar(texto) {
+    sea r = reemplazar(texto, "&", "&amp;")
+    r = reemplazar(r, "<", "&lt;")
+    r = reemplazar(r, ">", "&gt;")
+    r = reemplazar(r, "\"", "&quot;")
+    r = reemplazar(r, "'", "&#039;")
+    devolver r
+}
+
+# campo() entrega el valor ya escapado (con &#39; para la comilla simple): se deshace para medir caracteres reales.
+funcion leer_campo(nombre) {
+    sea v = campo(nombre)
+    si v == nada {
+        devolver ""
+    }
+    v = reemplazar(v, "&#39;", "'")
+    v = reemplazar(v, "&quot;", "\"")
+    v = reemplazar(v, "&lt;", "<")
+    v = reemplazar(v, "&gt;", ">")
+    v = reemplazar(v, "&amp;", "&")
+    devolver recortar(v)
+}
+
+ruta "/contacto" {
+    si no es_envio() {
+        devolver "<form method=\"post\" action=\"/contacto\"><input name=\"nombre\"><input name=\"edad\"><textarea name=\"mensaje\"></textarea><button>Enviar</button></form>"
+    }
+    sea nombre = leer_campo("nombre")
+    sea edad = leer_campo("edad")
+    sea mensaje = leer_campo("mensaje")
+    sea errores = ""
+    si medir(nombre) < 2 o medir(nombre) > 20 {
+        errores = errores + "<li>nombre &quot;" + escapar(nombre) + "&quot;: debe tener entre 2 y 20 caracteres</li>"
+    }
+    sea edad_valida = falso
+    si coincide_patron(edad, "^[0-9]+$") {
+        edad_valida = a_numero(edad) >= 18 y a_numero(edad) <= 120
+    }
+    si no edad_valida {
+        errores = errores + "<li>edad &quot;" + escapar(edad) + "&quot;: debe ser un entero entre 18 y 120</li>"
+    }
+    si medir(mensaje) < 1 o medir(mensaje) > 50 {
+        errores = errores + "<li>mensaje &quot;" + escapar(mensaje) + "&quot;: debe tener entre 1 y 50 caracteres</li>"
+    }
+    si errores != "" {
+        devolver "<h1>Errores</h1><ul>" + errores + "</ul>"
+    }
+    devolver "<h1>Gracias, " + escapar(nombre) + "</h1><p>" + a_numero(edad) + " anos: " + escapar(mensaje) + "</p>"
+}
+
+servir(8080)

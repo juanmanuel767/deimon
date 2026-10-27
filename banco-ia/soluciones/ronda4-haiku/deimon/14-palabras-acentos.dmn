@@ -1,0 +1,49 @@
+# Contar palabras (solo letras, con acentos y ñ)
+sea letras = "abcdefghijklmnopqrstuvwxyzáéíóúüñABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÜÑ"
+
+sea todo = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    todo = todo + linea + " "
+    linea = pedir_texto("")
+}
+
+sea conteo = {}
+sea total = 0
+sea palabra = ""
+sea p = ""
+sea i = 0
+sea c = ""
+mientras i < medir(todo) {
+    c = todo[i]
+    si incluye(letras, c) {
+        palabra = palabra + c
+    } sino {
+        si medir(palabra) > 0 {
+            total = total + 1
+            p = minusculas(palabra)
+            si tiene_clave(conteo, p) {
+                conteo[p] = conteo[p] + 1
+            } sino {
+                conteo[p] = 1
+            }
+            palabra = ""
+        }
+    }
+    i = i + 1
+}
+
+mostrar("total: " + a_texto(total))
+mostrar("distintas: " + a_texto(medir(listar_claves(conteo))))
+
+sea filas = []
+para palabra_c en listar_claves(conteo) {
+    filas = agregar(filas, {"palabra": palabra_c, "veces": conteo[palabra_c]})
+}
+sea orden = ordenar_por(filas, ["-veces", "palabra"])
+sea n = minimo(5, medir(orden))
+sea k = 0
+mientras k < n {
+    mostrar(orden[k]["palabra"] + ": " + a_texto(orden[k]["veces"]))
+    k = k + 1
+}

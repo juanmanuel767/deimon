@@ -1,0 +1,32 @@
+# Suma de enteros, avisando de las líneas que no son enteros
+funcion es_entero(t) {
+    sea inicio = 0
+    si medir(t) > 0 y t[0] == "-" {
+        inicio = 1
+    }
+    si medir(t) <= inicio {
+        devolver falso
+    }
+    sea i = inicio
+    mientras i < medir(t) {
+        si no incluye("0123456789", t[i]) {
+            devolver falso
+        }
+        i = i + 1
+    }
+    devolver verdadero
+}
+
+sea suma = 0
+sea n = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    n = n + 1
+    si es_entero(linea) {
+        suma = suma + a_numero(linea)
+    } sino {
+        mostrar("linea " + a_texto(n) + ": no es un numero: " + linea)
+    }
+    linea = pedir_texto("")
+}
+mostrar("suma: " + a_texto(suma))

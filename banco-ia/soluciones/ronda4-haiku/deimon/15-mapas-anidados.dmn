@@ -1,0 +1,55 @@
+# Árbol de claves a partir de líneas ruta=valor
+funcion separar_igual(linea) {
+    sea i = 0
+    sea pos = -1
+    mientras i < medir(linea) y pos < 0 {
+        si linea[i] == "=" {
+            pos = i
+        }
+        i = i + 1
+    }
+    devolver [cortar(linea, 0, pos), cortar(linea, pos + 1, nada)]
+}
+
+# cada nodo es {"valor", "tiene", "hijos"}; hijos es un mapa de nodos
+funcion insertar(nodo, partes, idx, valor) {
+    sea hijos = nodo["hijos"]
+    sea clave = partes[idx]
+    sea hijo = {"valor": "", "tiene": falso, "hijos": {}}
+    si tiene_clave(hijos, clave) {
+        hijo = hijos[clave]
+    }
+    si idx == medir(partes) - 1 {
+        hijo["valor"] = valor
+        hijo["tiene"] = verdadero
+    } sino {
+        hijo = insertar(hijo, partes, idx + 1, valor)
+    }
+    hijos[clave] = hijo
+    nodo["hijos"] = hijos
+    devolver nodo
+}
+
+funcion imprimir_nodo(hijos, nivel) {
+    sea sangria = repetir("  ", nivel)
+    sea hijo = {}
+    para clave en ordenar(listar_claves(hijos)) {
+        hijo = hijos[clave]
+        si hijo["tiene"] {
+            mostrar(sangria + clave + ": " + hijo["valor"])
+        } sino {
+            mostrar(sangria + clave + ":")
+            imprimir_nodo(hijo["hijos"], nivel + 1)
+        }
+    }
+}
+
+sea raiz = {"valor": "", "tiene": falso, "hijos": {}}
+sea par = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    par = separar_igual(linea)
+    raiz = insertar(raiz, partir(par[0], "."), 0, par[1])
+    linea = pedir_texto("")
+}
+imprimir_nodo(raiz["hijos"], 0)

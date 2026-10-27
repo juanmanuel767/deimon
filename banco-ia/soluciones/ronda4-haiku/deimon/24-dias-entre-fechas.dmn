@@ -1,0 +1,11 @@
+# Días entre dos fechas (segunda menos primera)
+funcion dias_entre(linea) {
+    sea trozos = partir(recortar(linea), " ")
+    devolver diferencia_fechas(leer_fecha(trozos[1]), leer_fecha(trozos[0]), "dias")
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(dias_entre(linea))
+    linea = pedir_texto("")
+}

@@ -1,0 +1,21 @@
+funcion escapar(texto) {
+    sea r = reemplazar(texto, "&", "&amp;")
+    r = reemplazar(r, "<", "&lt;")
+    r = reemplazar(r, ">", "&gt;")
+    r = reemplazar(r, "\"", "&quot;")
+    r = reemplazar(r, "'", "&#039;")
+    devolver r
+}
+
+mostrar("<table>")
+mostrar("<tr><th>Nombre</th><th>Cantidad</th><th>Comentario</th></tr>")
+sea fila = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    fila = fila + 1
+    sea campos = partir(linea, ";")
+    sea abrir = elegir(fila % 2 == 0, "<tr class=\"par\">", "<tr>")
+    mostrar(abrir + "<td>" + escapar(campos[0]) + "</td><td>" + escapar(campos[1]) + "</td><td>" + escapar(campos[2]) + "</td></tr>")
+    linea = pedir_texto("")
+}
+mostrar("</table>")

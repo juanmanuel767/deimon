@@ -1,0 +1,44 @@
+[
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "accion": "reiniciar"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/notas",
+  "cabeceras": {
+   "Content-Type": "application/x-www-form-urlencoded"
+  },
+  "cuerpo": "texto=sigue+aqui"
+ },
+ {
+  "accion": "reiniciar"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/notas"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/visitas"
+ }
+]

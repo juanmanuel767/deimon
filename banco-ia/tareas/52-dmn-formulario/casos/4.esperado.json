@@ -1,0 +1,52 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Gracias, Ana</h1><p>45 anos: hola mundo</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;&quot;: debe tener entre 2 y 20 caracteres</li><li>edad &quot;&quot;: debe ser un entero entre 18 y 120</li><li>mensaje &quot;&quot;: debe tener entre 1 y 50 caracteres</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;&quot;: debe ser un entero entre 18 y 120</li><li>mensaje &quot;&quot;: debe tener entre 1 y 50 caracteres</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;-5&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;30.5&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;3 0&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;+30&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;1e2&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>edad &quot;99999999999999999999&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;&quot;: debe tener entre 2 y 20 caracteres</li><li>mensaje &quot;&quot;: debe tener entre 1 y 50 caracteres</li></ul>"
+ }
+]

@@ -1,0 +1,48 @@
+# Pila y cola con órdenes apilar, desapilar, encolar, desencolar y mostrar
+funcion mostrar_estado(p, c) {
+    si medir(p) == 0 {
+        mostrar("pila: vacia")
+    } sino {
+        mostrar("pila: " + unir(p, " "))
+    }
+    si medir(c) == 0 {
+        mostrar("cola: vacia")
+    } sino {
+        mostrar("cola: " + unir(c, " "))
+    }
+}
+
+sea pila = []
+sea cola = []
+sea trozos = []
+sea orden = ""
+sea x = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), " ")
+    orden = trozos[0]
+    si orden == "apilar" {
+        pila = agregar(pila, trozos[1])
+    } sino si orden == "desapilar" {
+        si medir(pila) == 0 {
+            mostrar("error: pila vacia")
+        } sino {
+            x = pila[medir(pila) - 1]
+            pila = cortar(pila, 0, medir(pila) - 1)
+            mostrar("pila->" + x)
+        }
+    } sino si orden == "encolar" {
+        cola = agregar(cola, trozos[1])
+    } sino si orden == "desencolar" {
+        si medir(cola) == 0 {
+            mostrar("error: cola vacia")
+        } sino {
+            x = cola[0]
+            cola = cortar(cola, 1, nada)
+            mostrar("cola->" + x)
+        }
+    } sino si orden == "mostrar" {
+        mostrar_estado(pila, cola)
+    }
+    linea = pedir_texto("")
+}

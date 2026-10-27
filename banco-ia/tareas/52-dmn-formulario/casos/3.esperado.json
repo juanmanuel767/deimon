@@ -1,0 +1,27 @@
+[
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Gracias, abcdefghijklmnopqrst</h1><p>120 anos: mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;abcdefghijklmnopqrstu&quot;: debe tener entre 2 y 20 caracteres</li><li>edad &quot;17&quot;: debe ser un entero entre 18 y 120</li><li>mensaje &quot;mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm&quot;: debe tener entre 1 y 50 caracteres</li></ul>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Gracias, Ñu</h1><p>18 anos: ñ</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Gracias, ññññññññññññññññññññ</h1><p>19 anos: ññññññññññññññññññññññññññññññññññññññññññññññññññ</p>"
+ },
+ {
+  "codigo": 200,
+  "tipo": "text/html; charset=utf-8",
+  "cuerpo": "<h1>Errores</h1><ul><li>nombre &quot;ñññññññññññññññññññññ&quot;: debe tener entre 2 y 20 caracteres</li><li>edad &quot;121&quot;: debe ser un entero entre 18 y 120</li></ul>"
+ }
+]

@@ -1,0 +1,47 @@
+# Las 3 palabras más repetidas
+funcion es_signo(c) {
+    devolver c == "." o c == "," o c == ";" o c == ":" o c == "!" o c == "?"
+}
+
+funcion quitar_signos(p) {
+    sea r = p
+    mientras medir(r) > 0 y es_signo(r[0]) {
+        r = cortar(r, 1, nada)
+    }
+    mientras medir(r) > 0 y es_signo(r[medir(r) - 1]) {
+        r = cortar(r, 0, medir(r) - 1)
+    }
+    devolver r
+}
+
+sea todo = ""
+sea linea = pedir_texto("")
+mientras linea != nada {
+    todo = todo + linea + " "
+    linea = pedir_texto("")
+}
+
+sea conteo = {}
+sea p = ""
+para trozo en partir(minusculas(todo), " ") {
+    p = quitar_signos(trozo)
+    si medir(p) > 0 {
+        si tiene_clave(conteo, p) {
+            conteo[p] = conteo[p] + 1
+        } sino {
+            conteo[p] = 1
+        }
+    }
+}
+
+sea filas = []
+para palabra_c en listar_claves(conteo) {
+    filas = agregar(filas, {"palabra": palabra_c, "veces": conteo[palabra_c]})
+}
+sea orden = ordenar_por(filas, ["-veces", "palabra"])
+sea n = minimo(3, medir(orden))
+sea i = 0
+mientras i < n {
+    mostrar(orden[i]["palabra"] + ": " + a_texto(orden[i]["veces"]))
+    i = i + 1
+}

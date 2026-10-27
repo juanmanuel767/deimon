@@ -1,0 +1,16 @@
+# Factorial exacto de cada N
+funcion factorial(n) {
+    sea f = 1
+    sea i = 2
+    mientras i <= n {
+        f = f * i
+        i = i + 1
+    }
+    devolver f
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(factorial(a_numero(recortar(linea))))
+    linea = pedir_texto("")
+}

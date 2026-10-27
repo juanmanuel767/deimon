@@ -1,0 +1,77 @@
+# Plantilla con marcadores {nombre} sustituidos por los valores clave=valor
+funcion separar_igual(linea) {
+    sea i = 0
+    sea pos = -1
+    mientras i < medir(linea) y pos < 0 {
+        si linea[i] == "=" {
+            pos = i
+        }
+        i = i + 1
+    }
+    devolver [cortar(linea, 0, pos), cortar(linea, pos + 1, nada)]
+}
+
+funcion es_nombre(t) {
+    si medir(t) == 0 {
+        devolver falso
+    }
+    sea validos = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+    sea i = 0
+    mientras i < medir(t) {
+        si no incluye(validos, t[i]) {
+            devolver falso
+        }
+        i = i + 1
+    }
+    devolver verdadero
+}
+
+funcion sustituir(t, datos) {
+    sea res = ""
+    sea i = 0
+    sea j = 0
+    sea cierre = -1
+    sea nombre = ""
+    sea n = medir(t)
+    mientras i < n {
+        si t[i] == "{" {
+            j = i + 1
+            mientras j < n y t[j] != "}" {
+                j = j + 1
+            }
+            cierre = -1
+            si j < n {
+                cierre = j
+            }
+            si cierre >= 0 {
+                nombre = cortar(t, i + 1, cierre - i - 1)
+            }
+            si cierre >= 0 y es_nombre(nombre) {
+                si tiene_clave(datos, nombre) {
+                    res = res + datos[nombre]
+                } sino {
+                    res = res + "{" + nombre + "}"
+                }
+                i = cierre + 1
+            } sino {
+                res = res + "{"
+                i = i + 1
+            }
+        } sino {
+            res = res + t[i]
+            i = i + 1
+        }
+    }
+    devolver res
+}
+
+sea plantilla = pedir_texto("")
+sea datos = {}
+sea par = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    par = separar_igual(linea)
+    datos[par[0]] = par[1]
+    linea = pedir_texto("")
+}
+mostrar(sustituir(plantilla, datos))

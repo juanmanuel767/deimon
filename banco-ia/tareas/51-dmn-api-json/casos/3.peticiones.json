@@ -1,0 +1,94 @@
+[
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{titulo"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "[]"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"\"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"   \"}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": 5}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": ""
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "null"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": null}"
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "\"texto\""
+ },
+ {
+  "metodo": "POST",
+  "ruta": "/api/tareas",
+  "cabeceras": {
+   "Content-Type": "application/json"
+  },
+  "cuerpo": "{\"titulo\": \"  hola  \"}"
+ },
+ {
+  "metodo": "GET",
+  "ruta": "/api/tareas"
+ }
+]

@@ -1,0 +1,33 @@
+# Agrupar por departamento y ordenar por salario
+funcion mostrar_grupo(nombre_dep, personas) {
+    sea ordenadas = ordenar_por(personas, ["-salario", "nombre"])
+    sea total = 0
+    para p en ordenadas {
+        total = total + p["salario"]
+    }
+    mostrar(nombre_dep + " (" + a_texto(medir(ordenadas)) + " personas): total " + a_texto(total))
+    para p en ordenadas {
+        mostrar("  " + p["nombre"] + ": " + a_texto(p["salario"]))
+    }
+}
+
+sea grupos = {}
+sea trozos = []
+sea dep = ""
+sea persona = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    trozos = partir(recortar(linea), ",")
+    dep = trozos[0]
+    persona = {"nombre": trozos[1], "salario": a_numero(trozos[2])}
+    si tiene_clave(grupos, dep) {
+        grupos[dep] = agregar(grupos[dep], persona)
+    } sino {
+        grupos[dep] = [persona]
+    }
+    linea = pedir_texto("")
+}
+
+para d en ordenar(listar_claves(grupos)) {
+    mostrar_grupo(d, grupos[d])
+}
