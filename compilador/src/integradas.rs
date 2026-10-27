@@ -85,7 +85,7 @@ pub const INTEGRADAS: &[Integrada] = &[
         nombre: "ordenar",
         parametros: &["lista"],
         categoria: "listas y textos",
-        descripcion: "devuelve la lista ordenada de menor a mayor (solo números o solo textos)",
+        descripcion: "devuelve la lista ordenada de menor a mayor (solo números o solo textos; los textos van por código de letra: las mayúsculas antes que las minúsculas; para otro criterio, ordenar_por)",
         ejemplo: "mostrar(ordenar([3, 1, 2]))   # [1, 2, 3]",
     },
     Integrada {
@@ -127,14 +127,14 @@ pub const INTEGRADAS: &[Integrada] = &[
         nombre: "cortar",
         parametros: &["lista", "inicio", "cantidad"],
         categoria: "listas y textos",
-        descripcion: "trozo de una lista o texto desde inicio (negativo cuenta desde el final); cantidad nada llega hasta el final",
+        descripcion: "trozo de una lista o texto desde inicio (negativo cuenta desde el final); cantidad nada llega hasta el final; cantidad 0 da una lista o texto vacío",
         ejemplo: "mostrar(cortar(\"Deimon\", 0, 3))   # Dei",
     },
     Integrada {
         nombre: "rango",
         parametros: &["inicio", "fin"],
         categoria: "listas y textos",
-        descripcion: "lista de números enteros de inicio a fin, los dos incluidos",
+        descripcion: "lista de números enteros de inicio a fin, los dos incluidos; si inicio > fin cuenta hacia atrás (rango(0, -1) es [0, -1], no una lista vacía): para recorrer los índices de una lista usa para x en l, o rango(0, medir(l) - 1) solo si medir(l) > 0",
         ejemplo: "para i en rango(1, 5) { mostrar(i) }   # 1 2 3 4 5",
     },
     Integrada {
@@ -267,7 +267,7 @@ pub const INTEGRADAS: &[Integrada] = &[
         nombre: "listar_claves",
         parametros: &["coleccion"],
         categoria: "datos",
-        descripcion: "lista ordenada de las claves de la colección; si le das una lista con claves, devuelve sus claves en orden",
+        descripcion: "lista ordenada de las claves de la colección; si le das una lista con claves, devuelve sus claves en el orden en que se añadieron (no alfabético; para alfabético: ordenar(listar_claves(m)))",
         ejemplo: "para clave en listar_claves(\"amigos\") { mostrar(clave) }",
     },
     Integrada {

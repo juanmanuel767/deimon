@@ -135,9 +135,10 @@ fn todas_las_palabras_reservadas_aparecen_en_la_gramatica() {
     let gramatica = fs::read_to_string(raiz().join("docs").join("GRAMATICA.md"))
         .expect("no se pudo leer docs/GRAMATICA.md");
     for palabra in deimon::lexer::PALABRAS_RESERVADAS {
-        let tokens = deimon::lexer::tokenizar(palabra).expect("la palabra no se pudo leer");
+        // `y` y `o` solo son palabra del lenguaje tras un valor: se prueban entre dos números.
+        let tokens = deimon::lexer::tokenizar(&format!("1 {} 1", palabra)).expect("la palabra no se pudo leer");
         assert!(
-            !matches!(tokens[0].tipo, deimon::lexer::Tipo::Ident(_)),
+            !matches!(tokens[1].tipo, deimon::lexer::Tipo::Ident(_)),
             "'{}' debería ser una palabra reservada",
             palabra
         );

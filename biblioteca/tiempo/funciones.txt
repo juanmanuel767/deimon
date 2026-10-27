@@ -10,4 +10,4 @@ sumar_tiempo | segundos, cantidad, unidad | suma una cantidad entera de segundos
 diferencia_fechas | a, b, unidad | diferencia entera entre dos fechas en la unidad pedida (a - b); en meses y años cuenta meses completos | diferencia_fechas(86400, 0, "horas")   # 24
 dia_de_la_semana | segundos, zona | día de la semana en la zona indicada: 1 lunes ... 7 domingo | dia_de_la_semana(0, "UTC")   # 4
 es_bisiesto | anio | dice si un año es bisiesto | es_bisiesto(2024)   # verdadero
-dias_del_mes | mes, anio | días que tiene un mes de un año | dias_del_mes(2024, 2)   # 29
+dias_del_mes | anio, mes | días que tiene un mes de un año | dias_del_mes(2024, 2)   # 29

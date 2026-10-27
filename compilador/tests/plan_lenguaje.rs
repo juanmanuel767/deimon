@@ -646,3 +646,63 @@ fn solo_avisa_de_lo_que_se_ejecuta_seguro_en_la_llamada() {
     );
     assert!(texto.contains("línea 2: no se puede restar texto y número (con q(\"a\") de la línea 6;"), "{}", texto);
 }
+
+const PROGRAMA_Y_O_COMO_NOMBRES: &str = r#"sea y = 3
+sea o = 5
+y = y + 1
+
+funcion mover(x, y) {
+    devolver x * 10 + y
+}
+
+sea m = [[1, 2], [3, 4]]
+sea x = 1
+mostrar(m[x][x - 1])
+mostrar(m[y - 3][y - 4])
+mostrar(mover(2, y))
+para y en [7, 8] {
+    mostrar(y)
+}
+sea f = y
+mostrar(f)
+sea z = x < 2 y y > 0
+mostrar(z)
+mostrar(no y == 1)
+mostrar(-y)
+mostrar(f"{y} {o}")
+sea d = {y: 1, o: 2}
+mostrar(d[y])
+mostrar(verdadero y falso o verdadero)
+mientras x < 10 y y > 0 {
+    x = x + 5
+}
+mostrar(x)
+"#;
+
+#[test]
+fn y_y_o_son_nombres_fuera_de_posicion_de_operador() {
+    igual_en_los_dos_motores("y_o_nombres", PROGRAMA_Y_O_COMO_NOMBRES, "3\n3\n24\n7\n8\n4\nverdadero\nverdadero\n-4\n4 5\n1\nverdadero\n11\n");
+}
+
+#[test]
+fn y_y_o_siguen_siendo_operadores_logicos() {
+    igual_en_los_dos_motores(
+        "y_o_operadores",
+        "sea a = verdadero\nsea b = falso\nmostrar(a y b)\nmostrar(a o b)\nmostrar(no a y b)\nmostrar(no b y a)\nmostrar(b o a y b)\nmostrar((a) y (b))\n",
+        "falso\nverdadero\nfalso\nverdadero\nfalso\nfalso\n",
+    );
+}
+
+#[test]
+fn formatear_no_cambia_un_programa_con_y_como_variable() {
+    let carpeta = carpeta("y_o_formato");
+    let archivo = carpeta.join("y_o.dmn");
+    fs::write(&archivo, PROGRAMA_Y_O_COMO_NOMBRES).expect("no se pudo escribir el programa");
+    let salida = Command::new(binario()).arg("formatear").arg(&archivo).arg("--comprobar").output().expect("deimon formatear");
+    assert!(
+        salida.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&salida.stdout),
+        String::from_utf8_lossy(&salida.stderr)
+    );
+}

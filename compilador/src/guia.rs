@@ -27,8 +27,8 @@ pub const PALABRAS_CLAVE: &[(&str, &str)] = &[
     ("prueba", "palabra reservada que define una prueba (solo en el nivel principal): prueba \"suma\" { comprobar(1 + 1 == 2) }"),
     ("modulo", "carga un módulo (carpeta con funciones en Rust y/o en Deimon): usar modulo \"texto\""),
     ("extension", "palabra reservada antigua: 'usar extension' ahora se escribe 'usar modulo' (E021)"),
-    ("y", "y lógico (solo con valores lógicos)"),
-    ("o", "o lógico (solo con valores lógicos)"),
+    ("y", "y lógico (solo con valores lógicos); si el lado izquierdo ya decide, no evalúa el derecho. Es palabra contextual: solo es operador justo después de un valor completo; en otro sitio es un nombre normal (sea y = 3, funcion f(x, y), m[y])"),
+    ("o", "o lógico (solo con valores lógicos); si el lado izquierdo ya decide, no evalúa el derecho. Contextual igual que y (sea o = 3)"),
     ("no", "negación lógica"),
     ("verdadero", "valor lógico cierto"),
     ("falso", "valor lógico falso"),
@@ -48,12 +48,12 @@ pub const OPERADORES: &[(&str, &str)] = &[
 ];
 
 pub const TIPOS: &[(&str, &str)] = &[
-    ("número", "decimal (f64): 30, 2.5, -7; 5 se muestra como 5"),
-    ("texto", r#"entre comillas dobles, con escapes \n \t \" \\, en una sola línea; f"Hola {nombre}, {edad + 1}" mete valores (una llave literal se escribe {{ o }}); """ ... """ ocupa varias líneas (f""" ... """ con valores) y quita la sangría común"#),
+    ("número", "entero exacto aunque sea enorme (factorial de 40, Fibonacci 150...) o decimal en coma flotante (0.1 + 0.2 da 0.30000000000000004): 30, 2.5, -7; 5 se muestra como 5"),
+    ("texto", r#"entre comillas dobles, con escapes \n \t \" \\, en una sola línea; f"Hola {nombre}, {edad + 1}" mete valores (una llave literal se escribe {{ o }}); """ ... """ ocupa varias líneas (f""" ... """ con valores) y quita la sangría común; t[i] lee un carácter (desde 0; t[-1] es un error); para c en texto NO vale: usa para i en rango(0, medir(t) - 1) si medir(t) > 0; < y > no comparan textos: para ordenarlos usa ordenar"#),
     ("lógico", "verdadero o falso; las condiciones deben ser lógicas (no hay verdad por defecto)"),
     ("nada", "el valor nada; leer() de una clave inexistente lo devuelve"),
     ("lista", "[1, \"a\", verdadero]; puede mezclar tipos; l[0] es el primero y l[i] = v cambia uno"),
-    ("lista con claves", "{\"nombre\": \"Ana\", \"edad\": 30}; recuerda el orden de las claves; m[\"edad\"] lee y m[\"edad\"] = 31 cambia o añade; listar_claves(m), tiene_clave(m, c) y quitar_clave(m, c)"),
+    ("lista con claves", "{\"nombre\": \"Ana\", \"edad\": 30}; {} es la lista con claves vacía; recuerda el orden en que se añadieron las claves; m[\"edad\"] lee y m[\"edad\"] = 31 cambia o añade; listar_claves(m) las devuelve en ese orden, NO alfabético (para alfabético: ordenar(listar_claves(m))); tiene_clave(m, c) y quitar_clave(m, c)"),
 ];
 
 pub const ORDENES: &[(&str, &str)] = &[

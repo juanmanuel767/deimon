@@ -5,10 +5,10 @@ minusculas | texto | devuelve el texto en minúsculas | minusculas("HOLA")   # h
 recortar | texto | quita los espacios del principio y del final | recortar("  hola  ")   # hola
 contiene | texto, buscado | dice si el texto contiene otro texto | contiene("hola mundo", "mundo")   # verdadero
 reemplazar | texto, buscado, nuevo | cambia todas las apariciones de un texto por otro | reemplazar("a-b", "-", "+")   # a+b
-partir | texto, separador | divide el texto por un separador y devuelve una lista | partir("a,b", ",")   # [a, b]
+partir | texto, separador | divide el texto por un separador y devuelve una lista (partir("", ",") da una lista con un texto vacío, no una lista vacía) | partir("a,b", ",")   # [a, b]
 empieza_con | texto, inicio | dice si el texto empieza por otro texto | empieza_con("hola", "ho")   # verdadero
 termina_con | texto, final | dice si el texto termina en otro texto | termina_con("hola", "la")   # verdadero
-repetir | texto, veces | repite un texto varias veces | repetir("ja", 3)   # jajaja
+repetir | texto, veces | repite un texto varias veces (con 0 veces da un texto vacío) | repetir("ja", 3)   # jajaja
 unir | lista, separador | une los elementos de una lista en un texto con un separador | unir(["a", "b"], "-")   # a-b
 formatear_texto | plantilla, valores | rellena una plantilla como sprintf: %s texto, %d entero, %.2f decimales, %05d con ceros; los valores van en una lista | formatear_texto("%s tiene %d años", ["Ana", 30])   # Ana tiene 30 años
 formatear_numero | numero, decimales, separador_decimal, separador_miles | formatea un número con decimales y separadores como number_format de PHP: redondea como PHP y solo pone el signo si el resultado no es cero | formatear_numero(1234.5678, 2, ".", ",")   # 1,234.57

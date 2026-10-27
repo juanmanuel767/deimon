@@ -240,6 +240,7 @@ fin_archivo     = (* el final del texto *) ;
   error E021 con el nombre nuevo como sugerencia.
 - Una palabra reservada no se puede usar como nombre de variable, función,
   parámetro, prueba ni parámetro de ruta. Si se intenta, sale el error E022.
+  Excepción: `y` y `o` son palabras contextuales (ver sección 9).
 
 ## 9. Palabras reservadas
 
@@ -264,8 +265,8 @@ Estas son todas las palabras que el lexer reconoce como parte del lenguaje:
 | `intentar` | ejecuta un bloque y atrapa sus errores |
 | `falla` | en `si falla e { ... }`, el bloque que se ejecuta si hubo un error |
 | `en` | separa la variable y la lista en `para` |
-| `y` | y lógico |
-| `o` | o lógico |
+| `y` | y lógico (contextual: solo justo después de un operando completo; en otro sitio es un nombre normal) |
+| `o` | o lógico (contextual, igual que `y`) |
 | `no` | negación lógica |
 | `verdadero` | valor lógico cierto |
 | `falso` | valor lógico falso |

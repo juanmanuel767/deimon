@@ -350,9 +350,10 @@ fn la_guia_contiene_todas_las_integradas_y_el_generador_las_acepta() {
 #[test]
 fn las_palabras_clave_de_la_guia_son_palabras_reservadas_del_lexer() {
     for (palabra, _) in deimon::guia::PALABRAS_CLAVE {
-        let tokens = deimon::lexer::tokenizar(palabra).unwrap();
+        // `y` y `o` solo son palabra del lenguaje tras un valor: se prueban entre dos números.
+        let tokens = deimon::lexer::tokenizar(&format!("1 {} 1", palabra)).unwrap();
         assert!(
-            !matches!(tokens[0].tipo, deimon::lexer::Tipo::Ident(_)),
+            !matches!(tokens[1].tipo, deimon::lexer::Tipo::Ident(_)),
             "'{}' no es palabra reservada",
             palabra
         );

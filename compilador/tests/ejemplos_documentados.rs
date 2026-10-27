@@ -193,6 +193,8 @@ struct Ejemplo {
     origen: String,
     modulo: Option<String>,
     codigo: String,
+    /// Parámetros anunciados en funciones.txt (solo en los ejemplos de biblioteca).
+    parametros: Vec<String>,
 }
 
 fn raiz() -> PathBuf {
@@ -232,6 +234,7 @@ fn ejemplos_de_biblioteca(salida: &mut Vec<Ejemplo>) {
                 origen: format!("biblioteca/{}/funciones.txt:{}", modulo, campos[0].trim()),
                 modulo: Some(modulo.clone()),
                 codigo: campos[3].trim().to_string(),
+                parametros: campos[1].split(',').map(|p| p.trim().to_string()).filter(|p| p != "0" && !p.is_empty()).collect(),
             });
         }
     }
@@ -243,6 +246,7 @@ fn ejemplos_de_integradas(salida: &mut Vec<Ejemplo>) {
             origen: format!("integradas:{}", i.nombre),
             modulo: None,
             codigo: i.ejemplo.to_string(),
+            parametros: Vec::new(),
         });
     }
 }
@@ -281,6 +285,7 @@ fn ejemplos_de_documentos(salida: &mut Vec<Ejemplo>) {
                                 origen: format!("{}#{}", relativo.display(), numero),
                                 modulo: None,
                                 codigo: lineas.join("\n"),
+                                parametros: Vec::new(),
                             });
                         }
                     }
@@ -608,6 +613,77 @@ fn funcion_de_biblioteca(ej: &Ejemplo) -> Option<&str> {
     }
 }
 
+/// Argumentos de primer nivel de la primera llamada `nombre(...)` del texto.
+fn argumentos_de_llamada(codigo: &str, nombre: &str) -> Option<Vec<String>> {
+    let inicio = codigo.find(&format!("{}(", nombre))? + nombre.len() + 1;
+    let (mut profundidad, mut en_texto, mut escapado) = (0, false, false);
+    let (mut args, mut actual) = (Vec::new(), String::new());
+    for c in codigo[inicio..].chars() {
+        if en_texto {
+            if escapado {
+                escapado = false;
+            } else if c == '\\' {
+                escapado = true;
+            } else if c == '"' {
+                en_texto = false;
+            }
+        } else if c == '"' {
+            en_texto = true;
+        } else if "([{".contains(c) {
+            profundidad += 1;
+        } else if ")]}".contains(c) {
+            if profundidad == 0 {
+                if !actual.trim().is_empty() {
+                    args.push(actual.trim().to_string());
+                }
+                return Some(args);
+            }
+            profundidad -= 1;
+        } else if c == ',' && profundidad == 0 {
+            args.push(actual.trim().to_string());
+            actual.clear();
+            continue;
+        }
+        actual.push(c);
+    }
+    None
+}
+
+/// Los parámetros de fecha (`anio`, `mes`, `dia`...) deben ir en orden cronológico y, si el
+/// ejemplo los pasa como números sueltos, caer en un rango razonable. Así una cabecera con los
+/// parámetros en otro orden que la función real (`mes, anio` frente a `anio, mes`) no pasa.
+fn problemas_de_parametros_de_fecha(ej: &Ejemplo) -> Vec<String> {
+    const ORDEN: &[(&str, i64, i64)] = &[
+        ("anio", 100, 9999),
+        ("mes", 1, 12),
+        ("dia", 1, 31),
+        ("hora", 0, 23),
+        ("minuto", 0, 59),
+    ];
+    let mut problemas = Vec::new();
+    let posiciones: Vec<Option<usize>> =
+        ORDEN.iter().map(|(n, _, _)| ej.parametros.iter().position(|p| p == n)).collect();
+    let presentes: Vec<usize> = posiciones.iter().flatten().copied().collect();
+    if presentes.windows(2).any(|w| w[0] > w[1]) {
+        problemas.push(format!(
+            "los parámetros ({}) no están en orden año, mes, día, hora, minuto",
+            ej.parametros.join(", ")
+        ));
+    }
+    let Some(funcion) = funcion_de_biblioteca(ej) else { return problemas };
+    let Some(args) = argumentos_de_llamada(&ej.codigo, funcion) else { return problemas };
+    for ((nombre, minimo, maximo), posicion) in ORDEN.iter().zip(&posiciones) {
+        let Some(valor) = posicion.and_then(|p| args.get(p)).and_then(|a| a.parse::<i64>().ok()) else { continue };
+        if valor < *minimo || valor > *maximo {
+            problemas.push(format!(
+                "el ejemplo pasa {} como `{}` (tiene que estar entre {} y {}): ¿están los parámetros en el orden real?",
+                valor, nombre, minimo, maximo
+            ));
+        }
+    }
+    problemas
+}
+
 /// Devuelve (comprobado, ejecutado, anuncia su resultado).
 fn comprobar_ejemplo(indice: usize, ej: &Ejemplo) -> Result<(bool, bool, bool), String> {
     let armado = armar(ej);
@@ -680,6 +756,11 @@ fn todos_los_ejemplos_de_la_documentacion_son_ciertos() {
                 "SIN_RESULTADO: '{}' ya no es una función de biblioteca/*/funciones.txt; quítala de la lista",
                 funcion
             ));
+        }
+    }
+    for ej in &ejemplos {
+        for problema in problemas_de_parametros_de_fecha(ej) {
+            fallos.push(format!("[{}] {}", ej.origen, problema));
         }
     }
     let (mut comprobados, mut ejecutados, mut excepciones) = (0, 0, 0);

@@ -1092,8 +1092,6 @@ fn palabra_reservada(tipo: &Tipo) -> Option<&'static str> {
         Tipo::Mientras => Some("mientras"),
         Tipo::Para => Some("para"),
         Tipo::En => Some("en"),
-        Tipo::Y => Some("y"),
-        Tipo::O => Some("o"),
         Tipo::No => Some("no"),
         Tipo::Verdadero => Some("verdadero"),
         Tipo::Falso => Some("falso"),

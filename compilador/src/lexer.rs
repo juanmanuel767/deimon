@@ -457,7 +457,42 @@ fn tokenizar_interno(
         columna: caracteres.len() - inicio_linea + 1,
         fin: caracteres.len() - inicio_linea + 1,
     });
+    resolver_y_o(&mut tokens);
     Ok(tokens)
+}
+
+/// `y` y `o` son palabras contextuales: solo son el operador lógico justo después de un
+/// operando completo (en la misma línea); en cualquier otro sitio son un nombre normal.
+fn resolver_y_o(tokens: &mut [Token]) {
+    let mut anterior: Option<usize> = None;
+    for i in 0..tokens.len() {
+        if matches!(tokens[i].tipo, Tipo::Comentario(_)) {
+            continue;
+        }
+        if matches!(tokens[i].tipo, Tipo::Y | Tipo::O) {
+            let tras_operando = anterior.is_some_and(|a| {
+                matches!(
+                    tokens[a].tipo,
+                    Tipo::Numero(_)
+                        | Tipo::EnteroGrande(_)
+                        | Tipo::Texto(_)
+                        | Tipo::TextoEspecial { .. }
+                        | Tipo::Ident(_)
+                        | Tipo::RParen
+                        | Tipo::RCorchete
+                        | Tipo::RLave
+                        | Tipo::Verdadero
+                        | Tipo::Falso
+                        | Tipo::Nada
+                )
+            });
+            if !tras_operando {
+                let nombre = if tokens[i].tipo == Tipo::Y { "y" } else { "o" };
+                tokens[i].tipo = Tipo::Ident(nombre.to_string());
+            }
+        }
+        anterior = Some(i);
+    }
 }
 
 struct TextoLeido {
