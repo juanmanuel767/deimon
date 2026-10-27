@@ -4,7 +4,7 @@
 
 use crate::ajenas::EQUIVALENCIAS;
 use crate::ast::Extension;
-use crate::error::CODIGOS;
+use crate::error::{CODIGOS, CODIGOS_AVISO};
 use crate::integradas::INTEGRADAS;
 use crate::json;
 
@@ -60,7 +60,7 @@ pub const ORDENES: &[(&str, &str)] = &[
     ("deimon nuevo <programa|web|app|sistema> nombre", "crea la carpeta de un proyecto ya ordenado: principal.dmn, piezas/ con funciones y pruebas, README.md, arrancar.sh y .gitignore; es la forma de empezar cualquier proyecto"),
     ("deimon traducir archivo.dmn", "escribe el Rust generado"),
     ("deimon ejecutar archivo.dmn [--perfil NOMBRE]", "traduce, compila y ejecuta; los errores salen por stderr con código 1"),
-    ("deimon comprobar archivo.dmn [--json] [--arreglar]", "solo revisa: lista todos los errores (código 1) o dice que no hay (código 0); --arreglar aplica los arreglos automáticos seguros"),
+    ("deimon comprobar archivo.dmn [--json] [--arreglar] [--estricto]", "solo revisa: lista todos los errores (código 1) o dice que no hay (código 0); --arreglar aplica los arreglos automáticos seguros; --estricto avisa además de lo dudoso (códigos A001...) y también da código 1 si hay avisos"),
     ("deimon formatear archivo.dmn [--comprobar]", "reescribe el archivo con el estilo único del lenguaje; --comprobar no escribe nada, dice qué líneas cambiarían y sale con 1 si falta formatear"),
     ("deimon probar archivo.dmn [--json]", "corre las pruebas del programa sin ejecutar el resto"),
     ("deimon entorno [archivo.dmn] [--json]", "revisa que el ordenador tenga todo lo necesario y recomienda un perfil"),
@@ -119,6 +119,7 @@ pub const REGLAS: &[&str] = &[
     "usar \"ruta.dmn\" divide el programa: la ruta es relativa a la carpeta del archivo que la contiene y solo se cargan sus funciones, rutas y pruebas (sus demás instrucciones y su servir se ignoran).",
     "usar modulo \"nombre\" (solo en el nivel principal) carga un módulo: una carpeta con modulo.txt y funciones en Rust (funciones.txt + codigo.rs) y/o en Deimon (*.dmn). Se busca en modulos/<nombre>/ junto al archivo .dmn, después en ~/.deimon/modulos/<nombre>/ y por último en la biblioteca estándar (sus funciones están más abajo, en «Módulos de la biblioteca estándar»). deimon modulos los lista.",
     "Los módulos estándar que no necesitan nada (texto, matematicas, json, tiempo, patrones y graficos) se cargan solos al llamar a una de sus funciones; los que usan red o archivos (archivos, web, correo, sql, pdf, excel, pagos...) y pantallas necesitan 'usar modulo \"nombre\"' escrito. Una función propia con el mismo nombre tiene prioridad.",
+    "Tras escribir código, pasa deimon comprobar --estricto archivo.dmn y corrige todo lo que avise (errores E... y avisos A...: variables o parámetros sin usar, funciones que nadie llama, código después de devolver, resultados descartados...) hasta que diga que no hay ninguno. Un nombre que empieza por _ (_x) silencia el aviso de variable o parámetro sin usar.",
     "El estilo único del código (sangría de 4 espacios, espacios de los operadores, comentarios y líneas vacías) lo aplica deimon formatear. La gramática completa en EBNF, las reglas de nombres y el estilo están en docs/GRAMATICA.md.",
 ];
 
@@ -276,6 +277,12 @@ pub fn texto_con_extensiones(extensiones: &[Extension]) -> String {
     }
     salida.push_str("Cada error trae la línea de código con ^, «Sugerencia: ...» y, si es seguro, un arreglo automático (deimon comprobar --arreglar).\n");
 
+    salida.push_str("\n## Códigos de aviso (deimon comprobar --estricto; primera línea: «Aviso en la línea N: ...»)\n");
+    for (codigo, descripcion) in CODIGOS_AVISO {
+        salida.push_str(&format!("- {}: {}\n", codigo, descripcion));
+    }
+    salida.push_str("Un aviso es algo probablemente erróneo pero no seguro. Con --estricto, si hay errores o avisos el código de salida es 1. Un nombre que empieza por _ no da A001 ni A002.\n");
+
     if !extensiones.is_empty() {
         salida.push_str("\n## Módulos usados (funciones en Rust)\n");
         for extension in extensiones {
@@ -373,7 +380,7 @@ pub fn json_con_extensiones(extensiones: &[Extension]) -> String {
         })
         .collect();
     format!(
-        "{{\"lenguaje\":\"deimon\",\"reglas\":[{}],\"palabras_clave\":{},\"operadores\":{},\"tipos\":{},\"perfiles\":{},\"integradas\":[{}],\"biblioteca\":[{}],\"modulos_usados\":[{}],\"ordenes\":{},\"variables_de_entorno\":{},\"desde_otro_lenguaje\":{},\"codigos_de_error\":{}}}",
+        "{{\"lenguaje\":\"deimon\",\"reglas\":[{}],\"palabras_clave\":{},\"operadores\":{},\"tipos\":{},\"perfiles\":{},\"integradas\":[{}],\"biblioteca\":[{}],\"modulos_usados\":[{}],\"ordenes\":{},\"variables_de_entorno\":{},\"desde_otro_lenguaje\":{},\"codigos_de_error\":{},\"codigos_de_aviso\":{}}}",
         reglas.join(","),
         pares_json(PALABRAS_CLAVE, "palabra", "descripcion"),
         pares_json(OPERADORES, "operador", "descripcion"),
@@ -386,5 +393,6 @@ pub fn json_con_extensiones(extensiones: &[Extension]) -> String {
         pares_json(VARIABLES_DE_ENTORNO, "variable", "descripcion"),
         pares_json(EQUIVALENCIAS, "otro", "deimon"),
         pares_json(CODIGOS, "codigo", "descripcion"),
+        pares_json(CODIGOS_AVISO, "codigo", "descripcion"),
     )
 }

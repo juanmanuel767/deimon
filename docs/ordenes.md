@@ -10,7 +10,7 @@
 | `deimon arrancar archivo.dmn [--sin-ventana]` | enciende el programa como sistema operativo de un PC en QEMU ([detalles](nucleo.md)) |
 | `deimon traducir archivo.dmn` | escribe el Rust generado, sin ejecutarlo |
 | `deimon ejecutar archivo.dmn [--perfil NOMBRE]` | ejecuta al instante con el intérprete propio; si el programa usa algo que aún no sabe hacer, lo traduce, compila y ejecuta como siempre |
-| `deimon comprobar archivo.dmn [--json] [--arreglar]` | busca errores sin ejecutar |
+| `deimon comprobar archivo.dmn [--json] [--arreglar] [--estricto]` | busca errores sin ejecutar; con `--estricto` avisa además de lo dudoso (A001...) y da código 1 si hay avisos |
 | `deimon formatear archivo.dmn [--comprobar]` | aplica el estilo único |
 | `deimon probar archivo.dmn [--json]` | ejecuta solo las pruebas del programa |
 | `deimon app archivo.dmn [--nombre N] [--paquete P] [--salida RUTA] [--perfil NOMBRE]` | crea un APK de Android |
@@ -46,7 +46,7 @@ Herramientas:
   módulos) y dice su firma, para qué sirven, un ejemplo y el `usar modulo` que necesitan. Si no
   hay ninguna, lo dice claro, para que la IA no se la invente.
 - `deimon_guia`: la referencia completa del lenguaje.
-- `deimon_comprobar`: los errores en JSON (código, línea, columna, sugerencia y arreglo).
+- `deimon_comprobar`: los errores en JSON (código, línea, columna, sugerencia y arreglo); con `"estricto": true` también los avisos (cada entrada lleva `nivel`).
 - `deimon_ejecutar`: ejecuta con el intérprete; con límites de 60 s, 2 000 millones de pasos y
   64 KB de salida, así que un programa que no termina nunca cuelga el servidor.
 - `deimon_probar`: corre los bloques `prueba` y devuelve el resultado de cada uno.

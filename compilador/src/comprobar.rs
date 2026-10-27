@@ -7,16 +7,18 @@ use crate::utilidades::json_texto;
 
 type Fallo = (String, i32);
 
-/// `deimon comprobar archivo.dmn [--json] [--arreglar]`
+/// `deimon comprobar archivo.dmn [--json] [--arreglar] [--estricto]`
 pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
-    let uso = "Uso: deimon comprobar archivo.dmn [--json] [--arreglar]";
+    let uso = "Uso: deimon comprobar archivo.dmn [--json] [--arreglar] [--estricto]";
     let mut archivo = None;
     let mut json = false;
     let mut arreglar = false;
+    let mut estricto = false;
     for argumento in argumentos {
         match argumento.as_str() {
             "--json" => json = true,
             "--arreglar" => arreglar = true,
+            "--estricto" => estricto = true,
             otra if otra.starts_with("--") => {
                 return Err((format!("Error: la opción '{}' no existe.\n{}", otra, uso), 2))
             }
@@ -37,7 +39,7 @@ pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
     })?;
 
     let mut aplicados = 0;
-    let errores = if arreglar {
+    let mut errores = if arreglar {
         let (nuevo, total, errores) =
             deimon::arreglos::arreglar_en(&fuente, Some(Path::new(&archivo)));
         if total > 0 {
@@ -54,10 +56,20 @@ pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
     } else {
         deimon::comprobar_archivo(&fuente, Path::new(&archivo))
     };
-    let _ = &fuente;
+    // Con --estricto, tras los errores van los avisos (A001...).
+    let avisos = if estricto {
+        deimon::avisos_archivo(&fuente, Path::new(&archivo))
+    } else {
+        Vec::new()
+    };
+    let total_avisos = avisos.len();
+    errores.extend(avisos);
 
     if json {
-        println!("{}", a_json(&archivo, &errores, arreglar.then_some(aplicados)));
+        println!(
+            "{}",
+            a_json_con_nivel(&archivo, &errores, arreglar.then_some(aplicados), estricto)
+        );
     } else {
         if arreglar {
             println!(
@@ -66,17 +78,32 @@ pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
             );
         }
         if errores.is_empty() {
-            println!("✓ {} no tiene errores", archivo);
+            if estricto {
+                println!("✓ {} no tiene errores ni avisos", archivo);
+            } else {
+                println!("✓ {} no tiene errores", archivo);
+            }
         } else {
             for error in &errores {
                 println!("{}\n", error);
             }
-            println!(
-                "✗ {} tiene {} {}",
-                archivo,
-                errores.len(),
-                if errores.len() == 1 { "error" } else { "errores" }
-            );
+            let total_errores = errores.len() - total_avisos;
+            let mut partes = Vec::new();
+            if total_errores > 0 {
+                partes.push(format!(
+                    "{} {}",
+                    total_errores,
+                    if total_errores == 1 { "error" } else { "errores" }
+                ));
+            }
+            if total_avisos > 0 {
+                partes.push(format!(
+                    "{} {}",
+                    total_avisos,
+                    if total_avisos == 1 { "aviso" } else { "avisos" }
+                ));
+            }
+            println!("✗ {} tiene {}", archivo, partes.join(" y "));
         }
     }
     if errores.is_empty() {
@@ -87,6 +114,17 @@ pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
 }
 
 pub fn a_json(archivo: &str, errores: &[ErrorTraduccion], aplicados: Option<usize>) -> String {
+    a_json_con_nivel(archivo, errores, aplicados, false)
+}
+
+/// Como `a_json`; con `con_nivel` (modo `--estricto`) cada entrada lleva `"nivel"`:
+/// `"error"` o `"aviso"` (los avisos son los de código A...).
+fn a_json_con_nivel(
+    archivo: &str,
+    errores: &[ErrorTraduccion],
+    aplicados: Option<usize>,
+    con_nivel: bool,
+) -> String {
     let lista: Vec<String> = errores
         .iter()
         .map(|e| {
@@ -104,9 +142,17 @@ pub fn a_json(archivo: &str, errores: &[ErrorTraduccion], aplicados: Option<usiz
                 ),
                 None => "null".to_string(),
             };
+            let nivel = if !con_nivel {
+                String::new()
+            } else if e.es_aviso() {
+                "\"nivel\":\"aviso\",".to_string()
+            } else {
+                "\"nivel\":\"error\",".to_string()
+            };
             format!(
-                "{{\"codigo\":{},\"linea\":{},\"columna\":{},\"mensaje\":{},\"sugerencia\":{},\"arreglo\":{}}}",
+                "{{\"codigo\":{},{}\"linea\":{},\"columna\":{},\"mensaje\":{},\"sugerencia\":{},\"arreglo\":{}}}",
                 json_texto(e.codigo),
+                nivel,
                 e.linea,
                 e.columna,
                 json_texto(&e.mensaje),

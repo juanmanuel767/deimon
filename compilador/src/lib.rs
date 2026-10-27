@@ -2,6 +2,7 @@ pub mod ajenas;
 pub mod antiguas;
 pub mod arreglos;
 pub mod ast;
+pub mod avisos;
 pub mod biblioteca;
 pub mod desde_cobol;
 pub mod desde_php;
@@ -176,6 +177,27 @@ pub fn comprobar_archivo(fuente: &str, archivo: &Path) -> Vec<ErrorTraduccion> {
     traducir_archivo_varios(fuente, archivo)
         .err()
         .unwrap_or_default()
+}
+
+/// Avisos de `deimon comprobar --estricto` (A001...): cosas probablemente erróneas pero no
+/// seguras, solo del archivo principal y ordenadas por posición. Si el programa no se puede ni
+/// leer o cargar (errores de sintaxis, de módulos...), no hay avisos: antes están esos errores.
+pub fn avisos_archivo(fuente: &str, archivo: &Path) -> Vec<ErrorTraduccion> {
+    let Ok(tokens) = lexer::tokenizar(fuente) else { return Vec::new() };
+    let (tokens, _) = ajenas::corregir(tokens);
+    let (tokens, _) = antiguas::corregir(tokens);
+    let Ok(programa) = parser::analizar(tokens) else { return Vec::new() };
+    let Ok((programa, fuentes)) = modulos::resolver_con_fuentes(programa, Some(archivo)) else {
+        return Vec::new();
+    };
+    let mut avisos = avisos::revisar(&programa);
+    avisos.extend(
+        tipos::revisar_con_avisos(&programa)
+            .1
+            .into_iter()
+            .filter(|aviso| aviso.archivo.is_none()),
+    );
+    ordenar(avisos, fuente, &fuentes)
 }
 
 fn traducir_con_modo(

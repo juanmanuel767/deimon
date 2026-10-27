@@ -119,11 +119,13 @@ impl Herramienta {
 
 const PROGRAMA: &str = "\"codigo\":{\"type\":\"string\",\"description\":\"código Deimon (si no se da archivo)\"},\"archivo\":{\"type\":\"string\",\"description\":\"ruta de un archivo .dmn (si no se da codigo)\"}";
 
+const COMPROBAR: &str = "\"codigo\":{\"type\":\"string\",\"description\":\"código Deimon (si no se da archivo)\"},\"archivo\":{\"type\":\"string\",\"description\":\"ruta de un archivo .dmn (si no se da codigo)\"},\"estricto\":{\"type\":\"boolean\",\"description\":\"avisa también de lo dudoso (variables sin usar, código que nunca se ejecuta...); por defecto false\"}";
+
 const HERRAMIENTAS: &[Herramienta] = &[
     Herramienta {
         nombre: "deimon_comprobar",
-        descripcion: "Revisa un programa Deimon sin ejecutarlo y devuelve sus errores en JSON (código, línea, columna, mensaje, sugerencia y arreglo).",
-        propiedades: PROGRAMA,
+        descripcion: "Revisa un programa Deimon sin ejecutarlo y devuelve sus errores en JSON (código, línea, columna, mensaje, sugerencia y arreglo). Con estricto=true avisa también de lo dudoso (códigos A001...; cada entrada lleva nivel \"error\" o \"aviso\").",
+        propiedades: COMPROBAR,
         obligatorias: &[],
         funcion: comprobar,
     },
@@ -229,7 +231,14 @@ fn con_programa(
 
 fn comprobar(argumentos: &Json) -> Result<String, String> {
     con_programa(argumentos, |archivo, carpeta| {
-        let (salida, errores, _) = deimon(&["comprobar", "--json", &archivo.to_string_lossy()], carpeta)?;
+        let ruta = archivo.to_string_lossy();
+        let estricto = matches!(argumentos.campo("estricto"), Some(Json::Logico(true)));
+        let mut orden = vec!["comprobar", "--json"];
+        if estricto {
+            orden.push("--estricto");
+        }
+        orden.push(&ruta);
+        let (salida, errores, _) = deimon(&orden, carpeta)?;
         if salida.trim().is_empty() { Err(errores) } else { Ok(salida) }
     })
 }

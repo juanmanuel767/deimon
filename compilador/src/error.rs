@@ -33,6 +33,20 @@ pub const CODIGOS: &[(&str, &str)] = &[
     ("E999", "otro error"),
 ];
 
+/// Tabla de códigos de aviso (`deimon comprobar --estricto`): cosas probablemente erróneas
+/// pero no seguras. Una variable o un parámetro cuyo nombre empieza por `_` no da A001 ni A002.
+pub const CODIGOS_AVISO: &[(&str, &str)] = &[
+    ("A001", "variable declarada con 'sea' que nunca se lee"),
+    ("A002", "parámetro de una función que nunca se usa"),
+    ("A003", "función propia que nunca se llama ni se usa como valor"),
+    ("A004", "código que nunca se ejecuta (después de devolver, romper, continuar o provocar_error)"),
+    ("A005", "'sea x' dentro de un bloque tapa una 'x' de fuera (la de fuera no cambia)"),
+    ("A006", "función que en unos caminos devuelve un valor y en otros acaba sin devolver nada"),
+    ("A007", "resultado descartado: la función solo devuelve un valor y aquí se pierde"),
+    ("A008", "== o != entre valores de tipos distintos (no se pueden comparar)"),
+    ("A009", "condición que siempre da lo mismo (si verdadero, si falso, mientras falso)"),
+];
+
 /// Cambio automático seguro: sustituye las columnas `columna_inicio..columna_fin`
 /// (se cuenta desde 1; el final no se incluye) de la línea `linea` por `reemplazo`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -109,12 +123,18 @@ impl ErrorTraduccion {
         self
     }
 
+    /// ¿Es un aviso de `--estricto` (código A...) y no un error?
+    pub fn es_aviso(&self) -> bool {
+        self.codigo.starts_with('A')
+    }
+
     /// Solo la primera línea: «Error en la línea N: ...» o, en un archivo usado,
-    /// «Error en piezas/calculos.dmn, línea N: ...».
+    /// «Error en piezas/calculos.dmn, línea N: ...» (en un aviso, «Aviso» en vez de «Error»).
     pub fn primera_linea(&self) -> String {
+        let clase = if self.es_aviso() { "Aviso" } else { "Error" };
         match &self.archivo {
-            Some(archivo) => format!("Error en {}, línea {}: {}", archivo, self.linea, self.mensaje),
-            None => format!("Error en la línea {}: {}", self.linea, self.mensaje),
+            Some(archivo) => format!("{} en {}, línea {}: {}", clase, archivo, self.linea, self.mensaje),
+            None => format!("{} en la línea {}: {}", clase, self.linea, self.mensaje),
         }
     }
 }

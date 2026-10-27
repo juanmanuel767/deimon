@@ -16,7 +16,7 @@ termina, se marca con HECHO y la fecha.
 
 ## 2. Para que una IA no falle
 1. HECHO (26-oct-2026, cada ejemplo de biblioteca/*/funciones.txt que se ejecuta anuncia su resultado con `# ...` y la prueba lo exige; las excepciones están en SIN_RESULTADO, tests/ejemplos_documentados.rs) Ejemplos ejecutables en la guía para cada función de los módulos.
-2. `deimon comprobar --estricto` que avise de todo lo dudoso.
+2. HECHO (26-oct-2026, `deimon comprobar --estricto` con los avisos A001 a A009: variable o parámetro sin usar, función que nadie llama, código tras `devolver`, `sea` que tapa otra, función que a veces no devuelve, resultado descartado, `==` entre tipos distintos y condición constante; tests/estricto.rs) `deimon comprobar --estricto` que avise de todo lo dudoso.
 3. Más arreglos automáticos con `--arreglar`.
 4. Banco de pruebas más grande: 100 tareas, varias IAs, webs completas.
 

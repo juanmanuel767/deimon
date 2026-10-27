@@ -207,6 +207,11 @@ fn tipo_propio_de(sentencia: &Sentencia) -> Option<TipoPropio> {
     Some(TipoPropio { nombre: nombre.clone(), campos })
 }
 
+/// ¿Es la función que crea el analizador para un `tipo Nombre { ... }`?
+pub(crate) fn es_tipo_propio(sentencia: &Sentencia) -> bool {
+    tipo_propio_de(sentencia).is_some()
+}
+
 fn tipo_de_campo(tipo: &str) -> Tipo {
     match tipo {
         "numero" => Tipo::Numero,
@@ -256,10 +261,21 @@ struct Revisor<'a> {
     avisados: HashSet<(Option<String>, usize, String)>,
     /// Dentro de un bloque que puede no ejecutarse (o que atrapa sus fallos): no se avisa.
     callado: usize,
+    /// Avisos dudosos (A008) que solo pide `deimon comprobar --estricto`.
+    avisos: Vec<ErrorTraduccion>,
 }
 
 /// Revisa los tipos del programa ya resuelto (con sus `usar`).
 pub fn revisar(programa: &Programa) -> Vec<ErrorTraduccion> {
+    revisar_todo(programa).0
+}
+
+/// Como `revisar`, y además los avisos (A008) de `deimon comprobar --estricto`.
+pub fn revisar_con_avisos(programa: &Programa) -> (Vec<ErrorTraduccion>, Vec<ErrorTraduccion>) {
+    revisar_todo(programa)
+}
+
+fn revisar_todo(programa: &Programa) -> (Vec<ErrorTraduccion>, Vec<ErrorTraduccion>) {
     let tipos_propios = programa.sentencias.iter().filter_map(tipo_propio_de).collect();
     let de_extensiones: HashSet<&str> = programa.extensiones.iter().flat_map(|e| e.funciones.iter().map(|f| f.nombre.as_str())).collect();
     let mut funciones: HashMap<&str, Funcion> = HashMap::new();
@@ -286,6 +302,7 @@ pub fn revisar(programa: &Programa) -> Vec<ErrorTraduccion> {
         contexto: None,
         avisados: HashSet::new(),
         callado: 0,
+        avisos: Vec::new(),
     };
     revisor.calcular_lo_que_devuelven();
     let mut principal = Ambito::new();
@@ -317,7 +334,7 @@ pub fn revisar(programa: &Programa) -> Vec<ErrorTraduccion> {
         }
     }
     revisor.revisar_llamadas();
-    revisor.errores
+    (revisor.errores, revisor.avisos)
 }
 
 /// ¿Termina siempre con un `devolver` (sin poder llegar al final de la lista)?
@@ -798,6 +815,38 @@ impl<'a> Revisor<'a> {
         }
     }
 
+    /// A008: `==` o `!=` entre dos tipos distintos seguros. Se calla con `nada` (comparar con
+    /// `nada` es normal), entre lista y lista con claves (una lista vacía es las dos) y al
+    /// revisar una función con los tipos de una llamada concreta.
+    fn comparacion_de_tipos_distintos(&mut self, operador: &OperadorBinario, a: Tipo, b: Tipo, linea: usize) {
+        let lista_y_mapa = matches!((a, b), (Tipo::Lista, Tipo::Mapa) | (Tipo::Mapa, Tipo::Lista));
+        if self.silencioso || self.callado > 0 || self.contexto.is_some() {
+            return;
+        }
+        if !(a.conocido() && b.conocido()) || a == b || a == Tipo::Nada || b == Tipo::Nada || lista_y_mapa {
+            return;
+        }
+        let signo = if *operador == OperadorBinario::Igual { "==" } else { "!=" };
+        let mensaje = format!(
+            "se compara {} con {} usando {}: son tipos distintos y el programa fallaría al llegar aquí con «no se pueden comparar {} y {}»",
+            a.nombre(),
+            b.nombre(),
+            signo,
+            a.nombre(),
+            b.nombre()
+        );
+        if !self.avisados.insert((self.archivo.clone(), linea, mensaje.clone())) {
+            return;
+        }
+        let mut aviso = ErrorTraduccion::nuevo(linea, mensaje)
+            .con_codigo("A008")
+            .con_sugerencia("Convierte uno de los dos para que sean del mismo tipo, por ejemplo a_numero(texto) o a_texto(numero)");
+        if let Some(archivo) = &self.archivo {
+            aviso = aviso.con_archivo(archivo);
+        }
+        self.avisos.push(aviso);
+    }
+
     fn binaria(&mut self, operador: &OperadorBinario, a: Tipo, b: Tipo, linea: usize) -> Tipo {
         use OperadorBinario::*;
         // Para las operaciones, un tipo propio es una lista con claves más y una lista llena,
@@ -856,7 +905,10 @@ impl<'a> Revisor<'a> {
                 }
                 Tipo::Logico
             }
-            Igual | Distinto => Tipo::Logico,
+            Igual | Distinto => {
+                self.comparacion_de_tipos_distintos(operador, a, b, linea);
+                Tipo::Logico
+            }
             Y | O => {
                 self.condicion(a, linea);
                 self.condicion(b, linea);

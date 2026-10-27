@@ -141,12 +141,33 @@ Dentro de `deimon probar`, el detalle de la prueba termina con `(línea N)`.
 | E028 | llave sin cerrar, vacía o suelta dentro de un texto con valores `f"...{x}..."` |
 | E999 | otro error |
 
+### Tabla de códigos de aviso (`--estricto`)
+
+Un aviso es algo que probablemente es un fallo pero no es seguro. Solo se buscan con
+`deimon comprobar archivo.dmn --estricto` y se escriben como «Aviso en la línea N: ...».
+
+| Código | Significado |
+|--------|-------------|
+| A001 | variable declarada con `sea` que nunca se lee |
+| A002 | parámetro de una función que nunca se usa |
+| A003 | función propia que nunca se llama ni se usa como valor (no se avisa en un archivo que solo tiene funciones y pruebas, pensado para `usar`) |
+| A004 | código que nunca se ejecuta: después de `devolver`, `romper`, `continuar` o `provocar_error(...)` en el mismo bloque |
+| A005 | `sea x` dentro de un bloque cuando ya existe una `x` de fuera: la tapa y la de fuera no cambia (para cambiarla se escribe `x = ...`) |
+| A006 | función que en unos caminos devuelve un valor y en otros llega al final sin `devolver` |
+| A007 | resultado descartado: llamada suelta a una función que solo devuelve un valor, como `mayusculas(nombre)` (no se avisa dentro de `intentar`) |
+| A008 | `==` o `!=` entre valores de tipos distintos seguros (por ejemplo texto y número): no se pueden comparar y el programa falla |
+| A009 | condición que siempre da lo mismo: `si verdadero`, `si falso`, `si 1 == 1`, `mientras falso` (`mientras verdadero` no avisa) |
+
+Para silenciar A001 y A002 en lo que es a propósito, el nombre de la variable o del parámetro
+empieza por `_` (`sea _resto = ...`, `funcion f(a, _b)`).
+
 ## Comprobar un programa
 
 ```bash
 deimon comprobar archivo.dmn              # lista todos los errores
 deimon comprobar archivo.dmn --json       # lo mismo, escrito para que lo lea otro programa
 deimon comprobar archivo.dmn --arreglar   # aplica los arreglos automáticos seguros
+deimon comprobar archivo.dmn --estricto   # además de los errores, avisa de todo lo dudoso
 ```
 
 Antes de ejecutar nada, Deimon revisa también los tipos (`E025`): avisa de las operaciones
@@ -190,6 +211,16 @@ Con `--json` escribe, por ejemplo:
 
 `sugerencia` y `arreglo` son `null` cuando no hay. Con `--arreglar` se añade
 `"arreglos_aplicados":N`.
+
+Con `--estricto` se buscan además los **avisos** (tabla de arriba): variables y parámetros sin
+usar, funciones que nadie llama, código que nunca se ejecuta, resultados descartados, `sea` que
+tapa otra variable, funciones que a veces no devuelven nada, comparaciones de tipos distintos y
+condiciones constantes. Salen después de los errores, con línea, columna, sugerencia y
+«Aviso» en vez de «Error». Si hay algún error o algún aviso, la orden termina con código 1 (así
+una IA en bucle los va corrigiendo hasta que diga «no tiene errores ni avisos»). En `--json` cada
+entrada de `errores` lleva además `"nivel":"error"` o `"nivel":"aviso"` (sin `--estricto` el JSON
+es el de siempre). Se combina con `--json` y `--arreglar`. Los avisos solo miran el archivo
+principal; sus funciones no avisan de lo que viene de `usar` ni de módulos.
 
 `--arreglar` modifica el archivo: aplica los arreglos que no se solapan, vuelve a
 comprobar y repite mientras queden arreglos que aplicar; al final informa de cuántos
