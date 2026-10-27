@@ -1,0 +1,8 @@
+{
+  "productos": [
+    {"stock": 3, "nombre": "ñandú", "precio": 1999, "etiquetas": ["a", "b"]},
+    {"nombre": "x", "extra": {"k": 1}, "precio": 5, "stock": 1}
+  ],
+  "tienda": "Año Nuevo",
+  "version": 2
+}

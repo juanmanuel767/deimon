@@ -1,0 +1,35 @@
+funcion comprimir(texto) {
+    sea res = ""
+    sea i = 0
+    mientras i < medir(texto) {
+        sea j = i
+        mientras j < medir(texto) y texto[j] == texto[i] {
+            j = j + 1
+        }
+        res = res + (j - i) + texto[i]
+        i = j
+    }
+    devolver res
+}
+
+funcion descomprimir(texto) {
+    sea res = ""
+    sea numero = ""
+    para i en rango(0, medir(texto) - 1) {
+        sea c = texto[i]
+        si incluye("0123456789", c) {
+            numero = numero + c
+        } sino {
+            res = res + repetir(c, a_numero(numero))
+            numero = ""
+        }
+    }
+    devolver res
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea texto = cortar(linea, 2, nada)
+    mostrar(elegir(linea[0] == "C", comprimir(texto), descomprimir(texto)))
+    linea = pedir_texto("")
+}

@@ -1,0 +1,38 @@
+funcion euros(centimos) {
+    devolver suelo(centimos / 100) + "." + rellenar_texto(a_texto(centimos % 100), 2, "0", "izquierda")
+}
+
+funcion a_centimos(texto) {
+    sea partes = partir(texto, ".")
+    sea c = a_numero(partes[0]) * 100
+    si medir(partes) == 2 {
+        c = c + a_numero(rellenar_texto(partes[1], 2, "0", "derecha"))
+    }
+    devolver c
+}
+
+sea subtotal = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea q = a_numero(p[1])
+    sea d = 0
+    si q >= 10 {
+        d = 10
+    } sino si q >= 5 {
+        d = 5
+    }
+    sea importe = suelo((q * a_centimos(p[2]) * (100 - d) + 50) / 100)
+    subtotal = subtotal + importe
+    mostrar(p[0] + " x" + q + ": " + euros(importe) + elegir(d > 0, " (-" + d + "%)", ""))
+    linea = pedir_texto("")
+}
+mostrar("subtotal: " + euros(subtotal))
+sea total = subtotal
+si subtotal >= 10000 {
+    total = suelo((subtotal * 95 + 50) / 100)
+    mostrar("descuento pedido: -" + euros(subtotal - total))
+}
+sea envio = elegir(total >= 5000, 0, 495)
+mostrar("envio: " + euros(envio))
+mostrar("total: " + euros(total + envio))

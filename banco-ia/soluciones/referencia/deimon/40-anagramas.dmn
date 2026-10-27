@@ -1,0 +1,28 @@
+sea palabras = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    palabras[linea] = verdadero
+    linea = pedir_texto("")
+}
+sea grupos = {}
+para p en ordenar(listar_claves(palabras)) {
+    sea letras = []
+    para i en rango(0, medir(p) - 1) {
+        letras = agregar(letras, p[i])
+    }
+    sea clave = unir(ordenar(letras), "")
+    grupos[clave] = agregar(elegir(tiene_clave(grupos, clave), grupos[clave], []), p)
+}
+sea lineas = []
+para clave en listar_claves(grupos) {
+    sea g = grupos[clave]
+    si medir(g) >= 2 {
+        lineas = agregar(lineas, {"primera": g[0], "texto": unir(g, " ")})
+    }
+}
+si medir(lineas) == 0 {
+    mostrar("ninguno")
+}
+para l en ordenar_por(lineas, ["primera"]) {
+    mostrar(l["texto"])
+}

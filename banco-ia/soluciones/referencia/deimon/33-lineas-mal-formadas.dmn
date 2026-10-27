@@ -1,0 +1,44 @@
+funcion solo_cifras(texto) {
+    si medir(texto) == 0 {
+        devolver falso
+    }
+    para i en rango(0, medir(texto) - 1) {
+        si no incluye("0123456789", texto[i]) {
+            devolver falso
+        }
+    }
+    devolver verdadero
+}
+
+sea n = 0
+sea validas = 0
+sea ciudades = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    n = n + 1
+    sea p = partir(linea, ";")
+    sea motivo = ""
+    si medir(p) != 3 {
+        motivo = "numero de campos incorrecto"
+    } sino si p[0] == "" {
+        motivo = "nombre vacio"
+    } sino si no solo_cifras(p[1]) {
+        motivo = "edad invalida"
+    } sino si a_numero(p[1]) > 120 {
+        motivo = "edad invalida"
+    } sino si p[2] == "" {
+        motivo = "ciudad vacia"
+    }
+    si motivo != "" {
+        mostrar("linea " + n + ": " + motivo)
+    } sino {
+        validas = validas + 1
+        ciudades[p[2]] = elegir(tiene_clave(ciudades, p[2]), ciudades[p[2]], 0) + 1
+    }
+    linea = pedir_texto("")
+}
+mostrar("validas: " + validas)
+mostrar("descartadas: " + (n - validas))
+para c en ordenar(listar_claves(ciudades)) {
+    mostrar(c + ": " + ciudades[c])
+}

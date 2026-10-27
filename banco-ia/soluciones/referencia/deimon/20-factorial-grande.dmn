@@ -1,0 +1,31 @@
+# Número grande: lista de cifras, la menos importante primero.
+funcion multiplicar(cifras, m) {
+    sea res = []
+    sea llevo = 0
+    para x en cifras {
+        sea v = x * m + llevo
+        res = agregar(res, v % 10)
+        llevo = suelo(v / 10)
+    }
+    mientras llevo > 0 {
+        res = agregar(res, llevo % 10)
+        llevo = suelo(llevo / 10)
+    }
+    devolver res
+}
+
+funcion factorial_exacto(n) {
+    sea cifras = [1]
+    si n >= 2 {
+        para m en rango(2, n) {
+            cifras = multiplicar(cifras, m)
+        }
+    }
+    devolver unir(invertir(cifras), "")
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(factorial_exacto(a_numero(linea)))
+    linea = pedir_texto("")
+}

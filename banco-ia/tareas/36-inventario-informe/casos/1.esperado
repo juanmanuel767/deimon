@@ -1,0 +1,6 @@
+error: stock insuficiente de A1 (hay 2, piden 9)
+error: codigo desconocido Z9
+A1 tornillo stock=12 ingresos=0.30
+B2 tuerca stock=100 ingresos=0.00
+ingresos totales: 0.30
+sin stock: ninguno

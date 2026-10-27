@@ -1,0 +1,43 @@
+sea medidas = partir(pedir_texto(""), " ")
+sea f = a_numero(medidas[0])
+sea c = a_numero(medidas[1])
+sea filas = []
+sea inicio = 0
+sea fin = 0
+para i en rango(0, f - 1) {
+    sea fila = pedir_texto("")
+    filas = agregar(filas, fila)
+    para j en rango(0, c - 1) {
+        si fila[j] == "S" {
+            inicio = i * c + j
+        }
+        si fila[j] == "E" {
+            fin = i * c + j
+        }
+    }
+}
+sea dist = []
+para k en rango(0, f * c - 1) {
+    dist = agregar(dist, -1)
+}
+dist[inicio] = 0
+sea cola = [inicio]
+sea cabeza = 0
+sea saltos = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+mientras cabeza < medir(cola) {
+    sea actual = cola[cabeza]
+    cabeza = cabeza + 1
+    sea i = suelo(actual / c)
+    sea j = actual % c
+    para s en saltos {
+        sea a = i + s[0]
+        sea b = j + s[1]
+        si a >= 0 y a < f y b >= 0 y b < c {
+            si filas[a][b] != "#" y dist[a * c + b] == -1 {
+                dist[a * c + b] = dist[actual] + 1
+                cola = agregar(cola, a * c + b)
+            }
+        }
+    }
+}
+mostrar(elegir(dist[fin] >= 0, a_texto(dist[fin]), "sin camino"))

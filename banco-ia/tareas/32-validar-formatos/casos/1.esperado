@@ -1,0 +1,5 @@
+correo ana@ejemplo.es: valido
+correo ana@@x.es: invalido
+telefono 612345678: valido
+cp 28001: valido
+fecha 29/02/2024: valido

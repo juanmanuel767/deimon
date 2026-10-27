@@ -1,0 +1,3 @@
+Hola {nombre}, tienes {n} mensajes y {otro}.
+nombre=Ana
+n=3

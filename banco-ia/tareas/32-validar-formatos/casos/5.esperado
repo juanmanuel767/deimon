@@ -1,0 +1,10 @@
+fecha 29/02/1900: invalido
+fecha 29/02/2000: valido
+fecha 31/04/2024: invalido
+fecha 00/01/2024: invalido
+fecha 01/13/2024: invalido
+fecha 1/1/2024: invalido
+fecha 01/01/1899: invalido
+fecha 31/12/2100: valido
+fecha 01/01/2101: invalido
+fecha 01-01-2024: invalido

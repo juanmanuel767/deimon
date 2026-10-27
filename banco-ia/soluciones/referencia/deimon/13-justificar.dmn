@@ -1,0 +1,49 @@
+funcion justificar(fila, ancho) {
+    sea huecos = medir(fila) - 1
+    sea letras = 0
+    para p en fila {
+        letras = letras + medir(p)
+    }
+    sea total = ancho - letras
+    sea base = suelo(total / huecos)
+    sea extra = total % huecos
+    sea s = ""
+    para i en rango(0, huecos) {
+        s = s + fila[i]
+        si i < huecos {
+            s = s + repetir(" ", base + elegir(i < extra, 1, 0))
+        }
+    }
+    devolver s
+}
+
+sea ancho = a_numero(pedir_texto(""))
+sea filas = []
+sea fila = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    para p en partir(linea, " ") {
+        si p != "" {
+            si medir(fila) > 0 y medir(unir(fila, " ")) + 1 + medir(p) > ancho {
+                filas = agregar(filas, fila)
+                fila = []
+            }
+            fila = agregar(fila, p)
+        }
+    }
+    linea = pedir_texto("")
+}
+si medir(fila) > 0 {
+    filas = agregar(filas, fila)
+}
+sea n = medir(filas)
+para k en rango(0, n - 1) {
+    si n > 0 {
+        sea f = filas[k]
+        si k == n - 1 o medir(f) == 1 {
+            mostrar(unir(f, " "))
+        } sino {
+            mostrar(justificar(f, ancho))
+        }
+    }
+}

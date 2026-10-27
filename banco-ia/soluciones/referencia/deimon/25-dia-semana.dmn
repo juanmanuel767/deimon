@@ -1,0 +1,12 @@
+sea nombres = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, "-")
+    intentar {
+        sea s = crear_fecha(a_numero(p[0]), a_numero(p[1]), a_numero(p[2]), 0, 0, 0)
+        mostrar(linea + ": " + nombres[dia_de_la_semana(s, "UTC") - 1])
+    } si falla e {
+        mostrar(linea + ": invalida")
+    }
+    linea = pedir_texto("")
+}

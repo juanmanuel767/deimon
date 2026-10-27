@@ -1,0 +1,11 @@
+funcion hanoi(n, origen, destino, auxiliar) {
+    si n == 0 {
+        devolver 0
+    }
+    sea antes = hanoi(n - 1, origen, auxiliar, destino)
+    mostrar("mover disco " + n + " de " + origen + " a " + destino)
+    devolver antes + 1 + hanoi(n - 1, auxiliar, destino, origen)
+}
+
+sea total = hanoi(a_numero(pedir_texto("")), "A", "C", "B")
+mostrar("total: " + total)

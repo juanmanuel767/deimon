@@ -1,0 +1,12 @@
+correo a@b.c: invalido
+correo a@b.co: valido
+correo @b.co: invalido
+correo a@.co: invalido
+correo a@b..co: invalido
+correo a@-b.co: invalido
+correo a@b-.co: invalido
+correo a.b_c-d@x-y.z9.com: valido
+correo A@b.co: invalido
+correo a@b.c0: invalido
+correo a@bco: invalido
+correo a@b@c.co: invalido

@@ -1,0 +1,6 @@
+nombre: app
+servidor:
+  host: local host
+  puerto: 8080
+  tls:
+    activo: si

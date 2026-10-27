@@ -1,0 +1,47 @@
+funcion euros(centimos) {
+    devolver suelo(centimos / 100) + "." + rellenar_texto(a_texto(centimos % 100), 2, "0", "izquierda")
+}
+
+sea prod = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea orden = p[0]
+    si orden == "alta" {
+        si tiene_clave(prod, p[1]) {
+            mostrar("error: codigo duplicado " + p[1])
+        } sino {
+            prod[p[1]] = {"nombre": p[2], "precio": a_numero(p[3]), "stock": a_numero(p[4]), "ing": 0}
+        }
+    } sino si orden == "venta" {
+        sea n = a_numero(p[2])
+        si no tiene_clave(prod, p[1]) {
+            mostrar("error: codigo desconocido " + p[1])
+        } sino si prod[p[1]]["stock"] < n {
+            mostrar("error: stock insuficiente de " + p[1] + " (hay " + prod[p[1]]["stock"] + ", piden " + n + ")")
+        } sino {
+            prod[p[1]]["stock"] = prod[p[1]]["stock"] - n
+            prod[p[1]]["ing"] = prod[p[1]]["ing"] + n * prod[p[1]]["precio"]
+        }
+    } sino si orden == "reponer" {
+        si no tiene_clave(prod, p[1]) {
+            mostrar("error: codigo desconocido " + p[1])
+        } sino {
+            prod[p[1]]["stock"] = prod[p[1]]["stock"] + a_numero(p[2])
+        }
+    } sino si orden == "informe" {
+        sea total = 0
+        sea sin_stock = []
+        para c en ordenar(listar_claves(prod)) {
+            sea d = prod[c]
+            mostrar(c + " " + d["nombre"] + " stock=" + d["stock"] + " ingresos=" + euros(d["ing"]))
+            total = total + d["ing"]
+            si d["stock"] == 0 {
+                sin_stock = agregar(sin_stock, c)
+            }
+        }
+        mostrar("ingresos totales: " + euros(total))
+        mostrar("sin stock: " + elegir(medir(sin_stock) == 0, "ninguno", unir(sin_stock, ", ")))
+    }
+    linea = pedir_texto("")
+}

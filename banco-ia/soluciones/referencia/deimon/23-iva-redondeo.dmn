@@ -1,0 +1,17 @@
+funcion euros(centimos) {
+    devolver suelo(centimos / 100) + "." + rellenar_texto(a_texto(centimos % 100), 2, "0", "izquierda")
+}
+
+sea suma = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea partes = partir(p[0], ".")
+    sea base = a_numero(partes[0]) * 100 + a_numero(partes[1])
+    sea tipo = a_numero(p[1])
+    sea iva = suelo((base * tipo + 50) / 100)
+    suma = suma + base + iva
+    mostrar(euros(base) + " " + tipo + "% -> iva " + euros(iva) + " total " + euros(base + iva))
+    linea = pedir_texto("")
+}
+mostrar("suma de totales: " + euros(suma))

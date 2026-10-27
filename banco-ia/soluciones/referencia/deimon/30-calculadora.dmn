@@ -1,0 +1,94 @@
+# Las funciones del analizador devuelven [valor, posicion siguiente]. Los tokens son textos.
+funcion es_cifra(c) {
+    devolver incluye("0123456789", c)
+}
+
+funcion tokenizar(texto) {
+    sea tokens = []
+    sea numero = ""
+    para i en rango(0, medir(texto) - 1) {
+        sea c = texto[i]
+        si es_cifra(c) {
+            numero = numero + c
+        } sino {
+            si numero != "" {
+                tokens = agregar(tokens, numero)
+                numero = ""
+            }
+            si c != " " {
+                tokens = agregar(tokens, c)
+            }
+        }
+    }
+    si numero != "" {
+        tokens = agregar(tokens, numero)
+    }
+    devolver tokens
+}
+
+funcion unario(t, p) {
+    si t[p] == "-" {
+        sea r = unario(t, p + 1)
+        devolver [0 - r[0], r[1]]
+    }
+    si t[p] == "(" {
+        sea r = expresion(t, p + 1)
+        devolver [r[0], r[1] + 1]
+    }
+    devolver [a_numero(t[p]), p + 1]
+}
+
+funcion dividir(a, b) {
+    si b == 0 {
+        provocar_error("division por cero")
+    }
+    sea q = suelo(absoluto(a) / absoluto(b))
+    si (a < 0 y b > 0) o (a > 0 y b < 0) {
+        devolver 0 - q
+    }
+    devolver q
+}
+
+funcion termino(t, p) {
+    sea r = unario(t, p)
+    sea v = r[0]
+    sea pos = r[1]
+    mientras pos < medir(t) y (t[pos] == "*" o t[pos] == "/") {
+        sea op = t[pos]
+        sea s = unario(t, pos + 1)
+        si op == "*" {
+            v = v * s[0]
+        } sino {
+            v = dividir(v, s[0])
+        }
+        pos = s[1]
+    }
+    devolver [v, pos]
+}
+
+funcion expresion(t, p) {
+    sea r = termino(t, p)
+    sea v = r[0]
+    sea pos = r[1]
+    mientras pos < medir(t) y (t[pos] == "+" o t[pos] == "-") {
+        sea op = t[pos]
+        sea s = termino(t, pos + 1)
+        si op == "+" {
+            v = v + s[0]
+        } sino {
+            v = v - s[0]
+        }
+        pos = s[1]
+    }
+    devolver [v, pos]
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    intentar {
+        mostrar(expresion(tokenizar(linea), 0)[0])
+    } si falla e {
+        mostrar("error: " + e["mensaje"])
+    }
+    linea = pedir_texto("")
+}

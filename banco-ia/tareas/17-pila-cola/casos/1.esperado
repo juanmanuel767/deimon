@@ -1,0 +1,6 @@
+pila: a b
+cola: 1 2
+pila->b
+cola->1
+pila: a
+cola: 2

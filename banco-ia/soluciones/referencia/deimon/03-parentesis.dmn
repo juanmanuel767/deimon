@@ -1,6 +1,9 @@
 funcion equilibrada(texto) {
     sea pila = []
     sea pares = {")": "(", "]": "[", "}": "{"}
+    si medir(texto) == 0 {
+        devolver verdadero
+    }
     para i en rango(0, medir(texto) - 1) {
         sea c = texto[i]
         si incluye("([{", c) {

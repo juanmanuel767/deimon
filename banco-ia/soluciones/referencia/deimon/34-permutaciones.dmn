@@ -1,0 +1,23 @@
+# Con las letras ya ordenadas y distintas, el orden natural de generación es el alfabético.
+funcion permutaciones(letras) {
+    si medir(letras) <= 1 {
+        devolver [unir(letras, "")]
+    }
+    sea res = []
+    para i en rango(0, medir(letras) - 1) {
+        sea resto = cortar(letras, 0, i) + cortar(letras, i + 1, nada)
+        para p en permutaciones(resto) {
+            res = agregar(res, letras[i] + p)
+        }
+    }
+    devolver res
+}
+
+sea palabra = pedir_texto("")
+sea letras = []
+para i en rango(0, medir(palabra) - 1) {
+    letras = agregar(letras, palabra[i])
+}
+para p en permutaciones(ordenar(letras)) {
+    mostrar(p)
+}

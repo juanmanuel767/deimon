@@ -1,0 +1,8 @@
+alta c1 caja 1999 3
+venta c1 3
+alta c2 bolsa 5 0
+informe
+reponer c2 2
+reponer c9 1
+venta c2 2
+informe

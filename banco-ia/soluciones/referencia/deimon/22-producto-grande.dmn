@@ -1,0 +1,37 @@
+# Número grande: lista de cifras, la menos importante primero.
+funcion a_cifras(texto) {
+    sea cifras = []
+    para i en rango(0, medir(texto) - 1) {
+        cifras = agregar(cifras, a_numero(texto[i]))
+    }
+    devolver invertir(cifras)
+}
+
+funcion multiplicar(a, b) {
+    sea res = []
+    para k en rango(1, medir(a) + medir(b)) {
+        res = agregar(res, 0)
+    }
+    para i en rango(0, medir(a) - 1) {
+        para j en rango(0, medir(b) - 1) {
+            res[i + j] = res[i + j] + a[i] * b[j]
+        }
+    }
+    sea llevo = 0
+    para k en rango(0, medir(res) - 1) {
+        sea v = res[k] + llevo
+        res[k] = v % 10
+        llevo = suelo(v / 10)
+    }
+    mientras medir(res) > 1 y res[medir(res) - 1] == 0 {
+        res = cortar(res, 0, medir(res) - 1)
+    }
+    devolver unir(invertir(res), "")
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    mostrar(multiplicar(a_cifras(p[0]), a_cifras(p[1])))
+    linea = pedir_texto("")
+}

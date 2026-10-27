@@ -1,0 +1,48 @@
+funcion nombre_valido(texto) {
+    sea validos = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+    si medir(texto) == 0 {
+        devolver falso
+    }
+    para i en rango(0, medir(texto) - 1) {
+        si no incluye(validos, texto[i]) {
+            devolver falso
+        }
+    }
+    devolver verdadero
+}
+
+sea plantilla = pedir_texto("")
+sea defs = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, "=")
+    defs[partes[0]] = unir(cortar(partes, 1, nada), "=")
+    linea = pedir_texto("")
+}
+
+sea salida = ""
+sea i = 0
+sea n = medir(plantilla)
+mientras i < n {
+    sea c = plantilla[i]
+    sea hecho = falso
+    si c == "{" {
+        sea j = i + 1
+        mientras j < n y plantilla[j] != "}" {
+            j = j + 1
+        }
+        si j < n {
+            sea nombre = cortar(plantilla, i + 1, j - i - 1)
+            si nombre_valido(nombre) {
+                salida = salida + elegir(tiene_clave(defs, nombre), defs[nombre], "{" + nombre + "}")
+                i = j + 1
+                hecho = verdadero
+            }
+        }
+    }
+    si no hecho {
+        salida = salida + c
+        i = i + 1
+    }
+}
+mostrar(salida)

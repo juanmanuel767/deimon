@@ -1,0 +1,4 @@
+linea 1: no es un numero: abc
+linea 2: no es un numero: ñ
+linea 3: no es un numero: 12abc
+suma: 0

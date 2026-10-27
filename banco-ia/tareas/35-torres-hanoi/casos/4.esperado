@@ -1,0 +1,16 @@
+mover disco 1 de A a B
+mover disco 2 de A a C
+mover disco 1 de B a C
+mover disco 3 de A a B
+mover disco 1 de C a A
+mover disco 2 de C a B
+mover disco 1 de A a B
+mover disco 4 de A a C
+mover disco 1 de B a C
+mover disco 2 de B a A
+mover disco 1 de C a A
+mover disco 3 de B a C
+mover disco 1 de A a B
+mover disco 2 de A a C
+mover disco 1 de B a C
+total: 15

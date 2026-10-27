@@ -1,0 +1,30 @@
+funcion procesar(linea) {
+    sea campos = []
+    sea actual = ""
+    sea dentro = falso
+    si medir(linea) > 0 {
+        para i en rango(0, medir(linea) - 1) {
+            sea c = linea[i]
+            si c == "'" {
+                dentro = no dentro
+            } sino si c == "," y no dentro {
+                campos = agregar(campos, actual)
+                actual = ""
+            } sino {
+                actual = actual + c
+            }
+        }
+    }
+    campos = agregar(campos, actual)
+    sea salida = ""
+    para campo en campos {
+        salida = salida + "[" + campo + "]"
+    }
+    devolver medir(campos) + " campos: " + salida
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    mostrar(procesar(linea))
+    linea = pedir_texto("")
+}

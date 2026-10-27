@@ -1,0 +1,88 @@
+funcion solo_en(texto, permitidos) {
+    si medir(texto) == 0 {
+        devolver falso
+    }
+    para i en rango(0, medir(texto) - 1) {
+        si no incluye(permitidos, texto[i]) {
+            devolver falso
+        }
+    }
+    devolver verdadero
+}
+
+funcion correo_valido(valor) {
+    sea partes = partir(valor, "@")
+    si medir(partes) != 2 {
+        devolver falso
+    }
+    si no solo_en(partes[0], "abcdefghijklmnopqrstuvwxyz0123456789._-") {
+        devolver falso
+    }
+    sea trozos = partir(partes[1], ".")
+    si medir(trozos) < 2 {
+        devolver falso
+    }
+    para t en trozos {
+        si no solo_en(t, "abcdefghijklmnopqrstuvwxyz0123456789-") {
+            devolver falso
+        }
+        si t[0] == "-" o t[medir(t) - 1] == "-" {
+            devolver falso
+        }
+    }
+    sea ultimo = trozos[medir(trozos) - 1]
+    devolver medir(ultimo) >= 2 y solo_en(ultimo, "abcdefghijklmnopqrstuvwxyz")
+}
+
+funcion telefono_valido(valor) {
+    devolver medir(valor) == 9 y solo_en(valor, "0123456789") y incluye("6789", valor[0])
+}
+
+funcion fecha_valida(valor) {
+    si medir(valor) != 10 {
+        devolver falso
+    }
+    si valor[2] != "/" o valor[5] != "/" {
+        devolver falso
+    }
+    sea d = cortar(valor, 0, 2)
+    sea m = cortar(valor, 3, 2)
+    sea a = cortar(valor, 6, 4)
+    si no (solo_en(d, "0123456789") y solo_en(m, "0123456789") y solo_en(a, "0123456789")) {
+        devolver falso
+    }
+    si a_numero(a) < 1900 o a_numero(a) > 2100 {
+        devolver falso
+    }
+    intentar {
+        crear_fecha(a_numero(a), a_numero(m), a_numero(d), 0, 0, 0)
+        devolver verdadero
+    } si falla e {
+        devolver falso
+    }
+}
+
+funcion cp_valido(valor) {
+    si medir(valor) != 5 o no solo_en(valor, "0123456789") {
+        devolver falso
+    }
+    sea provincia = a_numero(cortar(valor, 0, 2))
+    devolver provincia >= 1 y provincia <= 52
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea ok = falso
+    si p[0] == "correo" {
+        ok = correo_valido(p[1])
+    } sino si p[0] == "telefono" {
+        ok = telefono_valido(p[1])
+    } sino si p[0] == "fecha" {
+        ok = fecha_valida(p[1])
+    } sino {
+        ok = cp_valido(p[1])
+    }
+    mostrar(linea + ": " + elegir(ok, "valido", "invalido"))
+    linea = pedir_texto("")
+}

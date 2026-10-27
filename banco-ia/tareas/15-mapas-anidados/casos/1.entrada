@@ -1,0 +1,4 @@
+servidor.puerto=8080
+servidor.host=local host
+nombre=app
+servidor.tls.activo=si

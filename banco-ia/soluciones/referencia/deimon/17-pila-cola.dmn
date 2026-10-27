@@ -1,0 +1,30 @@
+sea pila = []
+sea cola = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea orden = p[0]
+    si orden == "apilar" {
+        pila = agregar(pila, p[1])
+    } sino si orden == "desapilar" {
+        si medir(pila) == 0 {
+            mostrar("error: pila vacia")
+        } sino {
+            mostrar("pila->" + pila[medir(pila) - 1])
+            pila = cortar(pila, 0, medir(pila) - 1)
+        }
+    } sino si orden == "encolar" {
+        cola = agregar(cola, p[1])
+    } sino si orden == "desencolar" {
+        si medir(cola) == 0 {
+            mostrar("error: cola vacia")
+        } sino {
+            mostrar("cola->" + cola[0])
+            cola = cortar(cola, 1, nada)
+        }
+    } sino si orden == "mostrar" {
+        mostrar("pila: " + elegir(medir(pila) == 0, "vacia", unir(pila, " ")))
+        mostrar("cola: " + elegir(medir(cola) == 0, "vacia", unir(cola, " ")))
+    }
+    linea = pedir_texto("")
+}

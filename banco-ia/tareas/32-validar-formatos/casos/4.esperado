@@ -1,0 +1,6 @@
+telefono 512345678: invalido
+telefono 91234567: invalido
+telefono 9123456789: invalido
+telefono 6123a5678: invalido
+telefono 712345678: valido
+telefono 812345678: valido

@@ -1,0 +1,36 @@
+# Cada nodo es {"hoja": verdadero, "valor": texto} o {"hoja": falso, "hijos": {clave: nodo}}.
+funcion poner(hijos, camino, i, valor) {
+    sea k = camino[i]
+    si i == medir(camino) - 1 {
+        hijos[k] = {"hoja": verdadero, "valor": valor}
+        devolver hijos
+    }
+    sea sub = {}
+    si tiene_clave(hijos, k) {
+        sub = hijos[k]["hijos"]
+    }
+    hijos[k] = {"hoja": falso, "hijos": poner(sub, camino, i + 1, valor)}
+    devolver hijos
+}
+
+funcion escribir_nivel(hijos, nivel) {
+    para k en ordenar(listar_claves(hijos)) {
+        sea nodo = hijos[k]
+        si nodo["hoja"] {
+            mostrar(repetir("  ", nivel) + k + ": " + nodo["valor"])
+        } sino {
+            mostrar(repetir("  ", nivel) + k + ":")
+            escribir_nivel(nodo["hijos"], nivel + 1)
+        }
+    }
+}
+
+sea arbol = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea partes = partir(linea, "=")
+    sea valor = unir(cortar(partes, 1, nada), "=")
+    arbol = poner(arbol, partir(partes[0], "."), 0, valor)
+    linea = pedir_texto("")
+}
+escribir_nivel(arbol, 0)

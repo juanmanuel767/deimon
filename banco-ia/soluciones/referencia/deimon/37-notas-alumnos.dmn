@@ -1,0 +1,49 @@
+funcion media(suma_decimas, n) {
+    devolver suelo((suma_decimas * 10 * 20 + n) / (2 * n))
+}
+
+funcion formato(h) {
+    devolver suelo(h / 100) + "." + rellenar_texto(a_texto(h % 100), 2, "0", "izquierda")
+}
+
+sea alumnos = {}
+sea asigs = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, ";")
+    sea decimas = 0
+    sea partes = partir(p[2], ".")
+    decimas = a_numero(partes[0]) * 10
+    si medir(partes) == 2 {
+        decimas = decimas + a_numero(partes[1])
+    }
+    sea a = elegir(tiene_clave(alumnos, p[0]), alumnos[p[0]], {"suma": 0, "n": 0})
+    alumnos[p[0]] = {"suma": a["suma"] + decimas, "n": a["n"] + 1}
+    sea s = elegir(tiene_clave(asigs, p[1]), asigs[p[1]], {"suma": 0, "n": 0})
+    asigs[p[1]] = {"suma": s["suma"] + decimas, "n": s["n"] + 1}
+    linea = pedir_texto("")
+}
+mostrar("== alumnos ==")
+sea mejor = "nadie"
+sea mejor_media = -1
+para nombre en ordenar(listar_claves(alumnos)) {
+    sea h = media(alumnos[nombre]["suma"], alumnos[nombre]["n"])
+    sea cal = "sobresaliente"
+    si h < 500 {
+        cal = "suspenso"
+    } sino si h < 700 {
+        cal = "aprobado"
+    } sino si h < 900 {
+        cal = "notable"
+    }
+    mostrar(nombre + ": " + formato(h) + " " + cal)
+    si h > mejor_media {
+        mejor_media = h
+        mejor = nombre
+    }
+}
+mostrar("== asignaturas ==")
+para nombre en ordenar(listar_claves(asigs)) {
+    mostrar(nombre + ": " + formato(media(asigs[nombre]["suma"], asigs[nombre]["n"])))
+}
+mostrar("mejor alumno: " + mejor)

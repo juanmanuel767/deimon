@@ -1,0 +1,23 @@
+sea personas = []
+sea deptos = {}
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, ",")
+    personas = agregar(personas, {"d": p[0], "n": p[1], "s": a_numero(p[2])})
+    deptos[p[0]] = verdadero
+    linea = pedir_texto("")
+}
+para d en ordenar(listar_claves(deptos)) {
+    sea grupo = []
+    sea total = 0
+    para p en personas {
+        si p["d"] == d {
+            grupo = agregar(grupo, p)
+            total = total + p["s"]
+        }
+    }
+    mostrar(d + " (" + medir(grupo) + " personas): total " + total)
+    para p en ordenar_por(grupo, ["-s", "n"]) {
+        mostrar("  " + p["n"] + ": " + p["s"])
+    }
+}

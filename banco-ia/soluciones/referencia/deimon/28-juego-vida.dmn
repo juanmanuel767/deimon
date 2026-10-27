@@ -1,0 +1,42 @@
+sea cab = partir(pedir_texto(""), " ")
+sea f = a_numero(cab[0])
+sea c = a_numero(cab[1])
+sea generaciones = a_numero(cab[2])
+sea m = []
+para i en rango(0, f - 1) {
+    sea texto = pedir_texto("")
+    sea fila = []
+    para j en rango(0, c - 1) {
+        fila = agregar(fila, elegir(texto[j] == "#", 1, 0))
+    }
+    m = agregar(m, fila)
+}
+si generaciones > 0 {
+    para g en rango(1, generaciones) {
+        sea nuevo = []
+        para i en rango(0, f - 1) {
+            sea fila = []
+            para j en rango(0, c - 1) {
+                sea vecinas = 0
+                para a en rango(i - 1, i + 1) {
+                    para b en rango(j - 1, j + 1) {
+                        si a >= 0 y a < f y b >= 0 y b < c y (a != i o b != j) {
+                            vecinas = vecinas + m[a][b]
+                        }
+                    }
+                }
+                sea vive = vecinas == 3 o (m[i][j] == 1 y vecinas == 2)
+                fila = agregar(fila, elegir(vive, 1, 0))
+            }
+            nuevo = agregar(nuevo, fila)
+        }
+        m = nuevo
+    }
+}
+para fila en m {
+    sea s = ""
+    para v en fila {
+        s = s + elegir(v == 1, "#", ".")
+    }
+    mostrar(s)
+}

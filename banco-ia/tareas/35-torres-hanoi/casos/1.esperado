@@ -1,0 +1,4 @@
+mover disco 1 de A a B
+mover disco 2 de A a C
+mover disco 1 de B a C
+total: 3

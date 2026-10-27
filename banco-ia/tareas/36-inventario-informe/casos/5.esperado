@@ -1,0 +1,9 @@
+c1 caja stock=0 ingresos=59.97
+c2 bolsa stock=0 ingresos=0.00
+ingresos totales: 59.97
+sin stock: c1, c2
+error: codigo desconocido c9
+c1 caja stock=0 ingresos=59.97
+c2 bolsa stock=0 ingresos=0.10
+ingresos totales: 60.07
+sin stock: c1, c2

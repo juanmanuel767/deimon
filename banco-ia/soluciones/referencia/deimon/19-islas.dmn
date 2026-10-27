@@ -1,0 +1,44 @@
+sea medidas = partir(pedir_texto(""), " ")
+sea f = a_numero(medidas[0])
+sea c = a_numero(medidas[1])
+sea filas = []
+sea visto = []
+para i en rango(0, f - 1) {
+    filas = agregar(filas, pedir_texto(""))
+}
+para k en rango(0, f * c - 1) {
+    visto = agregar(visto, falso)
+}
+sea saltos = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+sea islas = 0
+sea mayor = 0
+para i en rango(0, f - 1) {
+    para j en rango(0, c - 1) {
+        si filas[i][j] == "#" y no visto[i * c + j] {
+            islas = islas + 1
+            visto[i * c + j] = verdadero
+            sea pila = [i * c + j]
+            sea tam = 0
+            mientras medir(pila) > 0 {
+                sea actual = pila[medir(pila) - 1]
+                pila = cortar(pila, 0, medir(pila) - 1)
+                tam = tam + 1
+                sea fx = suelo(actual / c)
+                sea fy = actual % c
+                para s en saltos {
+                    sea a = fx + s[0]
+                    sea b = fy + s[1]
+                    si a >= 0 y a < f y b >= 0 y b < c {
+                        si filas[a][b] == "#" y no visto[a * c + b] {
+                            visto[a * c + b] = verdadero
+                            pila = agregar(pila, a * c + b)
+                        }
+                    }
+                }
+            }
+            mayor = maximo(mayor, tam)
+        }
+    }
+}
+mostrar("islas: " + islas)
+mostrar("mayor: " + mayor)

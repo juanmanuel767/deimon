@@ -1,0 +1,8 @@
+pila: ñ á
+cola: ñ á
+cola->ñ
+pila->á
+cola->á
+error: cola vacia
+pila: ñ
+cola: vacia

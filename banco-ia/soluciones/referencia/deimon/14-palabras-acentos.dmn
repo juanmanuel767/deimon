@@ -1,0 +1,32 @@
+funcion es_letra(c) {
+    devolver incluye("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZáéíóúüñÁÉÍÓÚÜÑ", c)
+}
+
+sea veces = {}
+sea total = 0
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea actual = ""
+    sea texto = linea + " "
+    para i en rango(0, medir(texto) - 1) {
+        sea c = texto[i]
+        si es_letra(c) {
+            actual = actual + c
+        } sino si actual != "" {
+            sea p = minusculas(actual)
+            veces[p] = elegir(tiene_clave(veces, p), veces[p], 0) + 1
+            total = total + 1
+            actual = ""
+        }
+    }
+    linea = pedir_texto("")
+}
+sea items = []
+para p en listar_claves(veces) {
+    items = agregar(items, {"p": p, "n": veces[p]})
+}
+mostrar("total: " + total)
+mostrar("distintas: " + medir(items))
+para it en cortar(ordenar_por(items, ["-n", "p"]), 0, 5) {
+    mostrar(it["p"] + ": " + it["n"])
+}

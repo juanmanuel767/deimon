@@ -1,0 +1,8 @@
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea p = partir(linea, " ")
+    sea f = partir(p[0], "-")
+    sea s = crear_fecha(a_numero(f[0]), a_numero(f[1]), a_numero(f[2]), 0, 0, 0)
+    mostrar(cortar(fecha(sumar_tiempo(s, a_numero(p[1]), "dias")), 0, 10))
+    linea = pedir_texto("")
+}

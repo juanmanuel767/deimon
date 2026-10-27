@@ -1,0 +1,24 @@
+sea nombres = ["norte", "este", "sur", "oeste"]
+sea dx = [0, 1, 0, -1]
+sea dy = [1, 0, -1, 0]
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea px = 0
+    sea py = 0
+    sea d = 0
+    sea mayor = 0
+    para i en rango(0, medir(linea) - 1) {
+        sea orden = linea[i]
+        si orden == "A" {
+            px = px + dx[d]
+            py = py + dy[d]
+            mayor = maximo(mayor, px * px + py * py)
+        } sino si orden == "G" {
+            d = (d + 1) % 4
+        } sino si orden == "I" {
+            d = (d + 3) % 4
+        }
+    }
+    mostrar(px + "," + py + " " + nombres[d] + " max=" + mayor)
+    linea = pedir_texto("")
+}

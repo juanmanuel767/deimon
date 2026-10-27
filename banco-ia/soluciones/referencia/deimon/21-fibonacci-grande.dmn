@@ -1,0 +1,39 @@
+# Número grande: lista de cifras, la menos importante primero.
+funcion sumar(a, b) {
+    sea res = []
+    sea llevo = 0
+    sea n = maximo(medir(a), medir(b))
+    para i en rango(0, n - 1) {
+        sea v = llevo
+        si i < medir(a) {
+            v = v + a[i]
+        }
+        si i < medir(b) {
+            v = v + b[i]
+        }
+        res = agregar(res, v % 10)
+        llevo = suelo(v / 10)
+    }
+    si llevo > 0 {
+        res = agregar(res, llevo)
+    }
+    devolver res
+}
+
+funcion fibonacci(n) {
+    sea a = [0]
+    sea b = [1]
+    para i en rango(1, n) {
+        sea siguiente = sumar(a, b)
+        a = b
+        b = siguiente
+    }
+    devolver unir(invertir(a), "")
+}
+
+sea linea = pedir_texto("")
+mientras linea != nada {
+    sea n = a_numero(linea)
+    mostrar(elegir(n == 0, "0", fibonacci(n)))
+    linea = pedir_texto("")
+}

@@ -1,0 +1,25 @@
+funcion euros(centimos) {
+    devolver suelo(centimos / 100) + "." + rellenar_texto(a_texto(centimos % 100), 2, "0", "izquierda")
+}
+
+sea lineas = []
+sea linea = pedir_texto("")
+mientras linea != nada {
+    lineas = agregar(lineas, linea)
+    linea = pedir_texto("")
+}
+sea datos = desde_json(unir(lineas, "\n"))
+mostrar("tienda: " + datos["tienda"])
+sea agotados = 0
+sea total = 0
+para p en datos["productos"] {
+    si p["stock"] > 0 {
+        sea valor = p["precio"] * p["stock"]
+        total = total + valor
+        mostrar(p["nombre"] + ": " + euros(p["precio"]) + " x " + p["stock"] + " = " + euros(valor))
+    } sino {
+        agotados = agotados + 1
+    }
+}
+mostrar("agotados: " + agotados)
+mostrar("valor total: " + euros(total))
