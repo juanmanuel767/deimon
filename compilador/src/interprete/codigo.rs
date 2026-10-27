@@ -5,6 +5,8 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Constante {
     Numero(f64),
+    /// Entero mayor que 2^53, como cifras.
+    Grande(String),
     Texto(String),
     Logico(bool),
     Nada,

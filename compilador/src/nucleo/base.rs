@@ -9,6 +9,8 @@ use std::sync::Mutex;
 #[derive(Debug, Clone, PartialEq)]
 enum Valor {
     Numero(f64),
+    /// Entero exacto mayor que 2^53 en valor absoluto (los demás enteros son `Numero`).
+    Grande(Rc<EnteroGrande>),
     Texto(Rc<String>),
     Logico(bool),
     Nada,
@@ -17,6 +19,11 @@ enum Valor {
     /// Una función del programa usada como valor: `sea f = doble` y después `f(4)`.
     Funcion(Rc<FuncionValor>),
 }
+
+//@ENTERO_GRANDE@
+
+/// 2^53: hasta aquí un entero se guarda exacto en un f64.
+const LIMITE_ENTERO: f64 = 9_007_199_254_740_992.0;
 
 /// Función del programa guardada en un valor. `numero` es su posición en la tabla del motor
 /// que la ejecuta (el programa traducido o el intérprete); `parametros`, cuántos recibe.
@@ -57,7 +64,7 @@ impl MapaValores {
 impl Valor {
     fn tipo(&self) -> &'static str {
         match self {
-            Valor::Numero(_) => "número",
+            Valor::Numero(_) | Valor::Grande(_) => "número",
             Valor::Texto(_) => "texto",
             Valor::Logico(_) => "lógico",
             Valor::Nada => "nada",
@@ -122,9 +129,70 @@ impl Valor {
     fn como_numero(&self) -> Option<f64> {
         match self {
             Valor::Numero(numero) => Some(*numero),
+            Valor::Grande(entero) => Some(entero.a_f64()),
             _ => None,
         }
     }
+}
+
+/// El valor de un entero: `Numero` si cabe exacto en un f64 (hasta 2^53) y `Grande` si no.
+fn valor_de_entero(entero: EnteroGrande) -> Valor {
+    if entero.cabe_en_numero() {
+        Valor::Numero(entero.a_f64())
+    } else {
+        Valor::Grande(Rc::new(entero))
+    }
+}
+
+/// El valor de un texto que es un entero escrito con cifras (lo usan los literales grandes).
+fn valor_de_texto_entero(texto: &str) -> Valor {
+    match EnteroGrande::desde_texto(texto) {
+        Some(entero) => valor_de_entero(entero),
+        None => fallo(format!("'{}' no es un número entero válido", texto)),
+    }
+}
+
+/// El entero exacto que representa el valor, si es un número entero.
+fn entero_de(valor: &Valor) -> Option<EnteroGrande> {
+    match valor {
+        Valor::Grande(entero) => Some((**entero).clone()),
+        Valor::Numero(numero) if numero.is_finite() && numero.fract() == 0.0 => {
+            EnteroGrande::desde_f64(*numero)
+        }
+        _ => None,
+    }
+}
+
+/// El número como f64, también si es un entero grande (para las cuentas con decimales).
+fn numero_de_valor(valor: &Valor) -> Option<f64> {
+    match valor {
+        Valor::Numero(numero) => Some(*numero),
+        Valor::Grande(entero) => Some(entero.a_f64()),
+        _ => None,
+    }
+}
+
+fn es_numero_valor(valor: &Valor) -> bool {
+    matches!(valor, Valor::Numero(_) | Valor::Grande(_))
+}
+
+/// Orden exacto entre dos números (entero grande con entero grande sin pasar por f64).
+fn orden_numerico(a: &Valor, b: &Valor) -> Option<std::cmp::Ordering> {
+    if let (Some(x), Some(y)) = (entero_de(a), entero_de(b)) {
+        return Some(x.comparar(&y));
+    }
+    match (numero_de_valor(a), numero_de_valor(b)) {
+        (Some(x), Some(y)) => x.partial_cmp(&y),
+        _ => None,
+    }
+}
+
+/// Igualdad que también vale entre un entero grande y un número normal.
+fn valores_iguales(a: &Valor, b: &Valor) -> bool {
+    if es_numero_valor(a) && es_numero_valor(b) {
+        return orden_numerico(a, b) == Some(std::cmp::Ordering::Equal);
+    }
+    a == b
 }
 
 #[inline]
@@ -137,6 +205,7 @@ fn texto_de(valor: &Valor) -> String {
                 format!("{}", n)
             }
         }
+        Valor::Grande(entero) => entero.a_texto(),
         Valor::Texto(s) => (**s).clone(),
         Valor::Logico(b) => {
             if *b {
@@ -233,6 +302,7 @@ fn clave_de_mapa(posicion: &Valor) -> String {
     match posicion {
         Valor::Texto(texto) => (**texto).clone(),
         Valor::Numero(n) if n.is_finite() && n.fract() == 0.0 => texto_de(posicion),
+        Valor::Grande(_) => texto_de(posicion),
         otro => fallo(format!(
             "la clave debe ser un texto o un número entero, no {}",
             otro.tipo()
@@ -672,6 +742,7 @@ fn despachar_funcion(numero: usize, argumentos: Vec<Valor>) -> Valor {
 fn numero_de_maquina(valor: &Valor, funcion: &str) -> f64 {
     match valor {
         Valor::Numero(n) => *n,
+        Valor::Grande(entero) => entero.a_f64(),
         otro => fallo(format!("{}() espera un número, no {}", funcion, otro.tipo())),
     }
 }
@@ -795,6 +866,7 @@ fn a_logico(valor: &Valor) -> bool {
 fn negativo(valor: &Valor) -> Valor {
     match valor {
         Valor::Numero(n) => Valor::Numero(-n),
+        Valor::Grande(entero) => valor_de_entero(entero.negado()),
         otro => fallo(format!("no se puede negar {}", otro.tipo())),
     }
 }
@@ -807,6 +879,15 @@ fn no_logico(valor: &Valor) -> Valor {
 #[inline]
 fn suma(a: &Valor, b: &Valor) -> Valor {
     if let (Valor::Numero(x), Valor::Numero(y)) = (a, b) {
+        let resultado = x + y;
+        if x.fract() != 0.0 || y.fract() != 0.0 || resultado.abs() <= LIMITE_ENTERO {
+            return Valor::Numero(resultado);
+        }
+    }
+    if let (Some(x), Some(y)) = (entero_de(a), entero_de(b)) {
+        return valor_de_entero(x.sumar(&y));
+    }
+    if let (Some(x), Some(y)) = (numero_de_valor(a), numero_de_valor(b)) {
         return Valor::Numero(x + y);
     }
     match (a, b) {
@@ -847,6 +928,15 @@ fn suma_mover(a: Valor, b: &Valor) -> Valor {
 #[inline]
 fn resta(a: &Valor, b: &Valor) -> Valor {
     if let (Valor::Numero(x), Valor::Numero(y)) = (a, b) {
+        let resultado = x - y;
+        if x.fract() != 0.0 || y.fract() != 0.0 || resultado.abs() <= LIMITE_ENTERO {
+            return Valor::Numero(resultado);
+        }
+    }
+    if let (Some(x), Some(y)) = (entero_de(a), entero_de(b)) {
+        return valor_de_entero(x.restar(&y));
+    }
+    if let (Some(x), Some(y)) = (numero_de_valor(a), numero_de_valor(b)) {
         return Valor::Numero(x - y);
     }
     fallo(format!(
@@ -859,6 +949,15 @@ fn resta(a: &Valor, b: &Valor) -> Valor {
 #[inline]
 fn multiplicacion(a: &Valor, b: &Valor) -> Valor {
     if let (Valor::Numero(x), Valor::Numero(y)) = (a, b) {
+        let resultado = x * y;
+        if x.fract() != 0.0 || y.fract() != 0.0 || resultado.abs() <= LIMITE_ENTERO {
+            return Valor::Numero(resultado);
+        }
+    }
+    if let (Some(x), Some(y)) = (entero_de(a), entero_de(b)) {
+        return valor_de_entero(x.multiplicar(&y));
+    }
+    if let (Some(x), Some(y)) = (numero_de_valor(a), numero_de_valor(b)) {
         return Valor::Numero(x * y);
     }
     fallo(format!(
@@ -872,6 +971,22 @@ fn multiplicacion(a: &Valor, b: &Valor) -> Valor {
 fn division(a: &Valor, b: &Valor) -> Valor {
     if let (Valor::Numero(x), Valor::Numero(y)) = (a, b) {
         if *y == 0.0 {
+            fallo("no se puede dividir entre cero".to_string());
+        }
+        return Valor::Numero(x / y);
+    }
+    if let (Some(x), Some(y)) = (entero_de(a), entero_de(b)) {
+        if y.es_cero() {
+            fallo("no se puede dividir entre cero".to_string());
+        }
+        let (cociente, resto) = x.dividir_con_resto(&y);
+        if resto.es_cero() {
+            return valor_de_entero(cociente);
+        }
+        return Valor::Numero(x.a_f64() / y.a_f64());
+    }
+    if let (Some(x), Some(y)) = (numero_de_valor(a), numero_de_valor(b)) {
+        if y == 0.0 {
             fallo("no se puede dividir entre cero".to_string());
         }
         return Valor::Numero(x / y);
@@ -891,6 +1006,38 @@ fn division_numerica(x: f64, y: f64, linea: usize) -> f64 {
         fallo("no se puede dividir entre cero".to_string());
     }
     x / y
+}
+
+/// Suma de la vía rápida. Si dos enteros dan un resultado mayor que 2^53, avisa para que la
+/// llamada se repita con la versión normal, que usa enteros grandes exactos.
+#[inline]
+fn suma_numerica(x: f64, y: f64) -> Result<f64, ()> {
+    let resultado = x + y;
+    if x.fract() == 0.0 && y.fract() == 0.0 && resultado.abs() > LIMITE_ENTERO {
+        Err(())
+    } else {
+        Ok(resultado)
+    }
+}
+
+#[inline]
+fn resta_numerica(x: f64, y: f64) -> Result<f64, ()> {
+    let resultado = x - y;
+    if x.fract() == 0.0 && y.fract() == 0.0 && resultado.abs() > LIMITE_ENTERO {
+        Err(())
+    } else {
+        Ok(resultado)
+    }
+}
+
+#[inline]
+fn multiplicacion_numerica(x: f64, y: f64) -> Result<f64, ()> {
+    let resultado = x * y;
+    if x.fract() == 0.0 && y.fract() == 0.0 && resultado.abs() > LIMITE_ENTERO {
+        Err(())
+    } else {
+        Ok(resultado)
+    }
 }
 
 /// Límites de `rango(a, b)` para un `para` rápido: (desde, hasta, al revés), con desde <= hasta
@@ -931,6 +1078,19 @@ fn resto(a: &Valor, b: &Valor) -> Valor {
         }
         return Valor::Numero(x % y);
     }
+    if let (Some(x), Some(y)) = (entero_de(a), entero_de(b)) {
+        if y.es_cero() {
+            fallo("no se puede calcular el resto de una división entre cero".to_string());
+        }
+        let (_, resto) = x.dividir_con_resto(&y);
+        return valor_de_entero(resto);
+    }
+    if let (Some(x), Some(y)) = (numero_de_valor(a), numero_de_valor(b)) {
+        if y == 0.0 {
+            fallo("no se puede calcular el resto de una división entre cero".to_string());
+        }
+        return Valor::Numero(x % y);
+    }
     fallo(format!(
         "no se puede calcular el resto de {} y {}",
         a.tipo(),
@@ -942,6 +1102,9 @@ fn resto(a: &Valor, b: &Valor) -> Valor {
 fn igual(a: &Valor, b: &Valor) -> Valor {
     if let (Valor::Numero(x), Valor::Numero(y)) = (a, b) {
         return Valor::Logico(x == y);
+    }
+    if es_numero_valor(a) && es_numero_valor(b) {
+        return Valor::Logico(orden_numerico(a, b) == Some(std::cmp::Ordering::Equal));
     }
     match (a, b) {
         (Valor::Texto(x), Valor::Texto(y)) => Valor::Logico(x == y),
@@ -968,10 +1131,12 @@ fn distinto(a: &Valor, b: &Valor) -> Valor {
 }
 
 #[inline]
-fn comparar_numeros(a: &Valor, b: &Valor, operacion: &str) -> (f64, f64) {
-    match (a, b) {
-        (Valor::Numero(x), Valor::Numero(y)) => (*x, *y),
-        _ => fallo(format!(
+fn comparar_numeros(a: &Valor, b: &Valor, operacion: &str) -> Option<std::cmp::Ordering> {
+    // Dos números siempre se pueden comparar; con NaN no hay orden y todo da falso.
+    match orden_numerico(a, b) {
+        Some(orden) => Some(orden),
+        None if es_numero_valor(a) && es_numero_valor(b) => None,
+        None => fallo(format!(
             "no se pueden comparar {} y {} con {}",
             a.tipo(),
             b.tipo(),
@@ -982,36 +1147,38 @@ fn comparar_numeros(a: &Valor, b: &Valor, operacion: &str) -> (f64, f64) {
 
 #[inline]
 fn menor(a: &Valor, b: &Valor) -> Valor {
-    let (x, y) = comparar_numeros(a, b, "menor que");
-    Valor::Logico(x < y)
+    Valor::Logico(comparar_numeros(a, b, "menor que") == Some(std::cmp::Ordering::Less))
 }
 
 #[inline]
 fn menor_igual(a: &Valor, b: &Valor) -> Valor {
-    let (x, y) = comparar_numeros(a, b, "menor o igual que");
-    Valor::Logico(x <= y)
+    Valor::Logico(comparar_numeros(a, b, "menor o igual que").is_some_and(|orden| orden != std::cmp::Ordering::Greater))
 }
 
 #[inline]
 fn mayor(a: &Valor, b: &Valor) -> Valor {
-    let (x, y) = comparar_numeros(a, b, "mayor que");
-    Valor::Logico(x > y)
+    Valor::Logico(comparar_numeros(a, b, "mayor que") == Some(std::cmp::Ordering::Greater))
 }
 
 #[inline]
 fn mayor_igual(a: &Valor, b: &Valor) -> Valor {
-    let (x, y) = comparar_numeros(a, b, "mayor o igual que");
-    Valor::Logico(x >= y)
+    Valor::Logico(comparar_numeros(a, b, "mayor o igual que").is_some_and(|orden| orden != std::cmp::Ordering::Less))
 }
 
 #[inline]
 fn a_numero(valor: &Valor) -> Valor {
     match valor {
         Valor::Numero(n) => Valor::Numero(*n),
-        Valor::Texto(texto) => match texto.trim().parse::<f64>() {
-            Ok(n) if n.is_finite() => Valor::Numero(n),
-            _ => fallo(format!("'{}' no es un número válido", texto)),
-        },
+        Valor::Grande(entero) => Valor::Grande(Rc::clone(entero)),
+        Valor::Texto(texto) => {
+            if let Some(entero) = EnteroGrande::desde_texto(texto) {
+                return valor_de_entero(entero);
+            }
+            match texto.trim().parse::<f64>() {
+                Ok(n) if n.is_finite() => Valor::Numero(n),
+                _ => fallo(format!("'{}' no es un número válido", texto)),
+            }
+        }
         otro => fallo(format!("a_numero() espera un texto, no {}", otro.tipo())),
     }
 }
@@ -1157,10 +1324,7 @@ fn medir(valor: &Valor) -> Valor {
 /// Dice si una lista (o los valores de una lista con claves) tiene ese valor,
 /// o si un texto contiene otro texto.
 fn incluye(coleccion: &Valor, buscado: &Valor) -> Valor {
-    let mismo = |a: &Valor| match (a, buscado) {
-        (Valor::Numero(x), Valor::Numero(y)) => x == y,
-        _ => a == buscado,
-    };
+    let mismo = |a: &Valor| valores_iguales(a, buscado);
     match coleccion {
         Valor::Lista(elementos) => Valor::Logico(elementos.iter().any(mismo)),
         Valor::Mapa(mapa) => Valor::Logico(mapa.valores.values().any(mismo)),
@@ -1179,11 +1343,8 @@ fn ordenar(lista: &Valor) -> Valor {
         otro => fallo(format!("ordenar() espera una lista, no {}", otro.tipo())),
     };
     let mut nuevos: Vec<Valor> = elementos.iter().cloned().collect();
-    if nuevos.iter().all(|v| matches!(v, Valor::Numero(_))) {
-        nuevos.sort_by(|a, b| match (a, b) {
-            (Valor::Numero(x), Valor::Numero(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
-            _ => std::cmp::Ordering::Equal,
-        });
+    if nuevos.iter().all(es_numero_valor) {
+        nuevos.sort_by(|a, b| orden_numerico(a, b).unwrap_or(std::cmp::Ordering::Equal));
     } else if nuevos.iter().all(|v| matches!(v, Valor::Texto(_))) {
         nuevos.sort_by(|a, b| texto_de(a).cmp(&texto_de(b)));
     } else {
@@ -1235,7 +1396,7 @@ fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
         let mut valores = Vec::new();
         for (campo, _) in &campos {
             match mapa.valores.get(campo) {
-                Some(valor @ (Valor::Numero(_) | Valor::Texto(_))) => valores.push(valor.clone()),
+                Some(valor @ (Valor::Numero(_) | Valor::Grande(_) | Valor::Texto(_))) => valores.push(valor.clone()),
                 Some(otro) => fallo(format!(
                     "ordenar_por(): el campo '{}' del elemento {} es {}; solo se ordena por números o textos",
                     campo,
@@ -1248,12 +1409,12 @@ fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
         filas.push((valores, elemento.clone()));
     }
     for (indice, (campo, _)) in campos.iter().enumerate() {
-        let es_numero = filas.first().map(|(v, _)| matches!(v[indice], Valor::Numero(_)));
+        let es_numero = filas.first().map(|(v, _)| es_numero_valor(&v[indice]));
         if let Some(es_numero) = es_numero {
             if let Some((posicion, _)) = filas
                 .iter()
                 .enumerate()
-                .find(|(_, (v, _))| matches!(v[indice], Valor::Numero(_)) != es_numero)
+                .find(|(_, (v, _))| es_numero_valor(&v[indice]) != es_numero)
             {
                 fallo(format!(
                     "ordenar_por(): el campo '{}' mezcla números y textos (mira el elemento {})",
@@ -1265,7 +1426,9 @@ fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
     filas.sort_by(|(a, _), (b, _)| {
         for (indice, (_, al_reves)) in campos.iter().enumerate() {
             let orden = match (&a[indice], &b[indice]) {
-                (Valor::Numero(x), Valor::Numero(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+                (x, y) if es_numero_valor(x) && es_numero_valor(y) => {
+                    orden_numerico(x, y).unwrap_or(std::cmp::Ordering::Equal)
+                }
                 (x, y) => texto_de(x).cmp(&texto_de(y)),
             };
             let orden = if *al_reves { orden.reverse() } else { orden };
@@ -1276,6 +1439,97 @@ fn ordenar_por(lista: &Valor, claves: &Valor) -> Valor {
         std::cmp::Ordering::Equal
     });
     Valor::Lista(Rc::new(filas.into_iter().map(|(_, elemento)| elemento).collect()))
+}
+
+/// Distancia de edición entre dos textos (para el «¿quisiste decir...?» de los campos).
+fn distancia_textos(a: &str, b: &str) -> usize {
+    let b: Vec<char> = b.chars().collect();
+    let mut fila: Vec<usize> = (0..=b.len()).collect();
+    for (i, ca) in a.chars().enumerate() {
+        let mut anterior = fila[0];
+        fila[0] = i + 1;
+        for j in 0..b.len() {
+            let actual = fila[j + 1];
+            fila[j + 1] = (actual + 1).min(fila[j] + 1).min(anterior + usize::from(ca != b[j]));
+            anterior = actual;
+        }
+    }
+    fila[b.len()]
+}
+
+/// Lo que crea `tipo Persona { ... }`: comprueba que `datos` tenga todos los campos del tipo,
+/// ninguno más y del tipo pedido, y devuelve una lista con claves en el orden de los campos.
+/// `campos` es la lista [[nombre, tipo], ...] que escribe el traductor ("" = cualquier valor).
+fn crear_con_tipo(nombre: &Valor, campos: &Valor, datos: &Valor) -> Valor {
+    let nombre = texto_de(nombre);
+    let campos: Vec<(String, String)> = match campos {
+        Valor::Lista(campos) => campos
+            .iter()
+            .map(|campo| match campo {
+                Valor::Lista(par) if par.len() == 2 => (texto_de(&par[0]), texto_de(&par[1])),
+                _ => fallo("crear_con_tipo(): descripción de campos no válida".to_string()),
+            })
+            .collect(),
+        _ => fallo("crear_con_tipo(): descripción de campos no válida".to_string()),
+    };
+    let lista_de_campos = campos.iter().map(|(campo, _)| campo.as_str()).collect::<Vec<_>>().join(", ");
+    let mapa = match datos {
+        Valor::Mapa(mapa) => mapa,
+        otro => fallo(format!(
+            "{}() espera una lista con claves con sus campos ({}), no {}",
+            nombre,
+            lista_de_campos,
+            otro.tipo()
+        )),
+    };
+    for clave in &mapa.claves {
+        if !campos.iter().any(|(campo, _)| campo == clave) {
+            let parecido = campos
+                .iter()
+                .map(|(campo, _)| (distancia_textos(clave, campo), campo))
+                .filter(|(distancia, _)| *distancia <= 2)
+                .min();
+            let pista = match parecido {
+                Some((_, campo)) => format!("; ¿quisiste decir '{}'?", campo),
+                None => format!("; sus campos son: {}", lista_de_campos),
+            };
+            fallo(format!("{} no tiene el campo '{}'{}", nombre, clave, pista));
+        }
+    }
+    let mut resultado = MapaValores::default();
+    for (campo, tipo_campo) in &campos {
+        let valor = match mapa.valores.get(campo) {
+            Some(valor) => valor,
+            None => fallo(format!("falta el campo '{}' de {} (sus campos son: {})", campo, nombre, lista_de_campos)),
+        };
+        let encaja = match tipo_campo.as_str() {
+            "numero" => es_numero_valor(valor),
+            "texto" => matches!(valor, Valor::Texto(_)),
+            "logico" => matches!(valor, Valor::Logico(_)),
+            "lista" => matches!(valor, Valor::Lista(_)),
+            "lista_con_claves" => matches!(valor, Valor::Mapa(_)),
+            "funcion" => matches!(valor, Valor::Funcion(_)),
+            _ => true,
+        };
+        if !encaja {
+            let esperado = match tipo_campo.as_str() {
+                "numero" => "número",
+                "logico" => "lógico",
+                "lista_con_claves" => "lista con claves",
+                "funcion" => "función",
+                otro => otro,
+            };
+            fallo(format!(
+                "el campo '{}' de {} tiene que ser {}, no {}",
+                campo,
+                nombre,
+                esperado,
+                valor.tipo()
+            ));
+        }
+        resultado.poner(campo.clone(), valor.clone());
+    }
+    Valor::Mapa(Rc::new(resultado))
 }
 
 /// `ordenar_por(lista, f)`: ordena por lo que devuelve f para cada elemento (un número, un
@@ -1289,7 +1543,7 @@ fn ordenar_con_funcion(elementos: &[Valor], funcion: &Valor) -> Valor {
             otra => vec![otra],
         };
         for parte in &clave {
-            if !matches!(parte, Valor::Numero(_) | Valor::Texto(_)) {
+            if !matches!(parte, Valor::Numero(_) | Valor::Grande(_) | Valor::Texto(_)) {
                 fallo(format!(
                     "ordenar_por(): la función tiene que devolver un número, un texto o una lista de ellos, no {}",
                     parte.tipo()
@@ -1302,7 +1556,9 @@ fn ordenar_con_funcion(elementos: &[Valor], funcion: &Valor) -> Valor {
     filas.sort_by(|(a, _), (b, _)| {
         for (x, y) in a.iter().zip(b.iter()) {
             let orden = match (x, y) {
-                (Valor::Numero(x), Valor::Numero(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+                (x, y) if es_numero_valor(x) && es_numero_valor(y) => {
+                    orden_numerico(x, y).unwrap_or(std::cmp::Ordering::Equal)
+                }
                 (Valor::Texto(x), Valor::Texto(y)) => x.cmp(y),
                 _ => {
                     error.get_or_insert("ordenar_por(): la función devuelve números para unos elementos y textos para otros");
@@ -1385,10 +1641,16 @@ fn rango(inicio: &Valor, fin: &Valor) -> Valor {
 /// Suma los números de una lista.
 fn sumar_lista(lista: &Valor) -> Valor {
     match lista {
-        Valor::Lista(elementos) => Valor::Numero(elementos.iter().map(|v| match v {
-            Valor::Numero(n) => *n,
-            otro => fallo(format!("sumar_lista() solo suma números, y la lista tiene {}", otro.tipo())),
-        }).sum()),
+        Valor::Lista(elementos) => {
+            let mut total = Valor::Numero(0.0);
+            for elemento in elementos.iter() {
+                if !es_numero_valor(elemento) {
+                    fallo(format!("sumar_lista() solo suma números, y la lista tiene {}", elemento.tipo()));
+                }
+                total = suma(&total, elemento);
+            }
+            total
+        }
         otro => fallo(format!("sumar_lista() espera una lista, no {}", otro.tipo())),
     }
 }
@@ -1434,6 +1696,7 @@ fn agregar_mover(lista: Valor, valor: Valor) -> Valor {
 #[derive(Clone)]
 enum Dato {
     Numero(f64),
+    Grande(String),
     Texto(String),
     Logico(bool),
     Nada,
@@ -1445,6 +1708,7 @@ impl Dato {
     fn desde(valor: &Valor) -> Dato {
         match valor {
             Valor::Numero(numero) => Dato::Numero(*numero),
+            Valor::Grande(entero) => Dato::Grande(entero.a_texto()),
             Valor::Texto(texto) => Dato::Texto((**texto).clone()),
             Valor::Logico(valor) => Dato::Logico(*valor),
             Valor::Nada => Dato::Nada,
@@ -1460,6 +1724,7 @@ impl Dato {
     fn a_valor(&self) -> Valor {
         match self {
             Dato::Numero(numero) => Valor::Numero(*numero),
+            Dato::Grande(texto) => valor_de_texto_entero(texto),
             Dato::Texto(texto) => Valor::Texto(Rc::new(texto.clone())),
             Dato::Logico(valor) => Valor::Logico(*valor),
             Dato::Nada => Valor::Nada,
@@ -1471,6 +1736,7 @@ impl Dato {
     fn codificar(&self) -> (char, String) {
         match self {
             Dato::Numero(numero) => ('n', texto_de(&Valor::Numero(*numero))),
+            Dato::Grande(texto) => ('g', texto.clone()),
             Dato::Texto(texto) => ('t', texto.clone()),
             Dato::Logico(valor) => ('b', if *valor { "verdadero" } else { "falso" }.to_string()),
             Dato::Nada => ('z', String::new()),
@@ -1520,6 +1786,7 @@ impl Dato {
         }
         match tipo {
             "n" => texto.parse::<f64>().ok().filter(|n| n.is_finite()).map(Dato::Numero),
+            "g" => EnteroGrande::desde_texto(&texto).map(|entero| Dato::Grande(entero.a_texto())),
             "t" => Some(Dato::Texto(texto)),
             "b" => match texto.as_str() {
                 "verdadero" => Some(Dato::Logico(true)),
@@ -2202,6 +2469,7 @@ fn es_cierto_en_plantilla(valor: &Valor) -> bool {
         Valor::Nada => false,
         Valor::Logico(b) => *b,
         Valor::Numero(n) => *n != 0.0,
+        Valor::Grande(_) => true,
         Valor::Texto(t) => !t.is_empty(),
         Valor::Lista(l) => !l.is_empty(),
         Valor::Mapa(m) => !m.claves.is_empty(),

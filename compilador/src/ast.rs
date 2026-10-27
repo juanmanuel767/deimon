@@ -24,6 +24,8 @@ pub enum OperadorUnario {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expresion {
     Numero(f64),
+    /// Entero escrito con cifras que pasa de 2^53 (texto, para conservarlo exacto).
+    EnteroGrande(String),
     Texto(String),
     Logico(bool),
     Nada,

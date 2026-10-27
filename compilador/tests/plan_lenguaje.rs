@@ -172,3 +172,147 @@ hay más de 10000 llamadas a funciones un\n\
 no se puede guardar la función 'doble': guarda los datos y vuelve a elegir la función al leerlos\n",
     );
 }
+
+/// Escribe el programa y lo ejecuta con `deimon ejecutar`; devuelve el texto del error.
+fn error_de_ejecutar(nombre: &str, programa: &str) -> String {
+    let carpeta = carpeta(nombre);
+    let archivo = carpeta.join(format!("{}.dmn", nombre));
+    fs::write(&archivo, programa).expect("no se pudo escribir el programa");
+    let salida = Command::new(binario())
+        .arg("ejecutar")
+        .arg(&archivo)
+        .output()
+        .expect("deimon ejecutar");
+    assert!(!salida.status.success(), "el programa debía fallar");
+    String::from_utf8_lossy(&salida.stderr).to_string()
+}
+
+/// Escribe el programa, lo compila y ejecuta el ejecutable; devuelve el texto del error.
+fn error_del_compilado(nombre: &str, programa: &str) -> String {
+    let carpeta = carpeta(nombre);
+    let archivo = carpeta.join(format!("{}.dmn", nombre));
+    fs::write(&archivo, programa).expect("no se pudo escribir el programa");
+    let ejecutable = carpeta.join(nombre);
+    let compilacion = Command::new(binario())
+        .arg("compilar")
+        .arg(&archivo)
+        .arg("--salida")
+        .arg(&ejecutable)
+        .output()
+        .expect("deimon compilar");
+    assert!(compilacion.status.success(), "{}", String::from_utf8_lossy(&compilacion.stderr));
+    let salida = Command::new(&ejecutable).output().expect("programa compilado");
+    assert!(!salida.status.success(), "el programa debía fallar");
+    String::from_utf8_lossy(&salida.stderr).to_string()
+}
+
+/// Revisa el programa con `deimon comprobar` y devuelve todo lo que escribe.
+fn revisar(nombre: &str, programa: &str) -> String {
+    let carpeta = carpeta(nombre);
+    let archivo = carpeta.join(format!("{}.dmn", nombre));
+    fs::write(&archivo, programa).expect("no se pudo escribir el programa");
+    let salida = Command::new(binario())
+        .arg("comprobar")
+        .arg(&archivo)
+        .output()
+        .expect("deimon comprobar");
+    assert!(!salida.status.success(), "el programa debía tener errores");
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&salida.stdout),
+        String::from_utf8_lossy(&salida.stderr)
+    )
+}
+
+#[test]
+fn tipo_propio_ordena_los_campos_como_el_tipo() {
+    igual_en_los_dos_motores(
+        "tipo_orden",
+        r#"tipo Persona {
+    nombre: texto
+    edad: numero
+}
+sea p = Persona({"edad": 30, "nombre": "Luis"})
+mostrar(p)
+mostrar(p["nombre"])
+"#,
+        "{nombre: Luis, edad: 30}\nLuis\n",
+    );
+}
+
+#[test]
+fn tipo_propio_avisa_del_campo_que_falta_sin_ejecutar() {
+    let texto = revisar(
+        "tipo_falta",
+        r#"tipo Persona {
+    nombre: texto
+    edad: numero
+}
+sea p = Persona({"nombre": "Luis"})
+"#,
+    );
+    assert!(texto.contains("falta el campo 'edad' de Persona"), "{}", texto);
+    assert!(texto.contains("E027"), "{}", texto);
+}
+
+#[test]
+fn tipo_propio_sugiere_el_campo_parecido_cuando_sobra() {
+    let texto = revisar(
+        "tipo_sobra",
+        r#"tipo Persona {
+    nombre: texto
+    edad: numero
+}
+sea p = Persona({"nombre": "Luis", "edda": 30})
+"#,
+    );
+    assert!(texto.contains("¿Quisiste decir 'edad'?"), "{}", texto);
+}
+
+#[test]
+fn tipo_propio_falla_en_la_linea_de_la_llamada_con_datos_dinamicos() {
+    let programa = r#"tipo Persona {
+    nombre: texto
+    edad: numero
+    notas
+}
+sea datos = {"nombre": "Luis", "edad": "mucha", "notas": 0}
+sea q = Persona(datos)
+"#;
+    for error in [error_de_ejecutar("tipo_linea_ejecutar", programa), error_del_compilado("tipo_linea_compilado", programa)] {
+        assert!(error.contains("línea 7"), "{}", error);
+        assert!(error.contains("el campo 'edad' de Persona"), "{}", error);
+    }
+}
+
+#[test]
+fn tipo_sigue_siendo_un_nombre_normal_fuera_de_la_declaracion() {
+    igual_en_los_dos_motores("tipo_variable", "sea tipo = 3\nmostrar(tipo)\n", "3\n");
+}
+
+#[test]
+fn enteros_grandes_exactos() {
+    let programa = r#"funcion fact(n) {
+    si n <= 1 {
+        devolver 1
+    }
+    devolver n * fact(n - 1)
+}
+mostrar(fact(30))
+sea x = 1
+para i en rango(0, 100) {
+    x = x * 2
+}
+mostrar(x)
+mostrar(x % 7)
+mostrar(9007199254740993)
+mostrar(9007199254740993 - 1)
+mostrar(x / 2)
+mostrar(x > 5)
+mostrar(ordenar([x, 3, 9007199254740993]))
+mostrar(7 / 2)
+mostrar(0.5 * 3)
+"#;
+    let esperado = "265252859812191058636308480000000\n2535301200456458802993406410752\n4\n9007199254740993\n9007199254740992\n1267650600228229401496703205376\nverdadero\n[3, 9007199254740993, 2535301200456458802993406410752]\n3.5\n1.5\n";
+    igual_en_los_dos_motores("enteros_grandes_exactos", programa, esperado);
+}

@@ -22,6 +22,7 @@ La notación EBNF que se usa aquí es la habitual:
 ```ebnf
 programa        = { linea_vacia | sentencia }, fin_archivo ;
 sentencia       = declaracion
+                | tipo_propio
                 | uso
                 | funcion
                 | ruta
@@ -49,6 +50,12 @@ sentencia       = declaracion
 ```ebnf
 declaracion     = "sea", identificador, "=", expresion ;
 
+tipo_propio     = "tipo", identificador, "{", salto_de_linea,
+                  { campo, salto_de_linea }, "}" ;
+campo           = identificador, [ ":", tipo_de_campo ] ;
+tipo_de_campo   = "numero" | "texto" | "logico" | "lista"
+                | "lista_con_claves" | "funcion" ;
+
 uso             = "usar", texto
                 | "usar", "modulo", texto ;
 
@@ -65,6 +72,10 @@ linea_vacia     = salto_de_linea, { salto_de_linea } ;
 
 - `sea nombre = valor` crea una variable. Para cambiarla después se escribe
   `nombre = nuevo_valor` (sin `sea`).
+- `tipo Persona { nombre: texto  edad: numero }` (un campo por línea) crea una
+  función `Persona(datos)` que comprueba los campos y los devuelve en el orden
+  del tipo. El tipo de cada campo es opcional. Solo se escribe en el nivel
+  principal, y `tipo` sigue valiendo como nombre normal en otros sitios.
 - `usar "piezas/calculos.dmn"` carga las funciones, rutas y pruebas de otro
   archivo. La ruta es relativa a la carpeta del archivo que la contiene.
 - `usar modulo "texto"` carga un módulo: una carpeta con `modulo.txt` y

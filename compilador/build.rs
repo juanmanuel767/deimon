@@ -107,13 +107,16 @@ fn main() {
 fn generar_nucleo() {
     println!("cargo:rerun-if-changed=src/nucleo/base.rs");
     println!("cargo:rerun-if-changed=src/nucleo/servidor.rs");
+    println!("cargo:rerun-if-changed=src/nucleo/entero_grande.rs");
     println!("cargo:rerun-if-changed=recursos/favicon.png");
     const PERFIL: &str = "const PERFIL_LN: &str = \"@PERFIL@\";";
     let base = fs::read_to_string("src/nucleo/base.rs").expect("no se pudo leer src/nucleo/base.rs");
     let servidor = fs::read_to_string("src/nucleo/servidor.rs").expect("no se pudo leer src/nucleo/servidor.rs");
     let icono = Path::new(env!("CARGO_MANIFEST_DIR")).join("recursos").join("favicon.png");
     assert!(base.contains(PERFIL) && base.contains("&[]; //@ICONO_WEB@"), "faltan las marcas del núcleo");
-    let nucleo = base
+    let entero_grande =
+        fs::read_to_string("src/nucleo/entero_grande.rs").expect("no se pudo leer src/nucleo/entero_grande.rs");
+    let nucleo = (base + "\n" + &entero_grande)
         .replace(
             PERFIL,
             "static PERFIL_ELEGIDO: std::sync::OnceLock<&'static str> = std::sync::OnceLock::new();\n\

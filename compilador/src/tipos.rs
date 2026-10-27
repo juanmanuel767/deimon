@@ -20,6 +20,9 @@ enum Tipo {
     Nada,
     Lista,
     Mapa,
+    /// Lo que devuelve `Persona({...})` de un `tipo Persona { ... }` (posición en la lista de
+    /// tipos propios). Es una lista con claves que además sabe sus campos.
+    Registro(usize),
     /// Puede ser cualquier cosa: no se avisa de nada.
     Desconocido,
 }
@@ -33,7 +36,7 @@ impl Tipo {
             Tipo::Logico => "lógico",
             Tipo::Nada => "nada",
             Tipo::Lista => "lista",
-            Tipo::Mapa => "lista con claves",
+            Tipo::Mapa | Tipo::Registro(_) => "lista con claves",
             Tipo::Desconocido => "valor",
         }
     }
@@ -57,7 +60,51 @@ fn tipo_de_integrada(nombre: &str) -> Tipo {
 
 type Ambito = HashMap<String, Tipo>;
 
+/// Un `tipo Nombre { ... }`: su nombre y sus campos (nombre, tipo pedido o "" si vale todo).
+struct TipoPropio {
+    nombre: String,
+    campos: Vec<(String, String)>,
+}
+
+/// Reconoce la función que crea el analizador para `tipo Nombre { ... }` (ver
+/// `Analizador::tipo_propio`): un solo `devolver crear_con_tipo("Nombre", [[campo, tipo]...], datos)`.
+fn tipo_propio_de(sentencia: &Sentencia) -> Option<TipoPropio> {
+    let Sentencia::Funcion { nombre, parametros, cuerpo, .. } = sentencia else { return None };
+    let [Sentencia::Devolver { valor: Some(Expresion::Llamada { nombre: llamada, argumentos, .. }), .. }] = cuerpo.as_slice() else {
+        return None;
+    };
+    let [Expresion::Texto(nombre_tipo), Expresion::Lista(campos), Expresion::Variable { .. }] = argumentos.as_slice() else {
+        return None;
+    };
+    if llamada != "crear_con_tipo" || nombre_tipo != nombre || parametros.len() != 1 {
+        return None;
+    }
+    let campos = campos
+        .iter()
+        .map(|campo| match campo {
+            Expresion::Lista(par) => match par.as_slice() {
+                [Expresion::Texto(campo), Expresion::Texto(tipo)] => Some((campo.clone(), tipo.clone())),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some(TipoPropio { nombre: nombre.clone(), campos })
+}
+
+fn tipo_de_campo(tipo: &str) -> Tipo {
+    match tipo {
+        "numero" => Tipo::Numero,
+        "texto" => Tipo::Texto,
+        "logico" => Tipo::Logico,
+        "lista" => Tipo::Lista,
+        "lista_con_claves" => Tipo::Mapa,
+        _ => Tipo::Desconocido,
+    }
+}
+
 struct Revisor {
+    tipos_propios: Vec<TipoPropio>,
     errores: Vec<ErrorTraduccion>,
     /// Archivo de la definición que se revisa (si viene de un `usar`).
     archivo: Option<String>,
@@ -65,7 +112,8 @@ struct Revisor {
 
 /// Revisa los tipos del programa ya resuelto (con sus `usar`).
 pub fn revisar(programa: &Programa) -> Vec<ErrorTraduccion> {
-    let mut revisor = Revisor { errores: Vec::new(), archivo: None };
+    let tipos_propios = programa.sentencias.iter().filter_map(tipo_propio_de).collect();
+    let mut revisor = Revisor { tipos_propios, errores: Vec::new(), archivo: None };
     let mut principal = Ambito::new();
     for sentencia in &programa.sentencias {
         match sentencia {
@@ -106,6 +154,75 @@ impl Revisor {
             error = error.con_archivo(archivo);
         }
         self.errores.push(error);
+    }
+
+    /// Campos de un tipo propio que faltan, sobran o no encajan (E027), con el mismo mensaje
+    /// que daría el programa al ejecutarse.
+    fn avisar_campo(&mut self, linea: usize, columna: usize, mensaje: String, sugerencia: String) {
+        let mut error = ErrorTraduccion::nuevo(linea, format!("{} (se ve sin ejecutar el programa)", mensaje))
+            .con_codigo("E027")
+            .en_columna(columna)
+            .con_sugerencia(sugerencia);
+        if let Some(archivo) = &self.archivo {
+            error = error.con_archivo(archivo);
+        }
+        self.errores.push(error);
+    }
+
+    fn campo_parecido(&self, tipo: usize, clave: &str) -> Option<String> {
+        self.tipos_propios[tipo]
+            .campos
+            .iter()
+            .map(|(campo, _)| (crate::generador::distancia_edicion(clave, campo), campo.clone()))
+            .filter(|(distancia, _)| *distancia <= 2)
+            .min()
+            .map(|(_, campo)| campo)
+    }
+
+    /// `Persona({"nombre": ..., "edad": ...})` escrito tal cual: se revisan sus campos.
+    fn revisar_creacion(&mut self, tipo: usize, pares: &[(Expresion, Expresion)], ambito: &Ambito, linea: usize, columna: usize) {
+        let nombre = self.tipos_propios[tipo].nombre.clone();
+        let campos = self.tipos_propios[tipo].campos.clone();
+        let lista = campos.iter().map(|(campo, _)| campo.as_str()).collect::<Vec<_>>().join(", ");
+        let mut puestas = Vec::new();
+        for (clave, valor) in pares {
+            let Expresion::Texto(clave) = clave else { return };
+            puestas.push(clave.clone());
+            match campos.iter().find(|(campo, _)| campo == clave) {
+                None => {
+                    let pista = match self.campo_parecido(tipo, clave) {
+                        Some(campo) => format!("¿Quisiste decir '{}'?", campo),
+                        None => format!("Los campos de {} son: {}", nombre, lista),
+                    };
+                    self.avisar_campo(linea, columna, format!("{} no tiene el campo '{}'", nombre, clave), pista);
+                }
+                Some((_, pedido)) => {
+                    let esperado = tipo_de_campo(pedido);
+                    let mut tiene = self.expresion(valor, ambito);
+                    if let Tipo::Registro(_) = tiene {
+                        tiene = Tipo::Mapa;
+                    }
+                    if esperado.conocido() && tiene.conocido() && tiene != esperado {
+                        self.avisar_campo(
+                            linea,
+                            columna,
+                            format!("el campo '{}' de {} tiene que ser {}, no {}", clave, nombre, esperado.nombre(), tiene.nombre()),
+                            format!("Pon en '{}' un valor de tipo {}", clave, esperado.nombre()),
+                        );
+                    }
+                }
+            }
+        }
+        for (campo, _) in &campos {
+            if !puestas.contains(campo) {
+                self.avisar_campo(
+                    linea,
+                    columna,
+                    format!("falta el campo '{}' de {} (sus campos son: {})", campo, nombre, lista),
+                    format!("Añade \"{}\": ... dentro de las llaves", campo),
+                );
+            }
+        }
     }
 
     fn sentencias(&mut self, lista: &[Sentencia], ambito: &mut Ambito) {
@@ -195,7 +312,7 @@ impl Revisor {
 
     fn expresion(&mut self, expresion: &Expresion, ambito: &Ambito) -> Tipo {
         match expresion {
-            Expresion::Numero(_) => Tipo::Numero,
+            Expresion::Numero(_) | Expresion::EnteroGrande(_) => Tipo::Numero,
             Expresion::Texto(_) => Tipo::Texto,
             Expresion::Logico(_) => Tipo::Logico,
             Expresion::Nada => Tipo::Nada,
@@ -213,7 +330,17 @@ impl Revisor {
                 Tipo::Mapa
             }
             Expresion::Variable { nombre, .. } => ambito.get(nombre).copied().unwrap_or(Tipo::Desconocido),
-            Expresion::Llamada { nombre, argumentos, .. } => {
+            Expresion::Llamada { nombre, argumentos, linea, columna } => {
+                if let Some(tipo) = self.tipos_propios.iter().position(|t| t.nombre == *nombre) {
+                    if let [Expresion::Mapa(pares)] = argumentos.as_slice() {
+                        self.revisar_creacion(tipo, pares, ambito, *linea, *columna);
+                    } else {
+                        for argumento in argumentos {
+                            self.expresion(argumento, ambito);
+                        }
+                    }
+                    return Tipo::Registro(tipo);
+                }
                 for argumento in argumentos {
                     self.expresion(argumento, ambito);
                 }
@@ -237,6 +364,25 @@ impl Revisor {
             Expresion::Indice { coleccion, indice, linea } => {
                 let tipo = self.expresion(coleccion, ambito);
                 self.expresion(indice, ambito);
+                if let (Tipo::Registro(registro), Expresion::Texto(clave)) = (tipo, indice.as_ref()) {
+                    let campo = self.tipos_propios[registro].campos.iter().find(|(campo, _)| campo == clave).cloned();
+                    return match campo {
+                        Some((_, pedido)) => tipo_de_campo(&pedido),
+                        None => {
+                            let nombre = self.tipos_propios[registro].nombre.clone();
+                            let pista = match self.campo_parecido(registro, clave) {
+                                Some(campo) => format!("¿Quisiste decir '{}'?", campo),
+                                None => format!(
+                                    "Los campos de {} son: {}",
+                                    nombre,
+                                    self.tipos_propios[registro].campos.iter().map(|(c, _)| c.as_str()).collect::<Vec<_>>().join(", ")
+                                ),
+                            };
+                            self.avisar_campo(*linea, 0, format!("{} no tiene el campo '{}'", nombre, clave), pista);
+                            Tipo::Desconocido
+                        }
+                    };
+                }
                 if matches!(tipo, Tipo::Numero | Tipo::Logico | Tipo::Nada) {
                     self.avisar(
                         *linea,
@@ -259,6 +405,9 @@ impl Revisor {
 
     fn binaria(&mut self, operador: &OperadorBinario, a: Tipo, b: Tipo, linea: usize) -> Tipo {
         use OperadorBinario::*;
+        // Para las operaciones, un tipo propio es una lista con claves más.
+        let como_mapa = |tipo: Tipo| if let Tipo::Registro(_) = tipo { Tipo::Mapa } else { tipo };
+        let (a, b) = (como_mapa(a), como_mapa(b));
         let conocidos = a.conocido() && b.conocido();
         match operador {
             Suma => {

@@ -89,6 +89,13 @@ pub const INTEGRADAS: &[Integrada] = &[
         ejemplo: "mostrar(ordenar([3, 1, 2]))   # [1, 2, 3]",
     },
     Integrada {
+        nombre: "crear_con_tipo",
+        parametros: &["nombre", "campos", "datos"],
+        categoria: "básicas",
+        descripcion: "la usa por dentro 'tipo Nombre { ... }' para comprobar los campos; no hace falta llamarla: escribe Nombre({...})",
+        ejemplo: "mostrar(crear_con_tipo(\"Punto\", [[\"x\", \"numero\"], [\"y\", \"numero\"]], {\"y\": 2, \"x\": 1}))   # {x: 1, y: 2}",
+    },
+    Integrada {
         nombre: "filtrar",
         parametros: &["lista", "funcion"],
         categoria: "listas y textos",

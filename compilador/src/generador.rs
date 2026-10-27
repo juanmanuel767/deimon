@@ -13,6 +13,8 @@ const ICONO_WEB: &[u8] = include_bytes!("../recursos/favicon.png");
 const RUNTIME: &str = concat!(
     "\n",
     include_str!("nucleo/base.rs"),
+    "\n",
+    include_str!("nucleo/entero_grande.rs"),
     include_str!("plantilla_lectura.rs"),
     "\n",
     include_str!("nucleo/servidor.rs")
@@ -51,6 +53,8 @@ fn preludio_sin_sistema() -> String {
         resto = &tras_marca[fin..];
         resto = &resto[resto.find('\n').map(|i| i + 1).unwrap_or(resto.len())..];
     }
+    salida.push('\n');
+    salida.push_str(include_str!("nucleo/entero_grande.rs"));
     salida.push('\n');
     salida
 }
@@ -611,12 +615,12 @@ impl Generador {
             argumentos.push("profundidad_actual()".to_string());
             let llamada = format!("{}({})", crate::numerico::nombre_numerico(nombre), argumentos.join(", "));
             if parametros.is_empty() {
-                self.escribir(&format!("return Valor::Numero({});", llamada));
+                self.escribir(&format!("if let Ok(r) = {} {{ return Valor::Numero(r); }}", llamada));
             } else {
                 let patrones: Vec<String> = (0..parametros.len()).map(|i| format!("Valor::Numero(n{})", i)).collect();
                 let valores: Vec<String> = parametros.iter().map(|p| format!("&{}", nombre_variable(p))).collect();
                 self.escribir(&format!(
-                    "if let ({},) = ({},) {{ return Valor::Numero({}); }}",
+                    "if let ({},) = ({},) {{ if let Ok(r) = {} {{ return Valor::Numero(r); }} }}",
                     patrones.join(", "),
                     valores.join(", "),
                     llamada
@@ -1198,6 +1202,7 @@ impl Generador {
     fn generar_expresion(&mut self, expresion: &Expresion) -> Result<String, ErrorTraduccion> {
         match expresion {
             Expresion::Numero(numero) => Ok(format!("Valor::Numero({:?})", numero)),
+            Expresion::EnteroGrande(cifras) => Ok(format!("valor_de_texto_entero({:?})", cifras)),
             Expresion::Texto(texto) => {
                 Ok(format!("Valor::Texto(Rc::new({:?}.to_string()))", texto))
             }
@@ -1545,19 +1550,26 @@ impl Generador {
     fn abrir_bucle_rapido(&mut self, libres: &[String], bucle: &str) {
         let patrones: Vec<String> = (0..libres.len()).map(|i| format!("Valor::Numero(m{})", i)).collect();
         let valores: Vec<String> = libres.iter().map(|v| format!("&{}", nombre_variable(v))).collect();
-        self.escribir(&format!("if let ({},) = ({},) {{", patrones.join(", "), valores.join(", ")));
-        self.nivel += 1;
         let resultados: Vec<String> = (0..libres.len()).map(|i| format!("r{}", i)).collect();
-        self.escribir(&format!("let ({},) = {{", resultados.join(", ")));
+        // Si una cuenta se pasa de 2^53 el bucle rápido se abandona (no ha tocado las
+        // variables de verdad) y corre el bucle de siempre desde el estado inicial.
+        self.escribir("let bucle_rapido = (|| -> Result<_, ()> {");
+        self.nivel += 1;
+        self.escribir(&format!("if let ({},) = ({},) {{", patrones.join(", "), valores.join(", ")));
         self.nivel += 1;
         for (i, v) in libres.iter().enumerate() {
             self.escribir(&format!("let mut {}: f64 = *m{};", nombre_variable(v), i));
         }
         self.salida.push_str(bucle);
         let finales: Vec<String> = libres.iter().map(|v| nombre_variable(v)).collect();
-        self.escribir(&format!("({},)", finales.join(", ")));
+        self.escribir(&format!("return Ok(({},));", finales.join(", ")));
         self.nivel -= 1;
-        self.escribir("};");
+        self.escribir("}");
+        self.escribir("Err(())");
+        self.nivel -= 1;
+        self.escribir("})();");
+        self.escribir(&format!("if let Ok(({},)) = bucle_rapido {{", resultados.join(", ")));
+        self.nivel += 1;
         for (i, v) in libres.iter().enumerate() {
             self.escribir(&format!("{} = Valor::Numero(r{});", nombre_variable(v), i));
         }
@@ -1702,7 +1714,7 @@ pub(crate) fn distancia_edicion(a: &str, b: &str) -> usize {
 }
 
 pub(crate) fn linea_de_sentencia(sentencia: &Sentencia) -> Option<usize> {
-    match sentencia {
+    let linea = match sentencia {
         Sentencia::Declarar { linea, .. }
         | Sentencia::Asignar { linea, .. }
         | Sentencia::AsignarIndice { linea, .. }
@@ -1712,18 +1724,19 @@ pub(crate) fn linea_de_sentencia(sentencia: &Sentencia) -> Option<usize> {
         | Sentencia::Para { linea, .. }
         | Sentencia::Devolver { linea, .. }
         | Sentencia::Romper { linea, .. }
-        | Sentencia::Continuar { linea, .. } => Some(*linea),
+        | Sentencia::Continuar { linea, .. } => *linea,
         Sentencia::Expresion(expresion) => match expresion {
             Expresion::Variable { linea, .. }
             | Expresion::Llamada { linea, .. }
             | Expresion::Unaria { linea, .. }
             | Expresion::Binaria { linea, .. }
-            | Expresion::Indice { linea, .. } => Some(*linea),
-            _ => None,
+            | Expresion::Indice { linea, .. } => *linea,
+            _ => return None,
         },
-        Sentencia::Usar { linea, .. } | Sentencia::UsarExtension { linea, .. } => Some(*linea),
-        Sentencia::Funcion { .. } | Sentencia::Ruta { .. } | Sentencia::Prueba { .. } => None,
-    }
+        Sentencia::Usar { linea, .. } | Sentencia::UsarExtension { linea, .. } => *linea,
+        Sentencia::Funcion { .. } | Sentencia::Ruta { .. } | Sentencia::Prueba { .. } => return None,
+    };
+    (linea > 0).then_some(linea)
 }
 
 fn es_integrada(nombre: &str) -> bool {

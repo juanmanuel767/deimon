@@ -31,6 +31,7 @@ fn es_palabra(tipo: &Tipo) -> bool {
         tipo,
         Tipo::Ident(_)
             | Tipo::Numero(_)
+            | Tipo::EnteroGrande(_)
             | Tipo::Texto(_)
             | Tipo::Verdadero
             | Tipo::Falso
@@ -76,6 +77,7 @@ fn es_operador_binario(tipo: &Tipo) -> bool {
 fn texto_token(tipo: &Tipo) -> String {
     match tipo {
         Tipo::Numero(n) => format!("{}", n),
+        Tipo::EnteroGrande(cifras) => cifras.clone(),
         Tipo::Texto(texto) => escapar_texto(texto),
         Tipo::Ident(nombre) => nombre.clone(),
         Tipo::Comentario(texto) => texto.clone(),
@@ -490,6 +492,7 @@ impl Formateador {
                         Some(
                             Tipo::Ident(_)
                                 | Tipo::Numero(_)
+                                | Tipo::EnteroGrande(_)
                                 | Tipo::Texto(_)
                                 | Tipo::Verdadero
                                 | Tipo::Falso

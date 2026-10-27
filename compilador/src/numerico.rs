@@ -2,7 +2,9 @@
 //! parámetros, sus variables y lo que devuelve son siempre números), se genera además una
 //! versión rápida que trabaja con `f64` directos, sin el `Valor` que puede ser cualquier
 //! cosa. La función normal la usa cuando recibe números; con otros valores sigue igual
-//! que siempre, así que el comportamiento no cambia.
+//! que siempre, así que el comportamiento no cambia. Si una suma, resta o multiplicación de
+//! enteros se pasa de 2^53, la versión rápida devuelve `Err(())` y quien la llamó repite el
+//! trabajo con la versión normal, que usa enteros grandes exactos.
 
 use std::collections::{HashMap, HashSet};
 
@@ -187,7 +189,7 @@ pub fn generar(nombre: &str, parametros: &[String], cuerpo: &[Sentencia]) -> Str
         .collect();
     parametros_rust.push(format!("{}: usize", PROFUNDIDAD));
     let mut salida = format!(
-        "\n#[allow(unreachable_code, unused_mut, unused_variables, non_snake_case)]\nfn {}({}) -> f64 {{\n",
+        "\n#[allow(unreachable_code, unused_mut, unused_variables, non_snake_case)]\nfn {}({}) -> Result<f64, ()> {{\n",
         nombre_numerico(nombre),
         parametros_rust.join(", ")
     );
@@ -238,7 +240,7 @@ fn sentencias_rust(lista: &[Sentencia], nivel: usize, salida: &mut String) {
                 salida.push_str(&format!("{}    }}\n{}}}\n", sangria, sangria));
             }
             Sentencia::Devolver { valor: Some(valor), .. } => {
-                salida.push_str(&format!("{}return {};\n", sangria, numero_rust(valor)));
+                salida.push_str(&format!("{}return Ok({});\n", sangria, numero_rust(valor)));
             }
             Sentencia::Romper { .. } => salida.push_str(&format!("{}break;\n", sangria)),
             Sentencia::Continuar { .. } => salida.push_str(&format!("{}continue;\n", sangria)),
@@ -255,9 +257,9 @@ fn numero_rust(e: &Expresion) -> String {
         Expresion::Binaria { izquierda, operador, derecha, linea } => {
             let (a, b) = (numero_rust(izquierda), numero_rust(derecha));
             match operador {
-                OperadorBinario::Suma => format!("({} + {})", a, b),
-                OperadorBinario::Resta => format!("({} - {})", a, b),
-                OperadorBinario::Multiplicacion => format!("({} * {})", a, b),
+                OperadorBinario::Suma => format!("suma_numerica({}, {})?", a, b),
+                OperadorBinario::Resta => format!("resta_numerica({}, {})?", a, b),
+                OperadorBinario::Multiplicacion => format!("multiplicacion_numerica({}, {})?", a, b),
                 OperadorBinario::Division => format!("division_numerica({}, {}, {})", a, b, linea),
                 _ => format!("resto_numerico({}, {}, {})", a, b, linea),
             }
@@ -265,7 +267,7 @@ fn numero_rust(e: &Expresion) -> String {
         Expresion::Llamada { nombre, argumentos, linea, .. } => {
             let mut partes: Vec<String> = argumentos.iter().map(numero_rust).collect();
             partes.push(format!("llamada_numerica({}, {})", PROFUNDIDAD, linea));
-            format!("{}({})", nombre_numerico(nombre), partes.join(", "))
+            format!("{}({})?", nombre_numerico(nombre), partes.join(", "))
         }
         _ => unreachable!("expresión que no es numérica"),
     }

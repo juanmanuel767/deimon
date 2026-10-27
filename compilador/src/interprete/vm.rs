@@ -30,13 +30,15 @@ struct Intento {
 #[inline(always)]
 fn aplicar(operacion: Bin, a: &Valor, b: &Valor) -> Valor {
     // Atajo para dos números (lo más común): las mismas cuentas que el núcleo, sin pasar por
-    // él. La división y el resto entre cero, y todo lo demás, siguen por el núcleo.
+    // él. La división y el resto entre cero, los resultados mayores que 2^53 (pueden ser
+    // enteros grandes) y todo lo demás siguen por el núcleo.
     if let (Valor::Numero(x), Valor::Numero(y)) = (a, b) {
         let (x, y) = (*x, *y);
         match operacion {
-            Bin::Suma => return Valor::Numero(x + y),
-            Bin::Resta => return Valor::Numero(x - y),
-            Bin::Multiplicacion => return Valor::Numero(x * y),
+            Bin::Suma if (x + y).abs() <= LIMITE_ENTERO => return Valor::Numero(x + y),
+            Bin::Resta if (x - y).abs() <= LIMITE_ENTERO => return Valor::Numero(x - y),
+            Bin::Multiplicacion if (x * y).abs() <= LIMITE_ENTERO => return Valor::Numero(x * y),
+            Bin::Suma | Bin::Resta | Bin::Multiplicacion => {}
             Bin::Division if y != 0.0 => return Valor::Numero(x / y),
             Bin::Resto if y != 0.0 => return Valor::Numero(x % y),
             Bin::Division | Bin::Resto => {}
@@ -581,6 +583,7 @@ fn constantes_de(codigo: &std::sync::Arc<Codigo>) -> Rc<Vec<Valor>> {
                 .iter()
                 .map(|constante| match constante {
                     Constante::Numero(n) => Valor::Numero(*n),
+                    Constante::Grande(cifras) => valor_de_texto_entero(cifras),
                     Constante::Texto(t) => Valor::Texto(Rc::new(t.clone())),
                     Constante::Logico(b) => Valor::Logico(*b),
                     Constante::Nada => Valor::Nada,

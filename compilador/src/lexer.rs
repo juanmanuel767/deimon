@@ -3,6 +3,8 @@ use crate::error::{Arreglo, ErrorTraduccion};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tipo {
     Numero(f64),
+    /// Entero escrito con cifras que pasa de 2^53: se guarda como texto para no perder cifras.
+    EnteroGrande(String),
     Texto(String),
     /// Comentario completo, desde '#' hasta el final de la línea. Solo lo produce
     /// `tokenizar_con_comentarios` (lo usa el formateador); el parser no lo ve.
@@ -224,12 +226,19 @@ fn tokenizar_interno(
                     }
                 }
                 let texto: String = caracteres[inicio..i].iter().collect();
-                let numero = texto.parse::<f64>().map_err(|_| {
-                    ErrorTraduccion::nuevo(linea, format!("el número '{}' no es válido", texto))
-                        .con_codigo("E002")
-                        .en_columna(columna)
-                })?;
-                Some(Tipo::Numero(numero))
+                let cifras = texto.trim_start_matches('0');
+                let es_grande = texto.chars().all(|c| c.is_ascii_digit())
+                    && (cifras.len() > 16 || (cifras.len() == 16 && cifras > "9007199254740992"));
+                if es_grande {
+                    Some(Tipo::EnteroGrande(cifras.to_string()))
+                } else {
+                    let numero = texto.parse::<f64>().map_err(|_| {
+                        ErrorTraduccion::nuevo(linea, format!("el número '{}' no es válido", texto))
+                            .con_codigo("E002")
+                            .en_columna(columna)
+                    })?;
+                    Some(Tipo::Numero(numero))
+                }
             }
             _ if es_inicio_identificador(c) => {
                 while i < caracteres.len() && es_continuacion_identificador(caracteres[i]) {

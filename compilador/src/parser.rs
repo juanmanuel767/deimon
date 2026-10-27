@@ -221,9 +221,122 @@ impl Analizador {
                 .con_sugerencia(
                     "'sino' va justo después de la '}' de un 'si', en la misma línea: } sino { ... }",
                 )),
+            Tipo::Ident(palabra) if palabra == "tipo" && self.empieza_tipo_propio() => {
+                if en_bloque {
+                    return Err(self
+                        .error("E011", "un tipo solo se puede declarar en el nivel principal")
+                        .con_sugerencia("Mueve 'tipo Nombre { ... }' fuera de este bloque, al nivel principal"));
+                }
+                self.tipo_propio()
+            }
             Tipo::Ident(_) => self.expresion_o_asignacion(),
             _ => Ok(Sentencia::Expresion(self.expresion()?)),
         }
+    }
+
+    /// `tipo Nombre {`: «tipo» solo es especial así, para no romper variables llamadas tipo.
+    fn empieza_tipo_propio(&self) -> bool {
+        matches!(self.tokens.get(self.pos + 1).map(|t| &t.tipo), Some(Tipo::Ident(_)))
+            && matches!(self.tokens.get(self.pos + 2).map(|t| &t.tipo), Some(Tipo::LLave))
+    }
+
+    /// `tipo Persona { nombre: texto  edad: numero  notas }`, un campo por línea y el tipo
+    /// opcional. Se convierte en la función `Persona(datos)`, que comprueba los campos con
+    /// `crear_con_tipo` y devuelve una lista con claves en el orden de los campos.
+    fn tipo_propio(&mut self) -> Result<Sentencia, ErrorTraduccion> {
+        const TIPOS_DE_CAMPO: &[&str] = &["numero", "texto", "logico", "lista", "lista_con_claves", "funcion"];
+        let linea = self.linea();
+        let columna = self.actual().columna;
+        self.avanzar();
+        let token = self.avanzar();
+        let nombre = match &token.tipo {
+            Tipo::Ident(nombre) => nombre.clone(),
+            _ => unreachable!("empieza_tipo_propio ya miró que hay un nombre"),
+        };
+        let apertura = self.esperar(&Tipo::LLave, "'{'")?;
+        let mut campos: Vec<(String, String, usize)> = Vec::new();
+        self.saltar_nuevas_lineas();
+        while !matches!(self.tipo(), Tipo::RLave) {
+            if matches!(self.tipo(), Tipo::Fin) {
+                return Err(self
+                    .error("E004", format!("se esperaba '}}' para cerrar el tipo abierto en la línea {}", apertura.linea))
+                    .con_sugerencia(format!("Añade '}}' para cerrar el '{{' de la línea {}", apertura.linea)));
+            }
+            let token = self.avanzar();
+            let campo = match &token.tipo {
+                Tipo::Ident(campo) => campo.clone(),
+                otro => {
+                    if let Some(palabra) = palabra_reservada(otro) {
+                        return Err(self.error_reservada(palabra, &token));
+                    }
+                    return Err(ErrorTraduccion::nuevo(token.linea, "se esperaba el nombre de un campo")
+                        .con_codigo("E003")
+                        .en_columna(token.columna)
+                        .con_sugerencia("Escribe un campo por línea: nombre o nombre: texto"));
+                }
+            };
+            if campos.iter().any(|(otro, _, _)| *otro == campo) {
+                return Err(ErrorTraduccion::nuevo(token.linea, format!("el campo '{}' está repetido en el tipo '{}'", campo, nombre))
+                    .con_codigo("E010")
+                    .en_columna(token.columna)
+                    .con_sugerencia("Cada campo se escribe una sola vez"));
+            }
+            let mut tipo_campo = String::new();
+            if matches!(self.tipo(), Tipo::DosPuntos) {
+                self.avanzar();
+                let token = self.avanzar();
+                tipo_campo = match &token.tipo {
+                    Tipo::Ident(t) if TIPOS_DE_CAMPO.contains(&t.as_str()) => t.clone(),
+                    Tipo::Funcion => "funcion".to_string(),
+                    _ => {
+                        return Err(ErrorTraduccion::nuevo(token.linea, format!("tipo de campo desconocido en '{}'", campo))
+                            .con_codigo("E003")
+                            .en_columna(token.columna)
+                            .con_sugerencia(format!("Usa uno de estos: {} (o ninguno, para aceptar cualquier valor)", TIPOS_DE_CAMPO.join(", "))))
+                    }
+                };
+            }
+            campos.push((campo, tipo_campo, token.linea));
+            if !matches!(self.tipo(), Tipo::NuevaLinea | Tipo::RLave) {
+                return Err(self
+                    .error("E003", "después de cada campo va un salto de línea")
+                    .con_sugerencia("Escribe un campo por línea: nombre o nombre: texto"));
+            }
+            self.saltar_nuevas_lineas();
+        }
+        self.esperar(&Tipo::RLave, "'}'")?;
+        if campos.is_empty() {
+            return Err(ErrorTraduccion::nuevo(linea, format!("el tipo '{}' no tiene campos", nombre))
+                .con_codigo("E003")
+                .en_columna(columna)
+                .con_sugerencia("Escribe al menos un campo, uno por línea: nombre: texto"));
+        }
+        let descripcion = Expresion::Lista(
+            campos
+                .iter()
+                .map(|(campo, tipo_campo, _)| {
+                    Expresion::Lista(vec![Expresion::Texto(campo.clone()), Expresion::Texto(tipo_campo.clone())])
+                })
+                .collect(),
+        );
+        let llamada = Expresion::Llamada {
+            nombre: "crear_con_tipo".to_string(),
+            argumentos: vec![
+                Expresion::Texto(nombre.clone()),
+                descripcion,
+                Expresion::Variable { nombre: "datos".to_string(), linea, columna },
+            ],
+            linea,
+            columna,
+        };
+        Ok(Sentencia::Funcion {
+            nombre,
+            parametros: vec!["datos".to_string()],
+            cuerpo: vec![Sentencia::Devolver { valor: Some(llamada), linea: 0, columna }],
+            linea,
+            columna,
+            archivo: None,
+        })
     }
 
     fn usar(&mut self) -> Result<Sentencia, ErrorTraduccion> {
@@ -813,6 +926,7 @@ impl Analizador {
         let token = self.avanzar();
         match token.tipo {
             Tipo::Numero(numero) => Ok(Expresion::Numero(numero)),
+            Tipo::EnteroGrande(cifras) => Ok(Expresion::EnteroGrande(cifras)),
             Tipo::Texto(texto) => Ok(Expresion::Texto(texto)),
             Tipo::Verdadero => Ok(Expresion::Logico(true)),
             Tipo::Falso => Ok(Expresion::Logico(false)),
@@ -1001,6 +1115,7 @@ fn nombre_valido(nombre: &str) -> bool {
 fn describir(tipo: &Tipo) -> String {
     match tipo {
         Tipo::Numero(n) => format!("el número {}", n),
+        Tipo::EnteroGrande(cifras) => format!("el número {}", cifras),
         Tipo::Texto(t) => format!("el texto \"{}\"", t),
         Tipo::Comentario(t) => format!("el comentario '{}'", t),
         Tipo::Ident(nombre) => format!("el identificador '{}'", nombre),

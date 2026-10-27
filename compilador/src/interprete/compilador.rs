@@ -592,6 +592,10 @@ impl Compilador {
                 let op = self.constante(Constante::Numero(*n));
                 self.emitir(op);
             }
+            Expresion::EnteroGrande(cifras) => {
+                let op = self.constante(Constante::Grande(cifras.clone()));
+                self.emitir(op);
+            }
             Expresion::Texto(t) => {
                 let op = self.constante(Constante::Texto(t.clone()));
                 self.emitir(op);
@@ -888,6 +892,9 @@ impl Compilador {
                 Err(error) => return Err(error),
             },
             Expresion::Numero(n) => Some(Simple::Constante(self.nueva_constante(Constante::Numero(*n)))),
+            Expresion::EnteroGrande(cifras) => {
+                Some(Simple::Constante(self.nueva_constante(Constante::Grande(cifras.clone()))))
+            }
             Expresion::Texto(t) => {
                 Some(Simple::Constante(self.nueva_constante(Constante::Texto(t.clone()))))
             }

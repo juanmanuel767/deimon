@@ -206,7 +206,7 @@ fn desbordamiento_infinito_y_nan() {
         r#"sea x = 1
 sea i = 0
 mientras i < 400 {
-    x = x * 10
+    x = x * 10.5
     i = i + 1
 }
 mostrar(x)

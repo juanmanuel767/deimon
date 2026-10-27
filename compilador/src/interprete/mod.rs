@@ -29,6 +29,7 @@ mod motor {
                 Valor::Nada | Valor::Funcion(_) => super::Json::Nulo,
                 Valor::Logico(b) => super::Json::Logico(*b),
                 Valor::Numero(n) => super::Json::Numero(*n),
+                Valor::Grande(entero) => super::Json::Numero(entero.a_f64()),
                 Valor::Texto(t) => super::Json::Texto(t.to_string()),
                 Valor::Lista(elementos) => super::Json::Lista(elementos.iter().map(convertir).collect()),
                 Valor::Mapa(mapa) => super::Json::Objeto(

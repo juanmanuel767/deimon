@@ -312,7 +312,7 @@ para k en rango(1, 5) {
 mostrar(x)
 sea grande = 1
 para k en rango(1, 400) {
-    grande = grande * 10
+    grande = grande * 10.5
 }
 mostrar(grande)
 mostrar(grande - grande)

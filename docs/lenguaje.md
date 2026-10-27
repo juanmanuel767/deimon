@@ -34,6 +34,10 @@ mientras i < 3 {
 ### Valores
 
 - Números: `30`, `2.5`, `-7`. Internamente son números decimales (f64).
+  Los enteros son exactos aunque sean enormes: `9007199254740993` o el
+  resultado de `2 * 2 * ...` cien veces salen con todas sus cifras, igual en
+  `deimon ejecutar` y en el programa compilado. Si en la cuenta hay decimales
+  (`0.5 * 3`), se usa el número decimal de siempre, que puede dar `inf`.
   Al mostrarlos, `5` sale como `5` y `2.5` como `2.5`.
 - Textos: entre comillas dobles, por ejemplo `"hola"`. Se pueden usar los
   escapes `\n` (salto de línea), `\"` (comillas) y `\\` (barra invertida).
@@ -212,6 +216,34 @@ lista, y se pueden guardar con `guardar` y pasar a JSON con `a_json`.
 Los textos también se pueden leer por índice, contando caracteres (no bytes):
 `"año"[1]` devuelve `"ñ"`. No se pueden cambiar por partes: `texto[i] = ...`
 es un error de traducción (`E023`); crea un texto nuevo.
+
+### Tipos propios
+
+Un `tipo` le pone nombre a un conjunto de campos, como una ficha. Se escribe en
+el nivel principal, con un campo por línea y, si quieres, el tipo de cada campo:
+
+```deimon
+tipo Persona {
+    nombre: texto
+    edad: numero
+    notas
+}
+
+sea p = Persona({"edad": 30, "nombre": "Ana", "notas": 0})
+mostrar(p["nombre"])   # Ana
+mostrar(p)             # {nombre: Ana, edad: 30, notas: 0}
+```
+
+`Persona({...})` comprueba que no falte ningún campo, que no sobre ninguno y que
+cada valor sea del tipo pedido (`numero`, `texto`, `logico`, `lista`,
+`lista_con_claves` o `funcion`). Si un campo no lleva tipo, acepta cualquier
+valor. Los campos salen siempre en el orden en que se escribieron en el `tipo`,
+aunque los datos vengan en otro orden.
+
+`deimon comprobar` avisa antes de ejecutar si falta un campo o si sobra uno
+(código `E027`); cuando sobrescribe un nombre parecido, sugiere el correcto
+(«¿Quisiste decir 'edad'?»). Si los datos se construyen en marcha, el error se
+ve al ejecutar, con la línea de la llamada a `Persona(...)`.
 
 ## Ejemplos incluidos
 
