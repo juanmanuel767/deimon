@@ -33,7 +33,7 @@ pub fn comprobar(argumentos: &[String]) -> Result<(), Fallo> {
     let archivo = archivo.ok_or_else(|| (uso.to_string(), 2))?;
     let mut fuente = fs::read_to_string(&archivo).map_err(|error| {
         (
-            format!("Error: no se pudo leer el archivo '{}': {}", archivo, error),
+            format!("Error: no se pudo leer el archivo '{}': {}", archivo, deimon::error::explicar_lectura(&error)),
             1,
         )
     })?;
@@ -198,7 +198,7 @@ pub fn guia(argumentos: &[String]) -> Result<(), Fallo> {
         Some(archivo) => {
             let fuente = fs::read_to_string(archivo).map_err(|error| {
                 (
-                    format!("Error: no se pudo leer el archivo '{}': {}", archivo, error),
+                    format!("Error: no se pudo leer el archivo '{}': {}", archivo, deimon::error::explicar_lectura(&error)),
                     1,
                 )
             })?;

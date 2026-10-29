@@ -3,7 +3,7 @@ use crate::error::ErrorTraduccion;
 use crate::lexer::{self, Tipo, Token};
 
 pub fn analizar(tokens: Vec<Token>) -> Result<Programa, ErrorTraduccion> {
-    let mut analizador = Analizador { tokens, pos: 0 };
+    let mut analizador = Analizador { tokens, pos: 0, profundidad: 0 };
     let sentencias = analizador.programa()?;
     Ok(Programa {
         sentencias,
@@ -14,7 +14,13 @@ pub fn analizar(tokens: Vec<Token>) -> Result<Programa, ErrorTraduccion> {
 struct Analizador {
     tokens: Vec<Token>,
     pos: usize,
+    /// Expresiones y bloques abiertos uno dentro de otro (ver `PROFUNDIDAD_MAXIMA`).
+    profundidad: usize,
 }
+
+/// Más anidado que esto da un error claro en vez de agotar la pila (5000 paréntesis
+/// seguidos tumbaban `deimon` con «stack overflow»).
+const PROFUNDIDAD_MAXIMA: usize = 1000;
 
 impl Analizador {
     fn actual(&self) -> &Token {
@@ -45,6 +51,19 @@ impl Analizador {
         while matches!(self.tipo(), Tipo::NuevaLinea) {
             self.avanzar();
         }
+    }
+
+    fn entrar(&mut self) -> Result<(), ErrorTraduccion> {
+        if self.profundidad >= PROFUNDIDAD_MAXIMA {
+            return Err(self
+                .error(
+                    "E003",
+                    format!("hay más de {} expresiones o bloques uno dentro de otro", PROFUNDIDAD_MAXIMA),
+                )
+                .con_sugerencia("Guarda las partes intermedias en variables con 'sea' o sepáralas en funciones"));
+        }
+        self.profundidad += 1;
+        Ok(())
     }
 
     fn error(&self, codigo: &'static str, mensaje: impl Into<String>) -> ErrorTraduccion {
@@ -165,6 +184,13 @@ impl Analizador {
     }
 
     fn bloque(&mut self) -> Result<Vec<Sentencia>, ErrorTraduccion> {
+        self.entrar()?;
+        let resultado = self.bloque_dentro();
+        self.profundidad -= 1;
+        resultado
+    }
+
+    fn bloque_dentro(&mut self) -> Result<Vec<Sentencia>, ErrorTraduccion> {
         let apertura = self.esperar(&Tipo::LLave, "'{'")?;
         let mut sentencias = Vec::new();
         self.saltar_nuevas_lineas();
@@ -773,15 +799,22 @@ impl Analizador {
     }
 
     fn expresion(&mut self) -> Result<Expresion, ErrorTraduccion> {
-        self.expresion_o()
+        self.entrar()?;
+        let resultado = self.expresion_o();
+        self.profundidad -= 1;
+        resultado
     }
 
     fn expresion_o(&mut self) -> Result<Expresion, ErrorTraduccion> {
         let mut izquierda = self.expresion_y()?;
+        let mut operadores = 0;
         while matches!(self.tipo(), Tipo::O) {
             let linea = self.linea();
             self.avanzar();
             let derecha = self.expresion_y()?;
+            // Cada operador encadenado es un nivel más del árbol: cuenta para el límite.
+            self.entrar()?;
+            operadores += 1;
             izquierda = Expresion::Binaria {
                 izquierda: Box::new(izquierda),
                 operador: OperadorBinario::O,
@@ -789,15 +822,20 @@ impl Analizador {
                 linea,
             };
         }
+        self.profundidad -= operadores;
         Ok(izquierda)
     }
 
     fn expresion_y(&mut self) -> Result<Expresion, ErrorTraduccion> {
         let mut izquierda = self.expresion_no()?;
+        let mut operadores = 0;
         while matches!(self.tipo(), Tipo::Y) {
             let linea = self.linea();
             self.avanzar();
             let derecha = self.expresion_no()?;
+            // Cada operador encadenado es un nivel más del árbol: cuenta para el límite.
+            self.entrar()?;
+            operadores += 1;
             izquierda = Expresion::Binaria {
                 izquierda: Box::new(izquierda),
                 operador: OperadorBinario::Y,
@@ -805,6 +843,7 @@ impl Analizador {
                 linea,
             };
         }
+        self.profundidad -= operadores;
         Ok(izquierda)
     }
 
@@ -812,7 +851,10 @@ impl Analizador {
         if matches!(self.tipo(), Tipo::No) {
             let linea = self.linea();
             self.avanzar();
-            let valor = self.expresion_no()?;
+            self.entrar()?;
+            let valor = self.expresion_no();
+            self.profundidad -= 1;
+            let valor = valor?;
             return Ok(Expresion::Unaria {
                 operador: OperadorUnario::No,
                 valor: Box::new(valor),
@@ -824,6 +866,7 @@ impl Analizador {
 
     fn expresion_comparacion(&mut self) -> Result<Expresion, ErrorTraduccion> {
         let mut izquierda = self.expresion_suma()?;
+        let mut operadores = 0;
         loop {
             let operador = match self.tipo() {
                 Tipo::Igual => OperadorBinario::Igual,
@@ -837,6 +880,9 @@ impl Analizador {
             let linea = self.linea();
             self.avanzar();
             let derecha = self.expresion_suma()?;
+            // Cada operador encadenado es un nivel más del árbol: cuenta para el límite.
+            self.entrar()?;
+            operadores += 1;
             izquierda = Expresion::Binaria {
                 izquierda: Box::new(izquierda),
                 operador,
@@ -844,11 +890,13 @@ impl Analizador {
                 linea,
             };
         }
+        self.profundidad -= operadores;
         Ok(izquierda)
     }
 
     fn expresion_suma(&mut self) -> Result<Expresion, ErrorTraduccion> {
         let mut izquierda = self.expresion_producto()?;
+        let mut operadores = 0;
         loop {
             let operador = match self.tipo() {
                 Tipo::Mas => OperadorBinario::Suma,
@@ -858,6 +906,9 @@ impl Analizador {
             let linea = self.linea();
             self.avanzar();
             let derecha = self.expresion_producto()?;
+            // Cada operador encadenado es un nivel más del árbol: cuenta para el límite.
+            self.entrar()?;
+            operadores += 1;
             izquierda = Expresion::Binaria {
                 izquierda: Box::new(izquierda),
                 operador,
@@ -865,11 +916,13 @@ impl Analizador {
                 linea,
             };
         }
+        self.profundidad -= operadores;
         Ok(izquierda)
     }
 
     fn expresion_producto(&mut self) -> Result<Expresion, ErrorTraduccion> {
         let mut izquierda = self.expresion_unaria()?;
+        let mut operadores = 0;
         loop {
             let operador = match self.tipo() {
                 Tipo::Por => OperadorBinario::Multiplicacion,
@@ -880,6 +933,9 @@ impl Analizador {
             let linea = self.linea();
             self.avanzar();
             let derecha = self.expresion_unaria()?;
+            // Cada operador encadenado es un nivel más del árbol: cuenta para el límite.
+            self.entrar()?;
+            operadores += 1;
             izquierda = Expresion::Binaria {
                 izquierda: Box::new(izquierda),
                 operador,
@@ -887,6 +943,7 @@ impl Analizador {
                 linea,
             };
         }
+        self.profundidad -= operadores;
         Ok(izquierda)
     }
 
@@ -894,7 +951,10 @@ impl Analizador {
         if matches!(self.tipo(), Tipo::Menos) {
             let linea = self.linea();
             self.avanzar();
-            let valor = self.expresion_unaria()?;
+            self.entrar()?;
+            let valor = self.expresion_unaria();
+            self.profundidad -= 1;
+            let valor = valor?;
             return Ok(Expresion::Unaria {
                 operador: OperadorUnario::Negativo,
                 valor: Box::new(valor),
@@ -937,7 +997,7 @@ impl Analizador {
                     convertidas.push(match parte {
                         lexer::ParteTexto::Literal(texto) => ParteTexto::Literal(texto),
                         lexer::ParteTexto::Valor(tokens) => {
-                            let mut interior = Analizador { tokens, pos: 0 };
+                            let mut interior = Analizador { tokens, pos: 0, profundidad: self.profundidad };
                             let valor = interior.expresion()?;
                             if !matches!(interior.tipo(), Tipo::Fin) {
                                 return Err(interior.error(

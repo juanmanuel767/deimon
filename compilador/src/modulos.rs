@@ -264,7 +264,7 @@ impl Resolutor {
                 let mensaje = if error.kind() == std::io::ErrorKind::NotFound {
                     format!("no se encontró el archivo '{}'", mostrar)
                 } else {
-                    format!("no se pudo leer el archivo '{}': {}", mostrar, error)
+                    format!("no se pudo leer el archivo '{}': {}", mostrar, crate::error::explicar_lectura(&error))
                 };
                 let error = ErrorTraduccion::nuevo(linea, mensaje)
                     .con_codigo("E014")
@@ -305,7 +305,7 @@ impl Resolutor {
         let fuente = match fuentes::leer_texto(&canonico) {
             Ok(fuente) => fuente,
             Err(error) => {
-                let mensaje = format!("no se pudo leer el archivo '{}': {}", mostrar, error);
+                let mensaje = format!("no se pudo leer el archivo '{}': {}", mostrar, crate::error::explicar_lectura(&error));
                 let error = ErrorTraduccion::nuevo(linea, mensaje)
                     .con_codigo("E014")
                     .en_columna(columna)

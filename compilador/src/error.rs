@@ -172,3 +172,16 @@ pub fn texto_de_errores(errores: &[ErrorTraduccion]) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+/// Por qué no se pudo leer un archivo, en español (el texto del sistema sale en inglés).
+pub fn explicar_lectura(error: &std::io::Error) -> String {
+    match error.kind() {
+        std::io::ErrorKind::NotFound => "no existe".to_string(),
+        std::io::ErrorKind::PermissionDenied => "no tienes permiso para leerlo".to_string(),
+        std::io::ErrorKind::IsADirectory => "es una carpeta, no un archivo".to_string(),
+        std::io::ErrorKind::InvalidData => {
+            "no está escrito en UTF-8 (tiene caracteres dañados o no es un archivo de texto); guárdalo como UTF-8".to_string()
+        }
+        _ => error.to_string(),
+    }
+}

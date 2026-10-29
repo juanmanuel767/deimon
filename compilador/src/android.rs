@@ -36,7 +36,7 @@ pub fn app(argumentos: &[String]) -> Result<(), Fallo> {
         (
             format!(
                 "Error: no se pudo leer el archivo '{}': {}",
-                opciones.archivo, error
+                opciones.archivo, deimon::error::explicar_lectura(&error)
             ),
             1,
         )

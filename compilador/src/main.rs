@@ -266,7 +266,7 @@ fn mensaje_de_compilacion(extensiones: &[String], stderr: &[u8]) -> String {
 fn leer_archivo(archivo: &str) -> Result<String, (String, i32)> {
     fs::read_to_string(archivo).map_err(|error| {
         (
-            format!("Error: no se pudo leer el archivo '{}': {}", archivo, error),
+            format!("Error: no se pudo leer el archivo '{}': {}", archivo, deimon::error::explicar_lectura(&error)),
             1,
         )
     })

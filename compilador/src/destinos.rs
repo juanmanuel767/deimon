@@ -359,7 +359,7 @@ pub fn compilar(argumentos: &[String]) -> Result<(), Fallo> {
     let ruta_fuente = PathBuf::from(&archivo);
     let fuente = fs::read_to_string(&ruta_fuente).map_err(|error| {
         (
-            format!("Error: no se pudo leer el archivo '{}': {}", archivo, error),
+            format!("Error: no se pudo leer el archivo '{}': {}", archivo, deimon::error::explicar_lectura(&error)),
             1,
         )
     })?;

@@ -706,3 +706,67 @@ fn formatear_no_cambia_un_programa_con_y_como_variable() {
         String::from_utf8_lossy(&salida.stderr)
     );
 }
+
+#[test]
+fn matematicas_no_pierden_cifras_con_enteros_grandes() {
+    // Antes pasaban por f64: redondear(2^64) daba 18446744073709552000.
+    let carpeta = carpeta("matematicas_grandes");
+    let archivo = carpeta.join("matematicas_grandes.dmn");
+    let programa = r#"usar modulo "matematicas"
+mostrar(redondear(18446744073709551616))
+mostrar(techo(48907066576996237))
+mostrar(suelo(-9007199254740993))
+mostrar(absoluto(-9223372036854775808))
+mostrar(minimo(4131.18608, 9007199254740995 * -7))
+mostrar(maximo(760.2, techo(628130761396710558303113212863)))
+mostrar(maximo(3, 2.5))
+mostrar(minimo(1, 2))
+mostrar(redondear(2.5))
+"#;
+    fs::write(&archivo, programa).expect("no se pudo escribir el programa");
+    let salida = Command::new(binario()).arg("ejecutar").arg(&archivo).output().expect("deimon ejecutar");
+    assert!(salida.status.success(), "{}", String::from_utf8_lossy(&salida.stderr));
+    assert_eq!(
+        String::from_utf8_lossy(&salida.stdout),
+        "18446744073709551616\n48907066576996237\n-9007199254740993\n9223372036854775808\n-63050394783186965\n628130761396710558303113212863\n3\n1\n3\n"
+    );
+}
+
+#[test]
+fn anidar_demasiado_da_un_error_claro_y_no_agota_la_pila() {
+    // Antes 5000 paréntesis o 10000 sumas seguidas tumbaban deimon con «stack overflow».
+    let carpeta = carpeta("anidar_demasiado");
+    let casos = [
+        format!("mostrar({}1{})", "(".repeat(5000), ")".repeat(5000)),
+        format!("mostrar({}1)", "-".repeat(5000)),
+        format!("mostrar({}{})", "[".repeat(5000), "]".repeat(5000)),
+        format!("mostrar(1{})", "+1".repeat(50000)),
+    ];
+    for (i, programa) in casos.iter().enumerate() {
+        let archivo = carpeta.join(format!("caso{}.dmn", i));
+        fs::write(&archivo, programa).expect("no se pudo escribir el programa");
+        for orden in [&["ejecutar"][..], &["comprobar"], &["formatear", "--comprobar"]] {
+            let salida = Command::new(binario()).args(orden).arg(&archivo).output().expect("deimon");
+            // Según la orden, el error sale por la salida normal o por la de errores.
+            let error = format!("{}{}", String::from_utf8_lossy(&salida.stdout), String::from_utf8_lossy(&salida.stderr));
+            assert_eq!(salida.status.code(), Some(1), "caso {} {:?}: {}", i, orden, error);
+            assert!(error.contains("uno dentro de otro") && error.contains("E003"), "caso {} {:?}: {}", i, orden, error);
+        }
+    }
+    // Lo razonable sigue funcionando.
+    let archivo = carpeta.join("normal.dmn");
+    fs::write(&archivo, format!("mostrar({}1{})\nmostrar(1{})", "(".repeat(500), ")".repeat(500), "+1".repeat(900))).unwrap();
+    let salida = Command::new(binario()).arg("ejecutar").arg(&archivo).output().expect("deimon ejecutar");
+    assert_eq!(String::from_utf8_lossy(&salida.stdout), "1\n901\n");
+}
+
+#[test]
+fn archivo_que_no_es_utf8_explica_el_problema_en_espanol() {
+    let carpeta = carpeta("no_utf8");
+    let archivo = carpeta.join("roto.dmn");
+    fs::write(&archivo, b"mostrar(\"a\xff\")\n").unwrap();
+    let salida = Command::new(binario()).arg("ejecutar").arg(&archivo).output().expect("deimon ejecutar");
+    let error = String::from_utf8_lossy(&salida.stderr);
+    assert!(error.contains("no está escrito en UTF-8"), "{}", error);
+    assert!(!error.contains("stream did not contain"), "{}", error);
+}

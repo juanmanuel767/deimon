@@ -416,7 +416,7 @@ fn comprobar_archivo(archivo: &str, lista: &mut Vec<Comprobacion>) {
             lista.push(comprobacion(
                 &nombre_traduccion,
                 Estado::Error,
-                format!("no se pudo leer el archivo: {}", error),
+                format!("no se pudo leer el archivo: {}", deimon::error::explicar_lectura(&error)),
             ));
             return;
         }

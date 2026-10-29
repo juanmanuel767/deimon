@@ -655,7 +655,7 @@ pub fn comando(argumentos: &[String]) -> Result<(), (String, i32)> {
     let archivo = archivo.ok_or_else(|| (uso.to_string(), 2))?;
     let fuente = fs::read_to_string(&archivo).map_err(|error| {
         (
-            format!("Error: no se pudo leer el archivo '{}': {}", archivo, error),
+            format!("Error: no se pudo leer el archivo '{}': {}", archivo, crate::error::explicar_lectura(&error)),
             1,
         )
     })?;

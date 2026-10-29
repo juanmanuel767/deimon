@@ -31,32 +31,61 @@ fn ext_potencia(args: Vec<Valor>) -> Result<Valor, String> {
     Ok(Valor::Numero(resultado))
 }
 
+/// Un entero grande ya es entero: redondear, suelo y techo lo devuelven tal cual (sin pasar por f64).
+fn ext_matematicas_grande(args: &[Valor]) -> Option<Rc<EnteroGrande>> {
+    match args.first() {
+        Some(Valor::Grande(entero)) => Some(entero.clone()),
+        _ => None,
+    }
+}
+
 fn ext_absoluto(args: Vec<Valor>) -> Result<Valor, String> {
+    if let Some(entero) = ext_matematicas_grande(&args) {
+        return Ok(if entero.negativo { Valor::Grande(Rc::new(entero.negado())) } else { Valor::Grande(entero) });
+    }
     Ok(Valor::Numero(ext_matematicas_numero(&args, 0, "absoluto")?.abs()))
 }
 
 fn ext_redondear(args: Vec<Valor>) -> Result<Valor, String> {
+    if let Some(entero) = ext_matematicas_grande(&args) {
+        return Ok(Valor::Grande(entero));
+    }
     Ok(Valor::Numero(ext_matematicas_numero(&args, 0, "redondear")?.round()))
 }
 
 fn ext_suelo(args: Vec<Valor>) -> Result<Valor, String> {
+    if let Some(entero) = ext_matematicas_grande(&args) {
+        return Ok(Valor::Grande(entero));
+    }
     Ok(Valor::Numero(ext_matematicas_numero(&args, 0, "suelo")?.floor()))
 }
 
 fn ext_techo(args: Vec<Valor>) -> Result<Valor, String> {
+    if let Some(entero) = ext_matematicas_grande(&args) {
+        return Ok(Valor::Grande(entero));
+    }
     Ok(Valor::Numero(ext_matematicas_numero(&args, 0, "techo")?.ceil()))
 }
 
+/// El menor (o el mayor) de dos números comparando exacto, para no perder cifras de un entero grande.
+fn ext_matematicas_elegir(args: &[Valor], funcion: &str, quiero: std::cmp::Ordering) -> Result<Valor, String> {
+    let a = ext_matematicas_numero(args, 0, funcion)?;
+    let b = ext_matematicas_numero(args, 1, funcion)?;
+    if a.is_nan() || b.is_nan() {
+        return Ok(Valor::Numero(if funcion == "minimo" { a.min(b) } else { a.max(b) }));
+    }
+    match orden_numerico(&args[0], &args[1]) {
+        Some(orden) if orden == quiero => Ok(args[0].clone()),
+        _ => Ok(args[1].clone()),
+    }
+}
+
 fn ext_minimo(args: Vec<Valor>) -> Result<Valor, String> {
-    let a = ext_matematicas_numero(&args, 0, "minimo")?;
-    let b = ext_matematicas_numero(&args, 1, "minimo")?;
-    Ok(Valor::Numero(a.min(b)))
+    ext_matematicas_elegir(&args, "minimo", std::cmp::Ordering::Less)
 }
 
 fn ext_maximo(args: Vec<Valor>) -> Result<Valor, String> {
-    let a = ext_matematicas_numero(&args, 0, "maximo")?;
-    let b = ext_matematicas_numero(&args, 1, "maximo")?;
-    Ok(Valor::Numero(a.max(b)))
+    ext_matematicas_elegir(&args, "maximo", std::cmp::Ordering::Greater)
 }
 
 thread_local! {
