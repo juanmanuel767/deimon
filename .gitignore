@@ -14,3 +14,7 @@ rendimiento/*_gen.rs
 # Notas internas de traspaso (rutas privadas del ordenador del autor)
 docs/TRASPASO.md
 *.iso
+
+# Archivos que Python genera solo (llevan rutas del equipo)
+__pycache__/
+*.pyc
