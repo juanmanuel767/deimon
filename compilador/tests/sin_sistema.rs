@@ -236,3 +236,26 @@ fn lo_que_necesita_disco_red_o_navegador_da_e026() {
         assert!(errores.contains(esperado), "falta {:?} en:\n{}", esperado, errores);
     }
 }
+
+#[test]
+fn las_integradas_de_respuesta_web_dan_e026() {
+    let programa = carpeta("e026_respuesta").join("respuesta.dmn");
+    fs::write(
+        &programa,
+        "responder(\"a\", 200, \"text/plain\")\nresponder_json(1, 200)\nmostrar(metodo_recibido())\nmostrar(camino_recibido())\n",
+    )
+    .expect("no se pudo escribir el programa");
+    let salida = Command::new(binario())
+        .arg("compilar")
+        .arg(&programa)
+        .args(["--destino", "pc-sin-sistema"])
+        .output()
+        .expect("no se pudo ejecutar 'deimon compilar'");
+    assert!(!salida.status.success());
+    let errores = String::from_utf8_lossy(&salida.stderr);
+    for nombre in ["responder", "responder_json", "metodo_recibido", "camino_recibido"] {
+        let esperado = format!("'{}' no funciona en el destino pc-sin-sistema", nombre);
+        assert!(errores.contains(&esperado), "falta {:?} en:\n{}", esperado, errores);
+    }
+    assert!(errores.contains("Código: E026"), "{}", errores);
+}

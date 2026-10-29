@@ -1,0 +1,91 @@
+# API JSON de tareas en memoria de la colección "tareas" (clave = id escrito como texto).
+
+funcion no_encontrado() {
+    devolver responder_json({"error": "no encontrado"}, 404)
+}
+
+funcion no_existe() {
+    devolver responder_json({"error": "no existe"}, 404)
+}
+
+# Un id válido: entero positivo sin ceros a la izquierda (y de pocas cifras para que quepa).
+funcion id_valido(texto) {
+    si medir(texto) == 0 o medir(texto) > 15 o texto[0] == "0" {
+        devolver falso
+    }
+    para i en rango(0, medir(texto) - 1) {
+        si no incluye("0123456789", texto[i]) {
+            devolver falso
+        }
+    }
+    devolver verdadero
+}
+
+funcion todas_las_tareas() {
+    sea lista = []
+    sea total = leer("contador", "ultimo")
+    si total == nada {
+        devolver lista
+    }
+    para n en rango(1, total) {
+        lista = agregar(lista, leer("tareas", a_texto(n)))
+    }
+    devolver lista
+}
+
+ruta "/api/tareas" {
+    si camino_recibido() != "/api/tareas" {
+        devolver no_encontrado()
+    }
+    si metodo_recibido() == "GET" {
+        devolver responder_json(todas_las_tareas(), 200)
+    }
+    si metodo_recibido() != "POST" {
+        devolver no_encontrado()
+    }
+    sea titulo = nada
+    intentar {
+        sea datos = desde_json(cuerpo_recibido())
+        si tiene_clave(datos, "titulo") y a_texto(datos["titulo"]) == datos["titulo"] y recortar(datos["titulo"]) != "" {
+            titulo = datos["titulo"]
+        }
+    } si falla e {
+        titulo = nada
+    }
+    si titulo == nada {
+        devolver responder_json({"error": "peticion invalida"}, 400)
+    }
+    sea id = incrementar("contador", "ultimo", 1)
+    sea tarea = {"id": id, "titulo": titulo, "hecha": falso}
+    guardar("tareas", a_texto(id), tarea)
+    devolver responder_json(tarea, 201)
+}
+
+ruta "/api/tareas/:id" {
+    si metodo_recibido() != "GET" o termina_con(camino_recibido(), "/") {
+        devolver no_encontrado()
+    }
+    si no id_valido(id) o leer("tareas", id) == nada {
+        devolver no_existe()
+    }
+    devolver responder_json(leer("tareas", id), 200)
+}
+
+ruta "/api/tareas/:id/hecha" {
+    si metodo_recibido() != "POST" o termina_con(camino_recibido(), "/") {
+        devolver no_encontrado()
+    }
+    si no id_valido(id) o leer("tareas", id) == nada {
+        devolver no_existe()
+    }
+    sea tarea = leer("tareas", id)
+    tarea["hecha"] = verdadero
+    guardar("tareas", id, tarea)
+    devolver responder_json(tarea, 200)
+}
+
+ruta "/*" {
+    devolver no_encontrado()
+}
+
+servir(8080)

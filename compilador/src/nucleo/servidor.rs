@@ -28,7 +28,11 @@ fn redirigir(camino: &Valor) -> Valor {
     if !camino.starts_with('/') || camino.starts_with("//") || camino.contains(['\r', '\n']) {
         fallo("redirigir() solo acepta caminos de este sitio que empiecen por '/', por ejemplo \"/inicio\"".to_string());
     }
-    RESPUESTA.with(|respuesta| respuesta.borrow_mut().redireccion = Some(camino));
+    RESPUESTA.with(|respuesta| {
+        let mut respuesta = respuesta.borrow_mut();
+        respuesta.propia = None;
+        respuesta.redireccion = Some(camino);
+    });
     Valor::Texto(Rc::new(String::new()))
 }
 
@@ -40,7 +44,11 @@ fn redirigir_fuera(direccion: &Valor) -> Valor {
     if !(direccion.starts_with("https://") || local) || direccion.contains(['\r', '\n', ' ']) {
         fallo("redirigir_fuera() solo acepta direcciones que empiecen por https://".to_string());
     }
-    RESPUESTA.with(|respuesta| respuesta.borrow_mut().redireccion = Some(direccion));
+    RESPUESTA.with(|respuesta| {
+        let mut respuesta = respuesta.borrow_mut();
+        respuesta.propia = None;
+        respuesta.redireccion = Some(direccion);
+    });
     Valor::Texto(Rc::new(String::new()))
 }
 
@@ -54,6 +62,8 @@ fn preparar_peticion(envio: bool, campos: Vec<(String, String)>, galletas: Vec<(
             subidas: Vec::new(),
             cuerpo: String::new(),
             cabeceras: Vec::new(),
+            metodo: if envio { "POST" } else { "GET" }.to_string(),
+            camino: String::new(),
         }
     });
     RESPUESTA.with(|respuesta| {
@@ -628,13 +638,20 @@ fn atender_sin_red(camino: &str, envio: bool, mut campos: Vec<(String, String)>,
     let galletas = GALLETAS_PRUEBA.with(|galletas| galletas.borrow().clone());
     preparar_peticion(envio, campos, galletas);
     let cuerpo = CUERPO_PRUEBA.with(|cuerpo| std::mem::take(&mut *cuerpo.borrow_mut()));
-    PETICION.with(|peticion| peticion.borrow_mut().cuerpo = cuerpo);
+    PETICION.with(|peticion| {
+        let mut peticion = peticion.borrow_mut();
+        peticion.cuerpo = cuerpo;
+        peticion.camino = camino.to_string();
+    });
     let valor = match buscar_ruta(&rutas, camino) {
         Some((ruta, parametros)) => Some((ruta.manejador)(parametros)),
         None => None,
     };
     let respuesta = tomar_respuesta();
     let cuerpo = match valor {
+        Some(_) if respuesta.propia.is_some() && respuesta.redireccion.is_none() => {
+            respuesta.propia.as_ref().map(|propia| propia.cuerpo.clone()).unwrap_or_default()
+        }
         Some(valor) => cuerpo_pagina(&respuesta.escrito, &valor),
         None => PAGINA_404.to_string(),
     };
@@ -889,6 +906,160 @@ fn responder_archivo_http(conexion: &mut std::net::TcpStream, archivo: ArchivoRe
     let _ = conexion.shutdown(std::net::Shutdown::Write);
 }
 
+/// Frase estándar de un código HTTP (vacía si no es de los habituales).
+fn frase_http(codigo: u16) -> &'static str {
+    match codigo {
+        200 => "OK",
+        201 => "Created",
+        202 => "Accepted",
+        204 => "No Content",
+        301 => "Moved Permanently",
+        302 => "Found",
+        303 => "See Other",
+        304 => "Not Modified",
+        400 => "Bad Request",
+        401 => "Unauthorized",
+        403 => "Forbidden",
+        404 => "Not Found",
+        405 => "Method Not Allowed",
+        409 => "Conflict",
+        410 => "Gone",
+        415 => "Unsupported Media Type",
+        422 => "Unprocessable Entity",
+        429 => "Too Many Requests",
+        500 => "Internal Server Error",
+        501 => "Not Implemented",
+        503 => "Service Unavailable",
+        _ => "",
+    }
+}
+
+/// El código HTTP (entero de 100 a 599) de responder() y responder_json().
+fn codigo_http(valor: &Valor, funcion: &str) -> u16 {
+    match valor {
+        Valor::Numero(n) if n.is_finite() && n.fract() == 0.0 && (100.0..=599.0).contains(n) => *n as u16,
+        Valor::Numero(_) | Valor::Grande(_) => {
+            fallo(format!("{}(): el código debe ser un número entero de 100 a 599, por ejemplo 200 o 404", funcion))
+        }
+        otro => fallo(format!("{}() espera un número como código, no {}", funcion, otro.tipo())),
+    }
+}
+
+fn guardar_respuesta_propia(cuerpo: String, codigo: u16, tipo: String) {
+    RESPUESTA.with(|respuesta| {
+        let mut respuesta = respuesta.borrow_mut();
+        respuesta.redireccion = None;
+        respuesta.propia = Some(RespuestaPropia { cuerpo, codigo, tipo });
+    });
+}
+
+/// Hace que la ruta responda con ese texto, ese código HTTP y ese tipo de contenido (por
+/// ejemplo "text/plain"). Si el tipo es de texto y no dice el juego de letras, se añade UTF-8.
+fn responder(cuerpo: &Valor, codigo: &Valor, tipo: &Valor) -> Valor {
+    let cuerpo = match cuerpo {
+        Valor::Texto(texto) => (**texto).clone(),
+        otro => fallo(format!("responder() espera un texto como cuerpo, no {}", otro.tipo())),
+    };
+    let codigo = match codigo {
+        Valor::Numero(_) | Valor::Grande(_) => codigo,
+        otro => fallo(format!("responder() espera un número como código, no {}", otro.tipo())),
+    };
+    let tipo = match tipo {
+        Valor::Texto(texto) => (**texto).clone(),
+        otro => fallo(format!("responder() espera un texto como tipo, no {}", otro.tipo())),
+    };
+    let codigo = codigo_http(codigo, "responder");
+    let tipo = tipo.trim().to_string();
+    if tipo.is_empty() || tipo.chars().any(|c| c.is_control()) {
+        fallo("responder(): el tipo no puede estar vacío ni tener saltos de línea, por ejemplo \"text/plain\"".to_string());
+    }
+    let minuscula = tipo.to_ascii_lowercase();
+    let tipo = if minuscula.starts_with("text/") && !minuscula.contains("charset") {
+        format!("{}; charset=utf-8", tipo)
+    } else {
+        tipo
+    };
+    guardar_respuesta_propia(cuerpo, codigo, tipo);
+    Valor::Texto(Rc::new(String::new()))
+}
+
+/// Escribe un valor como JSON: listas con claves como objetos (en su orden), enteros grandes
+/// exactos y nada como null.
+fn json_de_valor(valor: &Valor, salida: &mut String, profundidad: usize) {
+    if profundidad > 200 {
+        fallo("responder_json(): el valor tiene demasiados niveles anidados".to_string());
+    }
+    match valor {
+        Valor::Numero(n) if n.is_finite() => salida.push_str(&texto_de(valor)),
+        Valor::Numero(_) => salida.push_str("null"),
+        Valor::Grande(entero) => salida.push_str(&entero.a_texto()),
+        Valor::Texto(texto) => {
+            salida.push('"');
+            for c in texto.chars() {
+                match c {
+                    '"' => salida.push_str("\\\""),
+                    '\\' => salida.push_str("\\\\"),
+                    '\n' => salida.push_str("\\n"),
+                    '\r' => salida.push_str("\\r"),
+                    '\t' => salida.push_str("\\t"),
+                    c if (c as u32) < 0x20 => salida.push_str(&format!("\\u{:04x}", c as u32)),
+                    c => salida.push(c),
+                }
+            }
+            salida.push('"');
+        }
+        Valor::Logico(b) => salida.push_str(if *b { "true" } else { "false" }),
+        Valor::Lista(elementos) => {
+            salida.push('[');
+            for (i, elemento) in elementos.iter().enumerate() {
+                if i > 0 {
+                    salida.push(',');
+                }
+                json_de_valor(elemento, salida, profundidad + 1);
+            }
+            salida.push(']');
+        }
+        Valor::Mapa(mapa) => {
+            salida.push('{');
+            for (i, (clave, elemento)) in mapa.pares().enumerate() {
+                if i > 0 {
+                    salida.push(',');
+                }
+                json_de_valor(&Valor::Texto(Rc::new(clave.clone())), salida, profundidad + 1);
+                salida.push(':');
+                json_de_valor(elemento, salida, profundidad + 1);
+            }
+            salida.push('}');
+        }
+        Valor::Nada | Valor::Funcion(_) => salida.push_str("null"),
+    }
+}
+
+/// Hace que la ruta responda con el valor escrito como JSON, con ese código HTTP y
+/// `Content-Type: application/json`.
+fn responder_json(valor: &Valor, codigo: &Valor) -> Valor {
+    let codigo = match codigo {
+        Valor::Numero(_) | Valor::Grande(_) => codigo_http(codigo, "responder_json"),
+        otro => fallo(format!("responder_json() espera un número como código, no {}", otro.tipo())),
+    };
+    let mut cuerpo = String::new();
+    json_de_valor(valor, &mut cuerpo, 0);
+    guardar_respuesta_propia(cuerpo, codigo, "application/json".to_string());
+    Valor::Texto(Rc::new(String::new()))
+}
+
+/// Método de la petición que se está atendiendo, en mayúsculas: "GET", "POST", "PUT", "PATCH"
+/// o "DELETE".
+fn metodo_recibido() -> Valor {
+    PETICION.with(|peticion| Valor::Texto(Rc::new(peticion.borrow().metodo.clone())))
+}
+
+/// Dirección pedida tal cual llegó, sin la parte de `?campo=...` (y sin decodificar), por
+/// ejemplo "/api/tareas/" con la barra final.
+fn camino_recibido() -> Valor {
+    PETICION.with(|peticion| Valor::Texto(Rc::new(peticion.borrow().camino.clone())))
+}
+
 /// Cuerpo de la petición tal cual llegó, SIN proteger: sirve para los avisos (webhooks) de
 /// otros servicios, que mandan JSON. No lo escribas en una página sin proteger_html().
 fn cuerpo_recibido() -> Valor {
@@ -965,11 +1136,15 @@ fn borrar_galleta(nombre: &Valor) -> Valor {
     Valor::Nada
 }
 
-fn responder(conexion: &mut std::net::TcpStream, estado: &str, cuerpo: &str) {
+fn responder_texto(conexion: &mut std::net::TcpStream, estado: &str, cuerpo: &str) {
     responder_con(conexion, estado, cuerpo, &[]);
 }
 
 fn responder_con(conexion: &mut std::net::TcpStream, estado: &str, cuerpo: &str, extra: &[String]) {
+    responder_tipo(conexion, estado, "text/html; charset=utf-8", cuerpo, extra);
+}
+
+fn responder_tipo(conexion: &mut std::net::TcpStream, estado: &str, tipo: &str, cuerpo: &str, extra: &[String]) {
     use std::io::{Read, Write};
     let mut cabeceras = String::new();
     for cabecera in extra {
@@ -977,8 +1152,9 @@ fn responder_con(conexion: &mut std::net::TcpStream, estado: &str, cuerpo: &str,
         cabeceras.push_str("\r\n");
     }
     let respuesta = format!(
-        "HTTP/1.1 {}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{}",
+        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{}",
         estado,
+        tipo,
         cuerpo.len(),
         cabeceras,
         cuerpo
@@ -1122,7 +1298,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
     let (peticion, mut cuerpo) = match leer_cabecera(&mut lectura, limites.max_peticion, limite) {
         Lectura::Peticion(texto, resto) => (texto, resto),
         Lectura::DemasiadoGrande => {
-            responder(
+            responder_texto(
                 &mut escritura,
                 "413 Payload Too Large",
                 "<h1>Petición demasiado grande</h1>",
@@ -1135,8 +1311,8 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
     let mut partes = primera.split_whitespace();
     let metodo = partes.next().unwrap_or("");
     let objetivo = partes.next().unwrap_or("");
-    if metodo != "GET" && metodo != "POST" {
-        responder(
+    if !["GET", "POST", "PUT", "PATCH", "DELETE"].contains(&metodo) {
+        responder_texto(
             &mut escritura,
             "405 Method Not Allowed",
             "<h1>Método no permitido</h1>",
@@ -1153,7 +1329,8 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
     let mut campos = decodificar_formulario(consulta);
     let mut subidas: Vec<Subida> = Vec::new();
     let mut cuerpo_texto = String::new();
-    let envio = metodo == "POST";
+    // Todo método distinto de GET puede traer cuerpo (POST, PUT, PATCH y DELETE).
+    let envio = metodo != "GET";
     if envio {
         // El cuerpo del formulario cuenta para el tamaño máximo de la petición.
         // Un tamaño que no es un número, dos tamaños distintos o el envío por trozos (chunked,
@@ -1173,14 +1350,14 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
         let largo = match largo {
             Some(largo) if cabecera("Transfer-Encoding").is_none() => largo,
             _ => {
-                responder(&mut escritura, "400 Bad Request", "<h1>Petición mal formada</h1>");
+                responder_texto(&mut escritura, "400 Bad Request", "<h1>Petición mal formada</h1>");
                 return;
             }
         };
         let frontera = cabecera("Content-Type").and_then(|tipo| frontera_multipart(&tipo));
         let maximo = if frontera.is_some() { limites.max_subida } else { limites.max_peticion };
         if largo > maximo.saturating_sub(peticion.len()) {
-            responder(&mut escritura, "413 Payload Too Large", "<h1>Petición demasiado grande</h1>");
+            responder_texto(&mut escritura, "413 Payload Too Large", "<h1>Petición demasiado grande</h1>");
             return;
         }
         let mut limite = limite;
@@ -1188,7 +1365,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
         while cuerpo.len() < largo {
             use std::io::Read;
             if !quedar_hasta(&lectura, limite) {
-                responder(&mut escritura, "408 Request Timeout", "<h1>La petición tardó demasiado</h1>");
+                responder_texto(&mut escritura, "408 Request Timeout", "<h1>La petición tardó demasiado</h1>");
                 return;
             }
             match lectura.read(&mut bloque) {
@@ -1209,7 +1386,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
                     subidas = archivos;
                 }
                 None => {
-                    responder(&mut escritura, "400 Bad Request", "<h1>Formulario mal formado</h1>");
+                    responder_texto(&mut escritura, "400 Bad Request", "<h1>Formulario mal formado</h1>");
                     return;
                 }
             },
@@ -1233,6 +1410,8 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
             PETICION.with(|peticion| {
                 let mut peticion = peticion.borrow_mut();
                 peticion.segura = segura;
+                peticion.metodo = metodo.to_string();
+                peticion.camino = camino.to_string();
                 peticion.subidas = std::mem::take(&mut subidas);
                 peticion.cuerpo = std::mem::take(&mut cuerpo_texto);
                 peticion.cabeceras = texto_peticion
@@ -1254,6 +1433,11 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
                     responder_archivo_http(&mut escritura, archivo, &respuesta.cabeceras);
                 }
                 Ok(valor) => match respuesta.redireccion {
+                    None if respuesta.propia.is_some() => {
+                        let propia = respuesta.propia.expect("hay respuesta propia");
+                        let estado = format!("{} {}", propia.codigo, frase_http(propia.codigo));
+                        responder_tipo(&mut escritura, estado.trim_end(), &propia.tipo, &propia.cuerpo, &respuesta.cabeceras);
+                    }
                     Some(destino) => {
                         let mut extra = respuesta.cabeceras;
                         extra.push(format!("Location: {}", destino));
@@ -1265,7 +1449,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
                     }
                 },
                 Err(_) => {
-                    responder(
+                    responder_texto(
                         &mut escritura,
                         "500 Internal Server Error",
                         "<h1>Error interno</h1>",
@@ -1276,7 +1460,7 @@ fn atender(conexion: std::net::TcpStream, rutas: &[Ruta], limites: &Limites) {
         None if camino == "/favicon.ico" || camino == "/favicon.png" => {
             responder_icono(&mut escritura);
         }
-        None => responder(
+        None => responder_texto(
             &mut escritura,
             "404 Not Found",
             PAGINA_404,
@@ -1389,7 +1573,7 @@ fn servir(puerto: &Valor, rutas: Vec<Ruta>) -> Valor {
             Ok(conexion) => match envio.try_send(conexion) {
                 Ok(()) => {}
                 Err(std::sync::mpsc::TrySendError::Full(mut conexion)) => {
-                    responder(
+                    responder_texto(
                         &mut conexion,
                         "503 Service Unavailable",
                         "<h1>Servidor ocupado, inténtalo de nuevo</h1>",

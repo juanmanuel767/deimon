@@ -2272,31 +2272,44 @@ fn buscar_ruta<'a>(rutas: &'a [Ruta], camino: &str) -> Option<(&'a Ruta, Vec<Str
         .filter(|parte| !parte.is_empty())
         .map(decodificar)
         .collect();
-    for ruta in rutas {
-        let patron: Vec<&str> = ruta
-            .camino
-            .split('/')
-            .filter(|parte| !parte.is_empty())
-            .collect();
-        if patron.len() != partes.len() {
-            continue;
-        }
-        let mut parametros = Vec::new();
-        let mut coincide = true;
-        for (esperado, recibido) in patron.iter().zip(partes.iter()) {
-            if let Some(nombre) = esperado.strip_prefix(':') {
-                if nombre.is_empty() {
+    // Primero las rutas exactas; las que acaban en `*` (cualquier resto del camino) solo
+    // atienden lo que ninguna otra ruta ha cogido.
+    for con_comodin in [false, true] {
+        for ruta in rutas {
+            let mut patron: Vec<&str> = ruta
+                .camino
+                .split('/')
+                .filter(|parte| !parte.is_empty())
+                .collect();
+            let comodin = patron.last() == Some(&"*");
+            if comodin != con_comodin {
+                continue;
+            }
+            if comodin {
+                patron.pop();
+                if partes.len() < patron.len() {
+                    continue;
+                }
+            } else if patron.len() != partes.len() {
+                continue;
+            }
+            let mut parametros = Vec::new();
+            let mut coincide = true;
+            for (esperado, recibido) in patron.iter().zip(partes.iter()) {
+                if let Some(nombre) = esperado.strip_prefix(':') {
+                    if nombre.is_empty() {
+                        coincide = false;
+                        break;
+                    }
+                    parametros.push(escapar_html(recibido));
+                } else if *esperado != recibido.as_str() {
                     coincide = false;
                     break;
                 }
-                parametros.push(escapar_html(recibido));
-            } else if *esperado != recibido.as_str() {
-                coincide = false;
-                break;
             }
-        }
-        if coincide {
-            return Some((ruta, parametros));
+            if coincide {
+                return Some((ruta, parametros));
+            }
         }
     }
     None
@@ -2328,6 +2341,9 @@ struct Peticion {
     /// Cuerpo tal cual llegó (para avisos de otros servicios, que mandan JSON) y cabeceras.
     cuerpo: String,
     cabeceras: Vec<(String, String)>,
+    /// Método (GET, POST, PUT, PATCH o DELETE) y dirección pedida, sin `?...` y sin decodificar.
+    metodo: String,
+    camino: String,
 }
 
 struct Subida {
@@ -2344,9 +2360,17 @@ struct ArchivoRespuesta {
     descargar: Option<String>,
 }
 
+/// Lo que fija responder() o responder_json(): cuerpo, código HTTP y tipo de contenido.
+struct RespuestaPropia {
+    cuerpo: String,
+    codigo: u16,
+    tipo: String,
+}
+
 #[derive(Default)]
 struct Respuesta {
     archivo: Option<ArchivoRespuesta>,
+    propia: Option<RespuestaPropia>,
     cabeceras: Vec<String>,
     redireccion: Option<String>,
     /// Mientras se atiende una ruta, lo que escribe escribir() va a la página (como echo).

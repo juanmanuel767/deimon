@@ -173,6 +173,34 @@ pub const INTEGRADAS: &[Integrada] = &[
         ejemplo: "devolver redirigir_fuera(direccion_de_pago)",
     },
     Integrada {
+        nombre: "responder",
+        parametros: &["cuerpo", "codigo", "tipo"],
+        categoria: "web",
+        descripcion: "la ruta responde con ese texto, ese código HTTP (100 a 599) y ese tipo de contenido; si el tipo es de texto y no dice el juego de letras, se añade UTF-8",
+        ejemplo: "devolver responder(\"no existe\", 404, \"text/plain\")",
+    },
+    Integrada {
+        nombre: "responder_json",
+        parametros: &["valor", "codigo"],
+        categoria: "web",
+        descripcion: "la ruta responde con el valor escrito como JSON (listas con claves como objetos, enteros grandes exactos, nada como null), ese código HTTP y application/json",
+        ejemplo: "devolver responder_json({\"id\": 1}, 201)",
+    },
+    Integrada {
+        nombre: "metodo_recibido",
+        parametros: &[],
+        categoria: "web",
+        descripcion: "método de la petición en mayúsculas: GET, POST, PUT, PATCH o DELETE (una ruta atiende todos)",
+        ejemplo: "si metodo_recibido() == \"DELETE\" { devolver responder_json(nada, 200) }",
+    },
+    Integrada {
+        nombre: "camino_recibido",
+        parametros: &[],
+        categoria: "web",
+        descripcion: "dirección pedida tal cual llegó, sin la parte ?campo=... y sin decodificar (conserva la barra final, por ejemplo /api/tareas/)",
+        ejemplo: "si camino_recibido() == \"/api/tareas/\" { devolver responder(\"no encontrado\", 404, \"text/plain\") }",
+    },
+    Integrada {
         nombre: "cuerpo_recibido",
         parametros: &[],
         categoria: "web",
@@ -288,7 +316,7 @@ pub const INTEGRADAS: &[Integrada] = &[
         nombre: "es_envio",
         parametros: &[],
         categoria: "web",
-        descripcion: "verdadero si la ruta se atiende porque se envió un formulario (método POST)",
+        descripcion: "verdadero si la ruta se atiende porque se envió un formulario (método POST, PUT, PATCH o DELETE)",
         ejemplo: "si es_envio() { guardar(\"mensajes\", campo(\"titulo\"), campo(\"texto\")) }",
     },
     Integrada {

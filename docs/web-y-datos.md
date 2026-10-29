@@ -150,7 +150,48 @@ ruta "/contacto" {
 ```
 
 El tamaño del formulario cuenta para el límite `DEIMON_MAX_PETICION` (si se pasa,
-responde 413). Otros métodos que no sean visitar (GET) o enviar (POST) reciben 405.
+responde 413). Una ruta atiende GET, POST, PUT, PATCH y DELETE (`es_envio()` es verdadero en todos menos GET); los demás métodos reciben 405.
+
+## API JSON, códigos y tipos de contenido
+
+Por defecto una ruta responde `200` con `text/html`. Para otra cosa:
+
+- `responder(cuerpo, codigo, tipo)` responde con ese texto, ese código HTTP (100 a 599) y ese tipo
+  (`"text/plain"`; si el tipo es de texto y no lleva `charset`, se añade `; charset=utf-8`).
+- `responder_json(valor, codigo)` escribe el valor como JSON (las listas con claves salen como objetos,
+  en su orden; los enteros grandes, exactos; `nada`, como `null`) y responde con `application/json`.
+- `metodo_recibido()` da `"GET"`, `"POST"`, `"PUT"`, `"PATCH"` o `"DELETE"`; `cuerpo_recibido()`, el cuerpo
+  tal cual; `camino_recibido()`, la dirección pedida (con la barra final si la tiene).
+- Una ruta que acaba en `*` (por ejemplo `ruta "/*"`) recoge todo lo que no coincide con otra ruta: sirve
+  para un 404 propio. Si no la declaras, lo que no existe da el 404 de siempre.
+
+```deimon
+ruta "/api/notas" {
+    si metodo_recibido() == "POST" {
+        sea datos = desde_json(cuerpo_recibido())
+        guardar("notas", datos["titulo"], datos)
+        devolver responder_json(datos, 201)
+    }
+    si metodo_recibido() == "GET" {
+        devolver responder_json(listar_claves("notas"), 200)
+    }
+    devolver responder_json({"error": "metodo no admitido"}, 405)
+}
+
+ruta "/api/notas/:titulo" {
+    si metodo_recibido() == "DELETE" {
+        borrar("notas", titulo)
+        devolver responder("", 204, "text/plain")
+    }
+    devolver responder_json(leer("notas", titulo), 200)
+}
+
+ruta "/*" {
+    devolver responder_json({"error": "no encontrado"}, 404)
+}
+
+servir(8080)
+```
 
 ## Subir archivos
 

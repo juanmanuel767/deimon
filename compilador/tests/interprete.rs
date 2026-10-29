@@ -681,3 +681,26 @@ fn los_limites_de_pasos_y_de_salida_cortan_y_no_se_pueden_atrapar() {
     assert_eq!(salida.stdout.len(), 1000);
     assert!(String::from_utf8_lossy(&salida.stderr).contains("DEIMON_MAX_SALIDA = 1000 bytes"));
 }
+
+#[test]
+fn los_enteros_grandes_pasan_exactos_por_json() {
+    let (salida, errores, codigo) = comparar_motores(
+        "json_grande",
+        "sea d = desde_json(\"{\\\"n\\\": 99999999999999999999, \\\"p\\\": 9007199254740993, \\\"m\\\": -123456789012345678901, \\\"c\\\": 12, \\\"f\\\": 1.5, \\\"e\\\": 1e3}\")\nmostrar(d[\"n\"])\nmostrar(d[\"n\"] + 1)\nmostrar(d[\"p\"])\nmostrar(d[\"m\"])\nmostrar(d[\"c\"] + d[\"f\"] + d[\"e\"])\nmostrar(a_json([d[\"n\"], 5, d[\"m\"]]))\nmostrar(leer_json(\"{\\\"a\\\": 99999999999999999999}\", \"a\"))\n",
+    );
+    assert_eq!(codigo, Some(0), "{}", errores);
+    assert_eq!(
+        salida,
+        "99999999999999999999\n100000000000000000000\n9007199254740993\n-123456789012345678901\n1013.5\n[99999999999999999999,5,-123456789012345678901]\n99999999999999999999\n"
+    );
+}
+
+#[test]
+fn visitar_ve_el_cuerpo_de_responder_y_responder_json() {
+    let (salida, errores, codigo) = comparar_motores(
+        "visitar_responder",
+        "ruta \"/t\" {\n    escribir(\"ignorado\")\n    devolver responder(\"cuerpo\", 404, \"text/plain\")\n}\nruta \"/j\" {\n    devolver responder_json({\"b\": 2, \"a\": [1, nada]}, 201)\n}\nruta \"/m\" {\n    devolver metodo_recibido() + \" \" + camino_recibido()\n}\nruta \"/*\" {\n    devolver responder(\"no encontrado\", 404, \"text/plain\")\n}\nmostrar(visitar(\"/t\"))\nmostrar(visitar(\"/j\"))\nmostrar(visitar(\"/m?x=1\"))\nmostrar(enviar(\"/m\", \"a=1\"))\nmostrar(visitar(\"/otra/cosa\"))\n",
+    );
+    assert_eq!(codigo, Some(0), "{}", errores);
+    assert_eq!(salida, "cuerpo\n{\"b\":2,\"a\":[1,null]}\nGET /m\nPOST /m\nno encontrado\n");
+}

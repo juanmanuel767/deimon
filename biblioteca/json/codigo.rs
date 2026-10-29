@@ -3,6 +3,8 @@ enum ExtJson {
     Nulo,
     Logico(bool),
     Numero(f64),
+    /// Entero de más de 2^53 en cifras exactas (como lo escribe `Valor::Grande`).
+    Grande(String),
     Texto(String),
     Lista(Vec<ExtJson>),
     Objeto(Vec<(String, ExtJson)>),
@@ -30,6 +32,7 @@ fn ext_json_escribir(j: &ExtJson) -> String {
         ExtJson::Nulo => "null".to_string(),
         ExtJson::Logico(b) => b.to_string(),
         ExtJson::Numero(n) => texto_de(&Valor::Numero(*n)),
+        ExtJson::Grande(cifras) => cifras.clone(),
         ExtJson::Texto(t) => ext_json_escapar(t),
         ExtJson::Lista(l) => format!("[{}]", l.iter().map(ext_json_escribir).collect::<Vec<_>>().join(",")),
         ExtJson::Objeto(o) => format!(
@@ -40,6 +43,9 @@ fn ext_json_escribir(j: &ExtJson) -> String {
 }
 
 fn ext_json_desde_valor(valor: &Valor) -> ExtJson {
+    if let Valor::Grande(entero) = valor {
+        return ExtJson::Grande(entero.a_texto());
+    }
     if let Some(n) = valor.como_numero() {
         return ExtJson::Numero(n);
     }
@@ -64,6 +70,7 @@ fn ext_json_a_valor(j: &ExtJson) -> Valor {
         ExtJson::Nulo => Valor::Nada,
         ExtJson::Logico(b) => Valor::Logico(*b),
         ExtJson::Numero(n) => Valor::Numero(*n),
+        ExtJson::Grande(cifras) => valor_de_texto_entero(cifras),
         ExtJson::Texto(t) => Valor::texto(t.clone()),
         ExtJson::Lista(l) => Valor::lista(l.iter().map(ext_json_a_valor).collect()),
         ExtJson::Objeto(_) => Valor::texto(ext_json_escribir(j)),
@@ -208,11 +215,14 @@ impl<'a> ExtJsonLector<'a> {
                 while self.pos < self.bytes.len() && matches!(self.bytes[self.pos], b'0'..=b'9' | b'-' | b'+' | b'.' | b'e' | b'E') {
                     self.pos += 1;
                 }
-                std::str::from_utf8(&self.bytes[inicio..self.pos])
-                    .ok()
-                    .and_then(|t| t.parse::<f64>().ok())
-                    .map(ExtJson::Numero)
-                    .ok_or_else(|| self.error("número no válido"))
+                let texto = std::str::from_utf8(&self.bytes[inicio..self.pos]).unwrap_or("");
+                // Un entero que no cabe exacto en un f64 se guarda con todas sus cifras.
+                if let Some(entero) = EnteroGrande::desde_texto(texto) {
+                    if !entero.cabe_en_numero() {
+                        return Ok(ExtJson::Grande(entero.a_texto()));
+                    }
+                }
+                texto.parse::<f64>().ok().map(ExtJson::Numero).ok_or_else(|| self.error("número no válido"))
             }
             _ => Err(self.error("se esperaba un valor")),
         }

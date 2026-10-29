@@ -39,7 +39,11 @@ fn compilar_sitio(archivo: &str) -> (PathBuf, PathBuf) {
     let ruta_fuente = carpeta_web().join(archivo);
     let fuente = fs::read_to_string(&ruta_fuente)
         .unwrap_or_else(|error| panic!("no se pudo leer '{}': {}", ruta_fuente.display(), error));
-    let rust = deimon::traducir(&fuente)
+    compilar_fuente(archivo, &fuente)
+}
+
+fn compilar_fuente(archivo: &str, fuente: &str) -> (PathBuf, PathBuf) {
+    let rust = deimon::traducir(fuente)
         .unwrap_or_else(|error| panic!("no se pudo traducir el ejemplo web: {}", error));
 
     let carpeta = std::env::temp_dir();
@@ -328,8 +332,8 @@ fn las_cuentas_registran_entran_y_protegen_la_pagina_privada() {
     let enorme = enviar_formulario(puerto, "/entrar", &format!("nombre={}", "a".repeat(8000)), "");
     assert!(enorme.starts_with("HTTP/1.1 413"), "{}", enorme);
 
-    let borrar = peticion_completa(puerto, "DELETE / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
-    assert!(borrar.starts_with("HTTP/1.1 405"), "{}", borrar);
+    let otro = peticion_completa(puerto, "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+    assert!(otro.starts_with("HTTP/1.1 405"), "{}", otro);
 }
 
 #[test]
@@ -529,4 +533,175 @@ fn se_suben_fotos_se_sirven_y_las_galletas_se_guardan() {
     let saludo = peticion_completa(puerto, &format!("GET / HTTP/1.1\r\nCookie: {}\r\nConnection: close\r\n\r\n", valor));
     assert!(saludo.contains("Hola, Ana &quot;la&quot;"), "{}", saludo);
     let _ = fs::remove_dir_all(&datos);
+}
+
+// ---------------------------------------------------------------------------
+// API JSON: responder, responder_json, métodos PUT/PATCH/DELETE y enteros grandes.
+// ---------------------------------------------------------------------------
+
+const PROGRAMA_API: &str = r#"
+ruta "/texto" {
+    devolver responder("no existe", 404, "text/plain")
+}
+ruta "/css" {
+    devolver responder("body{margin:0}", 200, "text/css; charset=iso-8859-1")
+}
+ruta "/imagen" {
+    devolver responder("x", 200, "image/svg+xml")
+}
+ruta "/json" {
+    devolver responder_json({"id": 1, "ok": verdadero, "nada": nada, "lista": [1, "a"], "z": 2, "a": 3}, 201)
+}
+ruta "/grande" {
+    sea datos = desde_json(cuerpo_recibido())
+    devolver responder_json({"n": datos["n"], "doble": datos["n"] * 2}, 200)
+}
+ruta "/metodo" {
+    devolver responder_json({"metodo": metodo_recibido(), "cuerpo": cuerpo_recibido(), "envio": es_envio(), "camino": camino_recibido()}, 200)
+}
+ruta "/codigo/:c" {
+    devolver responder("x", a_numero(c), "text/plain")
+}
+ruta "/tipo-vacio" {
+    devolver responder("x", 200, "")
+}
+ruta "/cuerpo-numero" {
+    sea x = leer("c", "c")
+    si x == nada {
+        x = 5
+    }
+    devolver responder(x, 200, "text/plain")
+}
+ruta "/json-codigo-texto" {
+    sea x = leer("c", "c")
+    si x == nada {
+        x = "200"
+    }
+    devolver responder_json(1, x)
+}
+ruta "/*" {
+    devolver responder("no encontrado", 404, "text/plain")
+}
+servir(8080)
+"#;
+
+/// Arranca la API con el motor indicado: "interprete" (`deimon ejecutar`) o "rust" (el programa
+/// compilado). Devuelve el servidor (se para al soltarlo) y su puerto.
+fn arrancar_api(motor: &str) -> (Servidor, u16) {
+    let puerto = puerto_libre();
+    let datos = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("tmp")
+        .join(format!("datos_api_{}_{}", std::process::id(), motor));
+    let servidor = if motor == "rust" {
+        let (ruta_rust, ruta_bin) = compilar_fuente("api_json.dmn", PROGRAMA_API);
+        let proceso = Command::new(&ruta_bin)
+            .env("DEIMON_PUERTO", puerto.to_string())
+            .env("DEIMON_DATOS", &datos)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("no se pudo arrancar el servidor");
+        Servidor { proceso, archivos: vec![ruta_rust, ruta_bin] }
+    } else {
+        let fuente = std::env::temp_dir().join(format!("ln_api_{}_{}.dmn", std::process::id(), motor));
+        fs::write(&fuente, PROGRAMA_API).expect("no se pudo escribir el programa");
+        let proceso = Command::new(env!("CARGO_BIN_EXE_deimon"))
+            .arg("ejecutar")
+            .arg(&fuente)
+            .env("DEIMON_MOTOR", motor)
+            .env("DEIMON_PUERTO", puerto.to_string())
+            .env("DEIMON_DATOS", &datos)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("no se pudo arrancar el servidor");
+        Servidor { proceso, archivos: vec![fuente] }
+    };
+    esperar_servidor(puerto);
+    (servidor, puerto)
+}
+
+fn solicitud(puerto: u16, metodo: &str, camino: &str, cuerpo: &str) -> String {
+    peticion_completa(
+        puerto,
+        &format!(
+            "{} {} HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            metodo,
+            camino,
+            cuerpo.len(),
+            cuerpo
+        ),
+    )
+}
+
+fn cuerpo_de(respuesta: &str) -> &str {
+    respuesta.split_once("\r\n\r\n").map(|(_, cuerpo)| cuerpo).unwrap_or("")
+}
+
+fn comprobar_api(motor: &str) {
+    let (_servidor, puerto) = arrancar_api(motor);
+
+    let texto = solicitud(puerto, "GET", "/texto", "");
+    assert!(texto.starts_with("HTTP/1.1 404 Not Found"), "{}", texto);
+    assert!(texto.contains("Content-Type: text/plain; charset=utf-8\r\n"), "{}", texto);
+    assert_eq!(cuerpo_de(&texto), "no existe");
+
+    let css = solicitud(puerto, "GET", "/css", "");
+    assert!(css.starts_with("HTTP/1.1 200 OK") && css.contains("Content-Type: text/css; charset=iso-8859-1\r\n"), "{}", css);
+    let imagen = solicitud(puerto, "GET", "/imagen", "");
+    assert!(imagen.contains("Content-Type: image/svg+xml\r\n"), "{}", imagen);
+
+    let json = solicitud(puerto, "GET", "/json", "");
+    assert!(json.starts_with("HTTP/1.1 201 Created"), "{}", json);
+    assert!(json.contains("Content-Type: application/json\r\n"), "{}", json);
+    assert_eq!(cuerpo_de(&json), r#"{"id":1,"ok":true,"nada":null,"lista":[1,"a"],"z":2,"a":3}"#);
+
+    // Entero grande exacto al leer y al escribir.
+    let grande = solicitud(puerto, "POST", "/grande", r#"{"n": 99999999999999999999}"#);
+    assert_eq!(cuerpo_de(&grande), r#"{"n":99999999999999999999,"doble":199999999999999999998}"#, "{}", grande);
+
+    // PUT, PATCH y DELETE llegan a la ruta, con su cuerpo y es_envio() verdadero.
+    for metodo in ["GET", "POST", "PUT", "PATCH", "DELETE"] {
+        let cuerpo = if metodo == "GET" { "" } else { "{\"a\": 1}" };
+        let respuesta = solicitud(puerto, metodo, "/metodo?x=1", cuerpo);
+        assert!(respuesta.starts_with("HTTP/1.1 200 OK"), "{}: {}", metodo, respuesta);
+        let esperado = format!(
+            r#"{{"metodo":"{}","cuerpo":"{}","envio":{},"camino":"/metodo"}}"#,
+            metodo,
+            cuerpo.replace('"', "\\\""),
+            metodo != "GET"
+        );
+        assert_eq!(cuerpo_de(&respuesta), esperado, "{}", respuesta);
+    }
+    let barra = solicitud(puerto, "GET", "/metodo/", "");
+    assert!(cuerpo_de(&barra).contains(r#""camino":"/metodo/""#), "{}", barra);
+
+    // Lo que no existe cae en la ruta "/*"; un método no admitido sigue dando 405.
+    let nada = solicitud(puerto, "DELETE", "/no/existe/nunca", "");
+    assert!(nada.starts_with("HTTP/1.1 404 Not Found") && cuerpo_de(&nada) == "no encontrado", "{}", nada);
+    let raro = solicitud(puerto, "OPTIONS", "/texto", "");
+    assert!(raro.starts_with("HTTP/1.1 405"), "{}", raro);
+    let cabeza = solicitud(puerto, "HEAD", "/texto", "");
+    assert!(cabeza.starts_with("HTTP/1.1 405"), "{}", cabeza);
+
+    // Código fuera de rango o argumentos que no son del tipo pedido: error 500 y el servidor sigue vivo.
+    for malo in ["/codigo/99", "/codigo/600", "/codigo/200.5", "/tipo-vacio", "/cuerpo-numero", "/json-codigo-texto"] {
+        let respuesta = solicitud(puerto, "GET", malo, "");
+        assert!(respuesta.starts_with("HTTP/1.1 500"), "{}: {}", malo, respuesta);
+    }
+    let bien = solicitud(puerto, "GET", "/codigo/418", "");
+    assert!(bien.starts_with("HTTP/1.1 418"), "{}", bien);
+    let vivo = solicitud(puerto, "GET", "/texto", "");
+    assert!(vivo.starts_with("HTTP/1.1 404"), "{}", vivo);
+}
+
+#[test]
+fn la_api_json_responde_codigo_tipo_y_metodos_con_el_interprete() {
+    comprobar_api("interprete");
+}
+
+#[test]
+fn la_api_json_responde_codigo_tipo_y_metodos_con_el_programa_compilado() {
+    comprobar_api("rust");
 }

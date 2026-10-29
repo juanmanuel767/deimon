@@ -101,23 +101,18 @@ Es el mismo para PHP, Python y Deimon y está copiado en cada `enunciado.md`:
   `soluciones/referencia/deimon/`).
 - Medir una sola web: `python3 herramientas/medir_web.py <deimon|php|python> <archivo> tareas/<tarea> -v`.
 
-### Lo que Deimon no puede hacer hoy (por eso no tiene referencia en 51 y 55)
+### Webs que Deimon hace con `responder` y `responder_json`
 
-La referencia de Deimon pasa 3 de las 5 webs (52, 53, 54). `comprobar_tareas.py` lo lista en
-`IMPOSIBLE_EN_DEIMON` y avisará si algún día se escribe la referencia. Las dos que faltan:
-
-- **51 (API JSON) y 55 (Content-Type):** una `ruta` solo responde `200 text/html; charset=utf-8` (o `303` si
-  redirige, o el `404` propio de una ruta que no existe); no hay función para elegir el código (`201`, `400`,
-  `404` con cuerpo propio) ni el `Content-Type` (`application/json`, `text/plain`, `text/css`), y solo se
-  aceptan los métodos GET y POST (PUT y DELETE reciben `405`). Ejemplo mínimo:
-  `ruta "/api/tareas" { devolver "[]" }` responde `200 text/html`, nunca `application/json`.
+La referencia de Deimon pasa las 5 webs (51-55). Para 51 y 55 hacen falta `responder(cuerpo, codigo, tipo)`,
+`responder_json(valor, codigo)`, `metodo_recibido()` (las rutas atienden GET, POST, PUT, PATCH y DELETE),
+`camino_recibido()` (para distinguir `/api/tareas` de `/api/tareas/`) y una ruta `"/*"` que recoge todo lo
+que no coincide con otra y permite un 404 propio. `IMPOSIBLE_EN_DEIMON` de `comprobar_tareas.py` queda vacío
+y avisará si en el futuro una web no se puede resolver.
 
 Otras carencias menores encontradas al escribir las referencias (no impiden resolver las tareas):
 
 - `campo()` y los parámetros de ruta ya vienen escapados (la comilla simple sale `&#39;`, no el `&#039;` de
   PHP), y para contar caracteres reales o guardar el texto original en la base hay que deshacer el escape a mano.
-- `desde_json` convierte los enteros de más de 64 bits en decimales (`{"n": 99999999999999999999}` da
-  `100000000000000000000`), aunque los enteros de Deimon sí son exactos.
 - No hay una función como `wordwrap` (la referencia de 44 parte las líneas a mano). `primera_mayuscula` pasa a
   mayúscula también las letras con acento (PHP `ucfirst` no lo hace), así que no vale tal cual para la tarea 44.
 

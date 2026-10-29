@@ -171,6 +171,18 @@ pub const TABLA_ARGUMENTOS: &[(&str, &[ReglaArgumento])] = &[
         "rellenar_plantilla",
         &[ReglaArgumento { posicion: 0, permitidos: &["texto"], mensaje: "rellenar_plantilla() espera un texto, no {}", cuando: None }],
     ),
+    (
+        "responder",
+        &[
+            ReglaArgumento { posicion: 0, permitidos: &["texto"], mensaje: "responder() espera un texto como cuerpo, no {}", cuando: None },
+            ReglaArgumento { posicion: 1, permitidos: &["número"], mensaje: "responder() espera un número como código, no {}", cuando: None },
+            ReglaArgumento { posicion: 2, permitidos: &["texto"], mensaje: "responder() espera un texto como tipo, no {}", cuando: None },
+        ],
+    ),
+    (
+        "responder_json",
+        &[ReglaArgumento { posicion: 1, permitidos: &["número"], mensaje: "responder_json() espera un número como código, no {}", cuando: None }],
+    ),
 ];
 
 type Ambito = HashMap<String, Tipo>;

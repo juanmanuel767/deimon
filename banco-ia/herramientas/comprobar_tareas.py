@@ -27,14 +27,7 @@ DEIMON = os.environ.get("DEIMON") or os.path.normpath(os.path.join(RAIZ, "..", "
 
 # Tareas web que la referencia de Deimon no puede resolver con el compilador actual (motivo y ejemplo mínimo).
 # Si algún día Deimon puede, hay que escribir su referencia y quitarla de aquí (se avisa si pasa).
-IMPOSIBLE_EN_DEIMON = {
-    "51-dmn-api-json": "una ruta solo responde 200 text/html (o 303, o el 404 propio): no hay forma de elegir 201/400/404 ni "
-                       "application/json, y solo se aceptan los métodos GET y POST (PUT/DELETE dan 405). "
-                       'Ejemplo mínimo: ruta "/api/tareas" { devolver "[]" } da «200 text/html; charset=utf-8».',
-    "55-dmn-rutas-cabeceras": "no se puede elegir el Content-Type (text/plain, text/css, application/json: siempre sale "
-                              "text/html; charset=utf-8) ni el código 400 / un 404 con cuerpo propio. "
-                              'Ejemplo mínimo: ruta "/hola.txt" { devolver "hola" } da «text/html».',
-}
+IMPOSIBLE_EN_DEIMON = {}
 
 
 def leer(ruta):
@@ -129,9 +122,9 @@ def main():
         print("\n".join(fallos))
         print(f"FALLOS: {len(fallos)} en {total} tareas")
         sys.exit(1)
+    imposibles = f" (imposibles hoy: {', '.join(sorted(IMPOSIBLE_EN_DEIMON))})" if IMPOSIBLE_EN_DEIMON else ""
     print(f"bien: {total} tareas, todas con >=4 casos y caso 1 en el enunciado; Deimon = Python en todos los casos de 01-50; "
-          f"webs 51-55: referencia Python pasa las 5 y la de Deimon las {len(tareas_web.WEBS) - len(IMPOSIBLE_EN_DEIMON)} "
-          f"posibles (imposibles hoy: {', '.join(sorted(IMPOSIBLE_EN_DEIMON))})")
+          f"webs 51-55: referencia Python pasa las 5 y la de Deimon las {len(tareas_web.WEBS) - len(IMPOSIBLE_EN_DEIMON)}{imposibles}")
 
 
 if __name__ == "__main__":

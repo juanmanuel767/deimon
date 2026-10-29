@@ -1,0 +1,73 @@
+# Rutas con Content-Type propio. Todo lo que no sea un GET de estas rutas es un 404 de texto.
+
+funcion no_encontrado() {
+    devolver responder("no encontrado", 404, "text/plain")
+}
+
+# Entero con un "-" opcional y de 1 a 15 cifras.
+funcion entero_valido(texto) {
+    sea cifras = texto
+    si medir(texto) > 0 y texto[0] == "-" {
+        cifras = cortar(texto, 1, medir(texto) - 1)
+    }
+    si medir(cifras) == 0 o medir(cifras) > 15 {
+        devolver falso
+    }
+    para i en rango(0, medir(cifras) - 1) {
+        si no incluye("0123456789", cifras[i]) {
+            devolver falso
+        }
+    }
+    devolver verdadero
+}
+
+ruta "/hola.txt" {
+    si metodo_recibido() != "GET" {
+        devolver no_encontrado()
+    }
+    devolver responder("hola\n", 200, "text/plain")
+}
+
+ruta "/estilo.css" {
+    si metodo_recibido() != "GET" {
+        devolver no_encontrado()
+    }
+    devolver responder("body{margin:0}", 200, "text/css")
+}
+
+ruta "/pagina" {
+    si metodo_recibido() != "GET" {
+        devolver no_encontrado()
+    }
+    devolver responder("<h1>Pagina</h1>", 200, "text/html")
+}
+
+ruta "/saludo/:nombre" {
+    si metodo_recibido() != "GET" {
+        devolver no_encontrado()
+    }
+    devolver responder("Hola, " + nombre, 200, "text/plain")
+}
+
+ruta "/suma/:a/:b" {
+    si metodo_recibido() != "GET" {
+        devolver no_encontrado()
+    }
+    si no entero_valido(a) o no entero_valido(b) {
+        devolver responder_json({"error": "numeros enteros"}, 400)
+    }
+    devolver responder_json({"a": a_numero(a), "b": a_numero(b), "suma": a_numero(a) + a_numero(b)}, 200)
+}
+
+ruta "/cabeceras" {
+    si metodo_recibido() != "GET" {
+        devolver no_encontrado()
+    }
+    devolver responder_json({"x_demo": cabecera_recibida("X-Demo")}, 200)
+}
+
+ruta "/*" {
+    devolver no_encontrado()
+}
+
+servir(8080)
